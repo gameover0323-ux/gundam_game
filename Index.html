@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GUNDAM BATTLE SLOT</title>
+<link rel="stylesheet" href="css_style.css">
+</head>
+<body>
+
+<!-- タイトル画面 -->
+<div id="title" class="screen active">
+  <h1>GUNDAM BATTLE SLOT</h1>
+  <button id="start1v1Btn">1on1</button>
+  <button id="start2v2Btn">2on2 (準備中)</button>
+</div>
+
+<!-- 機体選択 -->
+<div id="select" class="screen">
+  <h2>機体選択</h2>
+  <div id="selectGuide">PLAYER A の機体を選択</div>
+  <div id="selectedUnitsPreview"></div>
+  <div id="unitButtons"></div>
+</div>
+
+<!-- バトル画面 -->
+<div id="battle" class="screen">
+
+  <div style="text-align:left; margin-bottom:6px;">
+    <button id="toggleTestModeBtn">テストモード: OFF</button>
+  </div>
+
+
+  <h2 id="turnText">TURN 1</h2>
+  <h3 id="currentPlayer">PLAYER A</h3>
+
+  <div class="container">
+    <div class="player" id="playerA"></div>
+
+<div style="
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      margin:0 4px;
+      flex-shrink:0;
+    ">
+      <div id="turnCounterBox" style="
+        width:35px;
+        height:35px;
+        border:1px solid white;
+        border-radius:8px;
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+        align-items:center;
+        font-size:11px;
+        line-height:1.2;
+      ">
+        <div>TURN</div>
+        <div id="turnCounterValue" style="font-size:18px;font-weight:bold;">1</div>
+      </div>
+
+      <div id="actionCounterBox" style="
+        width:35px;
+        height:35px;
+        border:1px solid white;
+        border-radius:8px;
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+        align-items:center;
+        font-size:11px;
+        line-height:1.2;
+      ">
+        <div>行動</div>
+        <div id="actionCounterValue" style="font-size:18px;font-weight:bold;">1</div>
+      </div>
+    </div>
+
+    <div class="player" id="playerB"></div>
+  </div>
+
+  <div class="bottom">
+    <div id="attackLog">バトル開始待機中</div>
+   <button id="executeSlotBtn">スロット行動実行</button>
+<div id="singleTeamActionButtons" style="display:none; margin-top:4px;">
+  <button id="executeUnit1SlotBtn">1単独行動</button>
+  <button id="executeUnit2SlotBtn">2単独行動</button>
+</div>
+<button id="simulateSlotBtn">シミュレーション</button>
+<button id="endTurnBtn">ターン終了</button>
+    <br><br>
+  </div>
+
+</div>
+<!-- popup -->
+<div id="popup" class="popup"></div>
+
+<script type="module" src="js_main.js"></script>
+</body>
+</html>

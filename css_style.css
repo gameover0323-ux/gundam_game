@@ -1,0 +1,159 @@
+body{
+  background:black;
+  color:white;
+  font-family:sans-serif;
+  text-align:center;
+  font-size:14px;
+  margin:0;
+  padding:0;
+}
+
+.screen{
+  display:none;
+  width:100%;
+  max-width:1000px;
+  margin:0 auto;
+  padding:12px 8px;
+  box-sizing:border-box;
+}
+
+.active{
+  display:block;
+}
+
+h1{
+  font-size:28px;
+  margin:16px 0;
+}
+
+h2{
+  margin:10px 0;
+  font-size:18px;
+}
+
+h3{
+  margin:8px 0;
+  font-size:16px;
+}
+
+button{
+  padding:6px 10px;
+  margin:2px;
+  font-size:12px;
+  border-radius:4px;
+}
+
+.container{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:8px;
+  flex-wrap:nowrap;
+}
+
+.player{
+  width:48%;
+  border:2px solid white;
+  padding:8px;
+  box-sizing:border-box;
+}
+
+.slot{
+  border:1px solid white;
+  margin:3px 0;
+  padding:5px 4px;
+  font-size:12px;
+  line-height:1.35;
+}
+
+.exSlot{
+  border:2px solid red;
+  color:red;
+}
+
+.goldSlot {
+  border: 2px solid gold;
+  color: gold;
+  font-weight: bold;
+}
+
+.special{
+  border:1px solid cyan;
+  margin:3px 0;
+  padding:5px 4px;
+  font-size:12px;
+  line-height:1.35;
+}
+
+.bottom{
+  margin-top:14px;
+  border-top:2px solid white;
+  padding:10px 0;
+}
+
+.popup{
+  position:fixed;
+  top:30%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  background:#222;
+  color:white;
+  padding:20px;
+  border:2px solid white;
+  display:none;
+  z-index:999;
+  width:80%;
+  max-width:320px;
+  box-sizing:border-box;
+}
+
+.hpbar{
+  width:100%;
+  height:20px;
+  background:#333;
+  margin:6px 0;
+}
+
+.hpfill{
+  height:100%;
+  background:#0f0;
+}
+
+#turnCounterBox{
+  width:35px;
+  height:35px;
+  border:1px solid white;
+  border-radius:8px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  font-size:11px;
+  line-height:1.1;
+  margin:0 2px;
+  flex-shrink:0;
+}
+
+#attackLog{
+  min-height:20px;
+  margin-bottom:8px;
+}
+
+.special button{
+  margin-left:4px;
+  padding:3px 8px;
+  font-size:11px;
+}
+
+#selectGuide{
+  margin:8px 0;
+  font-size:16px;
+  font-weight:bold;
+}
+
+#selectedUnitsPreview{
+  margin:8px 0 12px;
+  min-height:20px;
+  font-size:13px;
+  line-height:1.4;
+}
