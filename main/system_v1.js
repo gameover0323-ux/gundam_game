@@ -18,7 +18,7 @@ import {
   executeUnitOnDamaged,
   executeUnitModifyTakenDamage,
   executeUnitModifyEvadeAttempt
-} from "./js_unit_runtime.js";
+} from "../js_unit_runtime.js";
 import {
   takeHit as resolveTakeHit,
   evadeAttack as resolveEvadeAttack
