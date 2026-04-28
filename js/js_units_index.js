@@ -4,6 +4,8 @@ import { shining_gundam } from "./js_units_shining_gundam.js";
 import { wing_zero } from "./js_units_wing_zero.js";
 
 
+//ボス機体//
+import { devil_gundam } from "./js_units_devil_gundam.js";
 
 export const unitList = [
   gundam_mc,
@@ -11,3 +13,7 @@ export const unitList = [
   shining_gundam,
   wing_zero
 ];
+
+export const bossList = [ 
+  devil_gundam
+  ];
