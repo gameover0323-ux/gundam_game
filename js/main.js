@@ -46,6 +46,7 @@ import { createGameSetup } from "./js_game_setup.js";
 
 import { createActionLayer } from "./js_action_layer.js";
 
+alert("js_main 読み込み成功");
 
 const screens = {
   title: document.getElementById("title"),
