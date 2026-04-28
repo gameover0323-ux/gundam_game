@@ -52,6 +52,12 @@ import {
   onWingZeroResolveChoice
 } from "./js_unit_rules_wing_zero.js";
 
+
+//ボス機体//
+import { devilGundamRules } from "./js_unit_rules_devil_gundam.js";
+
+
+
 export const unitRulesMap = {
   gundam_mc: {
     getDerivedState: getGundamMcDerivedState,
@@ -105,5 +111,8 @@ export const unitRulesMap = {
     modifyTakenDamage: modifyWingZeroTakenDamage,
     modifyEvadeAttempt: modifyWingZeroEvadeAttempt,
     onResolveChoice: onWingZeroResolveChoice
-  }
+  },
+  
+  //ボス機体//
+devil_gundam: devilGundamRules,
 };
