@@ -1,4 +1,4 @@
-import { unitList } from "./js_units_index.js";
+import { unitList } from "../js_units_index.js";
 import {
   createBattleState,
   applyUnitDerivedState,
@@ -22,29 +22,29 @@ import {
 import {
   takeHit as resolveTakeHit,
   evadeAttack as resolveEvadeAttack
-} from "./js_battle_system.js";
-import { resolveSlotEffect } from "./js_slot_effects.js";
-import { executeCommonSpecial } from "./js_special_actions.js";
+} from "../js_battle_system.js";
+import { resolveSlotEffect } from "../js_slot_effects.js";
+import { executeCommonSpecial } from "../js_special_actions.js";
 import {
   showPopup,
   renderPlayerState,
   renderPlayerState2v2,
   renderAttackChoicesUI,
   renderPendingChoiceUI
-} from "./js_ui.js";
+} from "../js_ui.js";
 
-import { create2v2Helpers } from "./js_2on2_helpers.js";
-import { create2v2Actions } from "./js_2on2_actions.js";
+import { create2v2Helpers } from "../js_2on2_helpers.js";
+import { create2v2Actions } from "../js_2on2_actions.js";
 
-import { createBattleFlow } from "./js_battle_flow.js";
+import { createBattleFlow } from "../js_battle_flow.js";
 
-import { createAttackResolution } from "./js_attack_resolution.js";
+import { createAttackResolution } from "../js_attack_resolution.js";
 
-import { createUiController } from "./js_ui_controller.js";
+import { createUiController } from "../js_ui_controller.js";
 
-import { createGameSetup } from "./js_game_setup.js";
+import { createGameSetup } from "../js_game_setup.js";
 
-import { createActionLayer } from "./js_action_layer.js";
+import { createActionLayer } from "../js_action_layer.js";
 
 
 const screens = {
