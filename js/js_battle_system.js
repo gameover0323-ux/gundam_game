@@ -36,6 +36,32 @@ export function calculateDamage(attack, defender) {
   return dmg;
 }
 
+function applyAttackOnHitSpecial({ attacker, defender, attack }) {
+  if (!attacker || !defender || !attack) {
+    return null;
+  }
+
+  if (attack.special === "devil_head_each_hit") {
+    defender.evade = Math.max(0, defender.evade - 1);
+    return `${defender.name} の回避-1`;
+  }
+
+  if (attack.special === "devil_fang_absorb") {
+    attacker.hp = Math.min(attacker.maxHp, attacker.hp + 50);
+    return `${attacker.name} がHP50吸収`;
+  }
+
+  if (attack.special === "devil_finger_zero_evade") {
+    defender.evade = 0;
+    defender.overEvadeMode = false;
+    defender.overEvadeCap = defender.evadeMax;
+    defender.overEvadeBaseMax = defender.evadeMax;
+    return `${defender.name} の回避が消滅`;
+  }
+
+  return null;
+}
+
 export function takeHit({
   attacker,
   defender,
@@ -81,10 +107,17 @@ export function takeHit({
   }
 
   defender.hp -= finalDamage;
-  if (defender.hp < 0) defender.hp = 0;
+if (defender.hp < 0) defender.hp = 0;
 
-  currentAttack.splice(attackIndex, 1);
+const onHitMessage = applyAttackOnHitSpecial({ attacker, defender, attack });
+if (onHitMessage) {
+  damageMessage = damageMessage
+    ? `${damageMessage}<br>${onHitMessage}`
+    : onHitMessage;
+}
 
+currentAttack.splice(attackIndex, 1);
+return { defender, attacker, currentAttack, attack, finalDamage, damageMessage };
   return {
     defender,
     attacker,
