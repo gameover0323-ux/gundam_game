@@ -35,7 +35,7 @@ import {
   onShiningDamaged,
   modifyShiningTakenDamage,
   onShiningResolveChoice
-} from "./js_rules_shining_gundam.js";
+} from "./js_unit_rules_shining_gundam.js";
 
 import {
   getWingZeroDerivedState,
