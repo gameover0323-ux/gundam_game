@@ -200,9 +200,10 @@ export function renderPlayerState2v2(team, container, label, handlers) {
       </div>
 
       <div>
-        <b>2. ${team.unit2.name}</b>
-        <div>HP:${team.unit2.hp}/${team.unit2.maxHp}</div>
-        <div>回避:${team.unit2.evade}/${team.unit2.evadeMax}</div>
+        <b>2. ${team.unit2 ? team.unit2.name : "空き"}
+</b>
+        <div>${team.unit2 ? `HP:${team.unit2.hp}/${team.unit2.maxHp}` : "HP:-"}</div>
+        <div>${team.unit2 ? `回避:${team.unit2.evade}/${team.unit2.evadeMax}` : "回避:-"}</div>
       </div>
     </div>
 
