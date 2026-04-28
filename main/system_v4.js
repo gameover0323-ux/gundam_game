@@ -1,4 +1,6 @@
 import { unitList } from "../js/js_units_index.js";
+  .then(() => alert("1 OK"))
+  .catch(e => alert("1 NG"));
 import {
   createBattleState,
   applyUnitDerivedState,
@@ -19,12 +21,26 @@ import {
   executeUnitModifyTakenDamage,
   executeUnitModifyEvadeAttempt
 } from "../js/js_unit_runtime.js";
+
+  .then(() => alert("2 OK"))
+  .catch(e => alert("2 NG"));
 import {
   takeHit as resolveTakeHit,
   evadeAttack as resolveEvadeAttack
 } from "../js/js_battle_system.js";
+  .then(() => alert("3 OK"))
+  .catch(e => alert("3 NG"));
+
 import { resolveSlotEffect } from "../js/js_slot_effects.js";
+  .then(() => alert("4 OK"))
+  .catch(e => alert("4 NG"));
+
+
 import { executeCommonSpecial } from "../js/js_special_actions.js";
+  .then(() => alert("5 OK"))
+  .catch(e => alert("5 NG"));
+
+
 import {
   showPopup,
   renderPlayerState,
@@ -33,18 +49,40 @@ import {
   renderPendingChoiceUI
 } from "../js/js_ui.js";
 
+  .then(() => alert("6 OK"))
+  .catch(e => alert("6 NG"));
+
 import { create2v2Helpers } from "../js/js_2on2_helpers.js";
+  .then(() => alert("7 OK"))
+  .catch(e => alert("7 NG"));
+
 import { create2v2Actions } from "../js/js_2on2_actions.js";
+  .then(() => alert("8 OK"))
+  .catch(e => alert("8 NG"));
+
 
 import { createBattleFlow } from "../js/js_battle_flow.js";
-
+  .then(() => alert("9 OK"))
+  .catch(e => alert("9 NG"));
 import { createAttackResolution } from "../js/js_attack_resolution.js";
+
+  .then(() => alert("10 OK"))
+  .catch(e => alert("10 NG"));
 
 import { createUiController } from "../js/js_ui_controller.js";
 
+  .then(() => alert("11 OK"))
+  .catch(e => alert("11 NG"));
+
 import { createGameSetup } from "../js/js_game_setup.js";
 
+  .then(() => alert("12 OK"))
+  .catch(e => alert("12 NG"));
+
 import { createActionLayer } from "../js/js_action_layer.js";
+
+  .then(() => alert("all OK"))
+  .catch(e => alert("12 NG"));
 
 
 const screens = {
