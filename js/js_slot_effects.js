@@ -47,10 +47,16 @@ function resolveStructuredEffect({ slot, actor }) {
   }
 
   if (effect.type === "attack") {
-    const damage = Number(effect.damage || 0);
-    const count = Number(effect.count || 1);
+  const damage = Number(effect.damage || 0);
 
-    const attacks = createAttack(damage, count, {
+  let count = Number(effect.count || 1);
+  if (typeof effect.randomCountMax === "number") {
+    const min = Number(effect.randomCountMin || 1);
+    const max = Number(effect.randomCountMax);
+    count = Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  const attacks = createAttack(damage, count, {
       type: effect.attackType || "shoot",
       beam: !!effect.beam,
       cannotEvade: !!effect.cannotEvade,
@@ -190,4 +196,4 @@ export function resolveSlotEffect({ slot, actor }) {
     desc: slot?.desc || "",
     actor
   });
-}
+      }
