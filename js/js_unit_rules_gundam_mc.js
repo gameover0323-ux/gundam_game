@@ -206,16 +206,8 @@ export function onGundamMcResolveChoice(state, pendingChoice, selectedValue, con
       };
     }
 
-    state.evade -= 2;
-
-    return {
-      handled: true,
-      redraw: true,
-      message: null,
-      startSlotAction: {
-        slotKey: selectedValue
-      }
-    };
+ state.evade = Math.max(0, state.evade - 2);
+return { handled: true, redraw: true, message: null, startSlotAction: { slotKey: selectedValue } };
   }
 
   if (pendingChoice.source === "nt_prediction") {
@@ -233,4 +225,4 @@ export function onGundamMcResolveChoice(state, pendingChoice, selectedValue, con
     redraw: false,
     message: null
   };
-}
+      }
