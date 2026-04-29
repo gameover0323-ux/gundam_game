@@ -1,4 +1,4 @@
-import { unitList } from "./js_units_index.js";
+import { unitList, bossList } from "./js_units_index.js";
 import {
   createBattleState,
   applyUnitDerivedState,
@@ -46,7 +46,6 @@ import { createGameSetup } from "./js_game_setup.js";
 
 import { createActionLayer } from "./js_action_layer.js";
 
-alert("js_main 読み込み成功");
 
 const screens = {
   title: document.getElementById("title"),
@@ -78,6 +77,28 @@ document.getElementById("start2v2Btn").addEventListener("click", () => {
   updateSelectUi();
 });
 
+document.getElementById("startChallenge1v1Btn").addEventListener("click", () => {
+  battleMode = "challenge1v1";
+  teamA = null;
+  teamB = null;
+  selectingPlayer = "A";
+  selectedUnitA = null;
+  selectedUnitB = bossList[0];
+  showScreen("select");
+  updateSelectUi();
+});
+
+document.getElementById("startChallenge2v2Btn").addEventListener("click", () => {
+  battleMode = "challenge2v2";
+  teamA = null;
+  teamB = null;
+  selectingPlayer = "A";
+  selectedUnitA = null;
+  selectedUnitB = bossList[0];
+  showScreen("select");
+  updateSelectUi();
+});
+
 const units = unitList;
 
 const unitButtons = document.getElementById("unitButtons");
@@ -94,7 +115,7 @@ let currentTurn = 1;
 let currentPlayer = "A";
 let isTestMode = false;
 
-let battleMode = "1v1"; // "1v1" or "2v2"
+let battleMode = "1v1"; // "1v1" or "2v2" or "challenge1v1" or "challenge2v2"
 
 // 2on2用チーム構造
 let teamA = null;
@@ -125,8 +146,16 @@ let gameSetup = null;
 
 let actionLayer = null;
 
+function isTeamBattleMode() {
+  return battleMode === "2v2" || battleMode === "challenge2v2";
+}
+
+function isChallengeMode() {
+  return battleMode === "challenge1v1" || battleMode === "challenge2v2";
+}
+
 function getPlayerState(playerKey) {
-  if (battleMode === "2v2") {
+  if (isTeamBattleMode()) {
     return getActiveUnitState(playerKey);
   }
 
@@ -164,7 +193,7 @@ function setActiveUnit(playerKey, unitKey) {
 }
 
 function getCombatTargetState(playerKey) {
-  if (battleMode === "2v2") {
+  if (isTeamBattleMode()) {
     return getFocusUnitState(playerKey);
   }
 
@@ -172,7 +201,7 @@ function getCombatTargetState(playerKey) {
 }
 
 function canChangeFocus(playerKey) {
-  if (battleMode !== "2v2") return false;
+  if (!isTeamBattleMode()) return false;
   if (playerKey !== currentPlayer) return false;
   if (pendingChoice) return false;
   if (currentAttack.length > 0) return false;
@@ -353,20 +382,29 @@ function build1v1RenderHandlers(playerKey) {
 }
 
 function build2v2RenderHandlers(playerKey) {
+  const isBossSide = isChallengeMode() && playerKey === "B";
+
   return {
     currentPlayer,
     playerKey,
-    canChangeFocus: canChangeFocus(playerKey),
+    canChangeFocus: isBossSide ? false : canChangeFocus(playerKey),
     onToggleTeamMode: () => toggleTeamMode(playerKey),
     onSwitchActiveUnit: (unitKey) => {
+      const team = getTeam(playerKey);
+      if (!team || !team[unitKey]) return;
+
       setActiveUnit(playerKey, unitKey);
       redrawBattleBoards();
     },
     onSwitchFocusUnit: (unitKey) => {
+      const team = getTeam(playerKey);
+      if (!team || !team[unitKey]) return;
+
       if (!canChangeFocus(playerKey)) {
         showPopup("フォーカス変更は自分ターン中、かつQTE中でない時のみ可能");
         return;
       }
+
       setFocusUnit(playerKey, unitKey);
       redrawBattleBoards();
     },
@@ -388,7 +426,155 @@ function handleChoiceRequest(requestChoice) {
   renderPendingChoice();
 }
 
+function autoResolveBossQteIfNeeded() {
+  if (!isChallengeMode()) return false;
+
+  const context = currentAttackContext;
+  if (!context) return false;
+
+  if (context.ownerPlayer !== "A") return false;
+  if (context.enemyPlayer !== "B") return false;
+  if (!currentAttack || currentAttack.length === 0) return false;
+
+  const attacker = getPlayerState("A");
+  const defender = getCombatTargetState("B");
+  if (!attacker || !defender) return false;
+
+  const damageBySource = new Map();
+  let totalDamage = 0;
+  let hitCount = 0;
+
+  while (currentAttack.length > 0) {
+    const attack = currentAttack[0];
+    const sourceLabel = attack?.sourceLabel || `${attacker.name} ${context.slotNumber}.${context.slotLabel}`;
+    const baseDamage = attack ? attack.damage : 0;
+
+    const hitResult = resolveTakeHit({
+      attacker,
+      defender,
+      currentAttack,
+      attackIndex: 0,
+      modifyTakenDamage: (d, a, atk, dmg) =>
+        executeUnitModifyTakenDamage(d, a, atk, dmg)
+    });
+
+    if (!hitResult || !hitResult.cancelled) {
+      const finalDamage =
+        typeof hitResult?.finalDamage === "number"
+          ? hitResult.finalDamage
+          : baseDamage;
+
+      totalDamage += finalDamage;
+      hitCount++;
+
+      damageBySource.set(
+        sourceLabel,
+        (damageBySource.get(sourceLabel) || 0) + finalDamage
+      );
+
+      const damagedResult = executeUnitOnDamaged(defender, attacker);
+      if (damagedResult.message) {
+        appendBattleNotice(damagedResult.message);
+      }
+    }
+  }
+
+  context.hitCount += hitCount;
+
+  finishCurrentAttackResolution();
+
+if (checkBattleEnd()) {
+    return true;
+  }
+
+  const detailLines = [...damageBySource.entries()].map(
+    ([label, damage]) => `${label}<br>→ ${damage}ダメージ`
+  );
+
+  renderAttackLogText(
+    `${currentActionHeader}<br>` +
+    `${detailLines.join("<br>")}<br>` +
+    `合計${totalDamage}ダメージを与えた。`
+  );
+
+  return true;
+}
+
+function isUnitDefeated(unit) {
+  return !unit || unit.hp <= 0;
+}
+
+function isSideDefeated(playerKey) {
+  if (isTeamBattleMode()) {
+    const team = getTeam(playerKey);
+    if (!team) return true;
+
+    const unit1Dead = isUnitDefeated(team.unit1);
+    const unit2Dead = team.unit2 ? isUnitDefeated(team.unit2) : true;
+
+    return unit1Dead && unit2Dead;
+  }
+
+  return isUnitDefeated(getPlayerStateRaw(playerKey));
+}
+
+function finishBattle(winnerPlayer) {
+  const popup = document.getElementById("popup");
+  if (!popup) return;
+
+  popup.innerHTML = `
+    PLAYER ${winnerPlayer} の勝利！
+    <br><br>
+    <button id="backToTitleBtn">タイトルへ戻る</button>
+  `;
+
+  popup.style.display = "block";
+
+  document.getElementById("backToTitleBtn").addEventListener("click", () => {
+    popup.style.display = "none";
+
+    currentAttack = [];
+    currentAttackContext = null;
+    currentAttackContexts = [];
+    pendingChoice = null;
+    battleNotice = "";
+    currentActionHeader = "";
+    currentActionLabel = "";
+
+    teamA = null;
+    teamB = null;
+    playerAState = null;
+    playerBState = null;
+    selectedUnitA = null;
+    selectedUnitB = null;
+    selectingPlayer = "A";
+    currentTurn = 1;
+    currentPlayer = "A";
+
+    showScreen("title");
+  });
+}
+
+function checkBattleEnd() {
+  if (isSideDefeated("A")) {
+    finishBattle("B");
+    return true;
+  }
+
+  if (isSideDefeated("B")) {
+    finishBattle("A");
+    return true;
+  }
+
+  return false;
+}
+
 function renderAttackChoices() {
+  if (autoResolveBossQteIfNeeded()) {
+    clearBattleNotice();
+    return;
+  }
+
   renderAttackChoicesUI({
     currentAttack,
     battleNotice,
@@ -397,13 +583,15 @@ function renderAttackChoices() {
     onHit: (index) => takeHit(index),
     onEvade: (index) => evadeAttack(index),
     onSupportDefense: (index) => supportDefenseAttack(index),
-    canSupportDefense: battleMode === "2v2"
+    canSupportDefense: isTeamBattleMode()
   });
 
   clearBattleNotice();
 }
 function takeHit(i) {
-  return attackResolution.takeHit(i);
+  const result = attackResolution.takeHit(i);
+  checkBattleEnd();
+  return result;
 }
 
 function evadeAttack(i) {
@@ -411,7 +599,9 @@ function evadeAttack(i) {
 }
 
 function supportDefenseAttack(i) {
-  return attackResolution.supportDefenseAttack(i);
+  const result = attackResolution.supportDefenseAttack(i);
+  checkBattleEnd();
+  return result;
 }
 
 function finishCurrentAttackResolution() {
@@ -511,6 +701,8 @@ uiController = createUiController({
   playerBBox,
 
   getBattleMode: () => battleMode,
+isTeamBattleMode,
+
   getCurrentPlayer: () => currentPlayer,
   getCurrentTurn: () => currentTurn,
   getIsTestMode: () => isTestMode,
@@ -606,7 +798,7 @@ actionLayer = createActionLayer({
   setCurrentAction,
   appendBattleNotice,
 
-  redrawBattleBoards,
+redrawBattleBoards,
   renderAttackChoices,
   renderAttackLogText,
   showPopup,
@@ -620,6 +812,9 @@ actionLayer = createActionLayer({
 
 battleFlow = createBattleFlow({
   getBattleMode: () => battleMode,
+isTeamBattleMode,
+isChallengeMode,
+
 
   getCurrentPlayer: () => currentPlayer,
   setCurrentPlayer: (value) => { currentPlayer = value; },
@@ -656,17 +851,20 @@ setCurrentAttackContexts,
 
   executeUnitTurnEnd,
 
-  showPopup
+  showPopup,
+  getCurrentAttack,
+renderAttackChoices
 });
 
 gameSetup = createGameSetup({
   units,
-
+  bosses: bossList,
   unitButtons,
   selectGuide,
   selectedUnitsPreview,
-
   getBattleMode: () => battleMode,
+  isTeamBattleMode,
+  isChallengeMode,
 
   getSelectingPlayer: () => selectingPlayer,
   setSelectingPlayer: (v) => selectingPlayer = v,
@@ -745,6 +943,80 @@ gameSetup = createGameSetup({
     redrawBattleBoards();
     document.getElementById("attackLog").textContent = "バトル開始待機中";
     showScreen("battle");
+  },
+  initChallenge1v1: (unitA, bossUnit) => {
+    playerAState = createBattleState(unitA);
+    playerBState = createBattleState(bossUnit);
+
+    resetActionCount(playerAState);
+    resetActionCount(playerBState);
+
+    currentTurn = 1;
+    currentPlayer = "A";
+    currentAttack = [];
+    currentAttackContext = null;
+    currentAttackContexts = [];
+    battleNotice = "";
+    currentActionHeader = "";
+    currentActionLabel = "";
+    pendingChoice = null;
+
+    isTestMode = false;
+    selectingPlayer = "A";
+    selectedUnitA = null;
+    selectedUnitB = null;
+
+    redrawBattleBoards();
+    document.getElementById("attackLog").textContent = "チャレンジバトル開始";
+    showScreen("battle");
+  },
+
+  initChallenge2v2: (unitsA, bossUnits) => {
+    teamA = createTeam(unitsA[0], unitsA[1]);
+
+    teamB = {
+      unit1: createBattleState(bossUnits[0]),
+      unit2: bossUnits[1] ? createBattleState(bossUnits[1]) : null,
+
+      mode: "split",
+      activeUnitKey: "unit1",
+      focusUnitKey: "unit1",
+
+      unified: {
+        baseHpA: 0,
+        baseHpB: 0,
+        totalDamage: 0,
+        healA: 0,
+        healB: 0
+      }
+    };
+
+    playerAState = teamA.unit1;
+    playerBState = teamB.unit1;
+
+    resetActionCount(teamA.unit1);
+    resetActionCount(teamA.unit2);
+    resetActionCount(teamB.unit1);
+    if (teamB.unit2) resetActionCount(teamB.unit2);
+
+    currentTurn = 1;
+    currentPlayer = "A";
+    currentAttack = [];
+    currentAttackContext = null;
+    currentAttackContexts = [];
+    battleNotice = "";
+    currentActionHeader = "";
+    currentActionLabel = "";
+    pendingChoice = null;
+
+    isTestMode = false;
+    selectingPlayer = "A";
+    selectedUnitA = null;
+    selectedUnitB = null;
+
+    redrawBattleBoards();
+    document.getElementById("attackLog").textContent = "2機チャレンジバトル開始";
+    showScreen("battle");
   }
 });
 
@@ -755,6 +1027,8 @@ twoVtwoHelpers = create2v2Helpers({
 
 twoVtwoActions = create2v2Actions({
   getBattleMode: () => battleMode,
+isTeamBattleMode,
+
   getCurrentPlayer: () => currentPlayer,
   getTeam,
   getOpponentPlayer,
