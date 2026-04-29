@@ -302,7 +302,7 @@ export function executeShiningSpecial(state, specialKey, context = {}) {
   }
 
   if (special.effectType === "miki_action") {
-    state.evade -= 1;
+   state.evade = Math.max(0, state.evade - 1);
     state.shiningMikiUsedThisTurn += 1;
 
     if (typeof state.actionCount !== "number") {
@@ -311,7 +311,7 @@ export function executeShiningSpecial(state, specialKey, context = {}) {
     state.actionCount += 1;
 
     consumeActiveModeTurns(state, 1);
-    clampShiningEvade(state);
+    
 
     return {
       handled: true,
@@ -321,14 +321,14 @@ export function executeShiningSpecial(state, specialKey, context = {}) {
   }
 
   if (special.effectType === "spirit_focus") {
-    state.evade -= 3;
+    state.evade = Math.max(0, state.evade - 3);
 
     if (typeof state.actionCount !== "number") {
       state.actionCount = 0;
     }
 
     state.actionCount = Math.max(0, state.actionCount - 1);
-    clampShiningEvade(state);
+    
 
     return {
       handled: true,
@@ -346,10 +346,10 @@ export function executeShiningSpecial(state, specialKey, context = {}) {
   }
 
   if (special.effectType === "water_drop") {
-    state.evade -= 5;
+    state.evade = Math.max(0, state.evade - 5);
     state.hp = Math.ceil(state.hp / 2);
     state.shiningWaterDropPending = true;
-    clampShiningEvade(state);
+    
 
     return {
       handled: true,
@@ -632,7 +632,7 @@ export function onShiningResolveChoice(state, pendingChoice, selectedValue, cont
       };
     }
 
-    state.evade -= spend;
+    state.evade = Math.max(0, state.evade - spend);
     state.shiningResolvingFollowup = true;
 
     return {
