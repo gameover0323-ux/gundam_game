@@ -43,11 +43,14 @@ export function createActionLayer(ctx) {
 
     actor.lastSlotKey = slotKey;
 
-    const beforeResult = executeUnitBeforeSlot(actor, slotNumber, {
+const beforeResult = executeUnitBeforeSlot(actor, slotNumber, {
       ownerPlayer,
       enemyPlayer,
       enemyPlayerLabel: `PLAYER ${enemyPlayer}`,
-      enemyState: defender
+      enemyState: defender,
+      slotKey,
+      slot,
+      isForcedSlotAction: !!slotOverride
     });
 
     if (beforeResult.redraw) {
@@ -56,6 +59,12 @@ export function createActionLayer(ctx) {
     if (beforeResult.message) {
       ctx.appendBattleNotice(beforeResult.message);
     }
+    if (beforeResult.cancelSlot) {
+      ctx.redrawBattleBoards();
+      ctx.renderAttackLogText(beforeResult.message || "行動不能");
+      return false;
+    }
+    
 
     if (defender) {
       const enemyBeforeResult = executeUnitEnemyBeforeSlot(defender, slotNumber, {
@@ -193,7 +202,7 @@ ctx.setCurrentAction(
       actor.evade = totalEvade;
 
       const preview = executeUnitCanUseSpecial(actor, specialKey, {
-                ownerPlayer,
+        ownerPlayer,
         enemyPlayer: ctx.getOpponentPlayer(ownerPlayer),
         currentAttackContext: ctx.getCurrentAttackContext(),
         currentAttack: ctx.getCurrentAttack()
@@ -222,6 +231,15 @@ ctx.setCurrentAction(
         ctx.handleChoiceRequest(unitResult.requestChoice);
         return;
       }
+
+if (unitResult.startSlotAction) {
+  startSlotAction(
+    ownerPlayer,
+    unitResult.startSlotAction.slotKey,
+    unitResult.startSlotAction.slotData || null
+  );
+  return;
+}
 
       if (unitResult.appendAttacks && unitResult.appendAttacks.length > 0) {
         currentAttack.push(...unitResult.appendAttacks);
@@ -276,6 +294,8 @@ ctx.setCurrentAction(
       return;
     }
   }
+
+
 
 function resolvePendingChoice(selectedValue) {
     const pendingChoice = ctx.getPendingChoice();
