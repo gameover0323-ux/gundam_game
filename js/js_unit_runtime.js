@@ -587,6 +587,16 @@ export function executeUnitActionResolved(attacker, defender, context = {}) {
   };
 }
 
+export function executeUnitExtraWeaponResult(state, context = {}) {
+  const rules = unitRulesMap[state.unitId];
+
+  if (rules && rules.getExtraWeaponResult) {
+    return rules.getExtraWeaponResult(state, context);
+  }
+
+  return null;
+}
+
 export function executeUnitOnDamaged(defender, attacker) {
   const rules = unitRulesMap[defender.unitId];
 
