@@ -1,4 +1,4 @@
-import { unitList, bossList } from "./js_units_index.js";
+import { unitList, bossList, cpuList } from "./js_units_index.js";
 import {
   createBattleState,
   applyUnitDerivedState,
@@ -98,7 +98,27 @@ document.getElementById("startChallenge2v2Btn").addEventListener("click", () => 
   showScreen("select");
   updateSelectUi();
 });
+document.getElementById("startVsCpu1v1Btn").addEventListener("click", () => {
+  battleMode = "vscpu1v1";
+  teamA = null;
+  teamB = null;
+  selectingPlayer = "A";
+  selectedUnitA = null;
+  selectedUnitB = cpuList[0];
+  showScreen("select");
+  updateSelectUi();
+});
 
+document.getElementById("startVsCpu2v2Btn").addEventListener("click", () => {
+  battleMode = "vscpu2v2";
+  teamA = null;
+  teamB = null;
+  selectingPlayer = "A";
+  selectedUnitA = null;
+  selectedUnitB = null;
+  showScreen("select");
+  updateSelectUi();
+});
 const units = unitList;
 
 const unitButtons = document.getElementById("unitButtons");
@@ -147,11 +167,16 @@ let gameSetup = null;
 let actionLayer = null;
 
 function isTeamBattleMode() {
-  return battleMode === "2v2" || battleMode === "challenge2v2";
+  return battleMode === "2v2" ||
+    battleMode === "challenge2v2" ||
+    battleMode === "vscpu2v2";
 }
 
 function isChallengeMode() {
-  return battleMode === "challenge1v1" || battleMode === "challenge2v2";
+  return battleMode === "challenge1v1" ||
+    battleMode === "challenge2v2" ||
+    battleMode === "vscpu1v1" ||
+    battleMode === "vscpu2v2";
 }
 
 function getPlayerState(playerKey) {
@@ -400,7 +425,7 @@ function build2v2RenderHandlers(playerKey) {
       const team = getTeam(playerKey);
       if (!team || !team[unitKey]) return;
 
-          if (!canChangeFocus(playerKey)) {
+      if (!canChangeFocus(playerKey)) {
         showPopup("フォーカス変更は自分ターン中、かつQTE中でない時のみ可能");
         return;
       }
@@ -702,6 +727,7 @@ uiController = createUiController({
 
   getBattleMode: () => battleMode,
 isTeamBattleMode,
+
   getCurrentPlayer: () => currentPlayer,
   getCurrentTurn: () => currentTurn,
   getIsTestMode: () => isTestMode,
@@ -770,7 +796,7 @@ actionLayer = createActionLayer({
   getBattleMode: () => battleMode,
   getCurrentPlayer: () => currentPlayer,
 
-  getPendingChoice,
+getPendingChoice,
   clearPendingChoice,
 
   getCurrentAttack,
@@ -797,7 +823,7 @@ actionLayer = createActionLayer({
   setCurrentAction,
   appendBattleNotice,
 
-redrawBattleBoards,
+  redrawBattleBoards,
   renderAttackChoices,
   renderAttackLogText,
   showPopup,
@@ -813,7 +839,7 @@ battleFlow = createBattleFlow({
   getBattleMode: () => battleMode,
 isTeamBattleMode,
 isChallengeMode,
-
+executeTeamSlot: () => twoVtwoActions.executeTeamSlot(),
 
   getCurrentPlayer: () => currentPlayer,
   setCurrentPlayer: (value) => { currentPlayer = value; },
@@ -857,14 +883,14 @@ renderAttackChoices
 
 gameSetup = createGameSetup({
   units,
-bosses: bossList,
-
-
+  bosses: bossList,
+  cpus: cpuList,
   unitButtons,
   selectGuide,
   selectedUnitsPreview,
-
   getBattleMode: () => battleMode,
+  isTeamBattleMode,
+  isChallengeMode,
 
   getSelectingPlayer: () => selectingPlayer,
   setSelectingPlayer: (v) => selectingPlayer = v,
@@ -971,7 +997,7 @@ bosses: bossList,
     showScreen("battle");
   },
 
-  initChallenge2v2: (unitsA, bossUnits) => {
+ initChallenge2v2: (unitsA, bossUnits) => {
     teamA = createTeam(unitsA[0], unitsA[1]);
 
     teamB = {
@@ -1027,6 +1053,8 @@ twoVtwoHelpers = create2v2Helpers({
 
 twoVtwoActions = create2v2Actions({
   getBattleMode: () => battleMode,
+isTeamBattleMode,
+
   getCurrentPlayer: () => currentPlayer,
   getTeam,
   getOpponentPlayer,
