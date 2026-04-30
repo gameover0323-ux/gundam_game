@@ -6,7 +6,8 @@ import {
   executeUnitResolveChoice,
   executeUnitBeforeSlot,
   executeUnitEnemyBeforeSlot,
-  executeUnitAfterSlotResolved
+  executeUnitAfterSlotResolved,
+  executeUnitExtraWeaponResult
 } from "./js_unit_runtime.js";
 
 import { resolveSlotEffect } from "./js_slot_effects.js";
@@ -133,24 +134,41 @@ ctx.setCurrentAction(
       return;
     }
 
-    if (result.kind === "attack") {
-      ctx.setCurrentAttack(result.attacks);
-      ctx.setCurrentAttackContext({
-        ownerPlayer: slotMeta.ownerPlayer,
-        enemyPlayer: slotMeta.enemyPlayer,
-        slotKey: slotMeta.slotKey,
-        slotNumber: slotMeta.slotNumber,
-        slotLabel: slot.label,
-        slotDesc: slot.desc,
-        totalCount: result.attacks.length,
-        hitCount: 0,
-        evadeCount: 0
-      });
+if (result.kind === "attack") {
+  const extraResult = executeUnitExtraWeaponResult(actor, {
+    ownerPlayer: slotMeta.ownerPlayer,
+    enemyPlayer: slotMeta.enemyPlayer,
+    slotKey: slotMeta.slotKey,
+    slotNumber: slotMeta.slotNumber,
+    slot
+  });
 
-      ctx.redrawBattleBoards();
-      ctx.renderAttackChoices();
-      return;
+  if (extraResult && Array.isArray(extraResult.appendAttacks)) {
+    result.attacks.push(...extraResult.appendAttacks);
+
+    if (extraResult.message) {
+      ctx.appendBattleNotice(extraResult.message);
     }
+  }
+
+  ctx.setCurrentAttack(result.attacks);
+
+  ctx.setCurrentAttackContext({
+    ownerPlayer: slotMeta.ownerPlayer,
+    enemyPlayer: slotMeta.enemyPlayer,
+    slotKey: slotMeta.slotKey,
+    slotNumber: slotMeta.slotNumber,
+    slotLabel: slot.label,
+    slotDesc: slot.desc,
+    totalCount: result.attacks.length,
+    hitCount: 0,
+    evadeCount: 0
+  });
+
+  ctx.redrawBattleBoards();
+  ctx.renderAttackChoices();
+  return;
+}
 
     ctx.renderAttackLogText("この行動はまだ未対応");
   }
