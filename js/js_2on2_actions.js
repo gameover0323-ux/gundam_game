@@ -1,3 +1,5 @@
+import { executeUnitExtraWeaponResult } from "./js_unit_runtime.js";
+
 export function create2v2Actions(ctx) {
   function isTeamBattleMode() {
     return ctx.isTeamBattleMode
@@ -112,7 +114,23 @@ export function create2v2Actions(ctx) {
       const currentAttack = ctx.getCurrentAttack();
 
       currentAttackContexts.push(context);
+const extraResult = executeUnitExtraWeaponResult(unit, {
+  ownerPlayer: currentPlayer,
+  enemyPlayer,
+  slotKey,
+  slotNumber,
+  slot
+});
 
+if (extraResult && Array.isArray(extraResult.appendAttacks)) {
+  result.attacks.push(...extraResult.appendAttacks);
+
+  if (extraResult.message) {
+    ctx.appendBattleNotice(extraResult.message);
+  }
+
+  context.totalCount = result.attacks.length;
+}
       result.attacks.forEach((attack) => {
         currentAttack.push({
           ...attack,
