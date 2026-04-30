@@ -70,7 +70,17 @@ import {
 //ボス機体//
 import { devilGundamRules } from "./js_unit_rules_devil_gundam.js";
 
-
+//CPU専用機体//
+import {
+  getCpuGundamMcDerivedState,
+  onCpuGundamMcBeforeSlot,
+  onCpuGundamMcAfterSlotResolved,
+  onCpuGundamMcActionResolved,
+  onCpuGundamMcTurnEnd,
+  modifyCpuGundamMcTakenDamage,
+  modifyCpuGundamMcEvadeAttempt,
+  getCpuGundamMcExtraWeaponResult
+} from "./js_unit_rules_cpu_gundam_mc.js";
 
 export const unitRulesMap = {
   gundam_mc: {
@@ -141,6 +151,19 @@ export const unitRulesMap = {
     modifyEvadeAttempt: modifyStrikeEvadeAttempt,
     onResolveChoice: onStrikeResolveChoice
   },
+
+//CPU専用機体//
+cpu_gundam_mc: {
+  getDerivedState: getCpuGundamMcDerivedState,
+  onBeforeSlot: onCpuGundamMcBeforeSlot,
+  onAfterSlotResolved: onCpuGundamMcAfterSlotResolved,
+  onActionResolved: onCpuGundamMcActionResolved,
+  onTurnEnd: onCpuGundamMcTurnEnd,
+  modifyTakenDamage: modifyCpuGundamMcTakenDamage,
+  modifyEvadeAttempt: modifyCpuGundamMcEvadeAttempt,
+  getExtraWeaponResult: getCpuGundamMcExtraWeaponResult
+},
+  
   
   //ボス機体//
 devil_gundam: devilGundamRules,
