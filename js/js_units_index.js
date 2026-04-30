@@ -7,6 +7,9 @@ import { strike_gundam } from "./js_units_strike_gundam.js";
 //ボス機体//
 import { devil_gundam } from "./js_units_devil_gundam.js";
 
+//CPU専用機体//
+import { cpu_gundam_mc } from "./js_units_cpu_gundam_mc.js";
+
 export const unitList = [
   gundam_mc,
   z_gundam,
@@ -17,4 +20,8 @@ export const unitList = [
 
 export const bossList = [
   devil_gundam
+];
+
+export const cpuList = [
+  cpu_gundam_mc
 ];
