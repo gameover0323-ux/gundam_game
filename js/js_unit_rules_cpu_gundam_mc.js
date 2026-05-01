@@ -116,12 +116,16 @@ export function onCpuGundamMcAfterSlotResolved(state, slotNumber) {
   ensureCpuGundamState(state);
 
   if (slotNumber === 2) {
-    state.cpuGundamFullEvadePending = true;
-    return {
-      redraw: true,
-      message: "CPU特性：次のターン、必中を除く攻撃を全て回避"
-    };
-  }
+  state.cpuGundamFullEvadePending = true;
+
+  const beforeEvade = state.evade;
+  state.evade = Math.min(state.evadeMax, state.evade + 2);
+
+  return {
+    redraw: true,
+    message: `CPU特性：回避+${state.evade - beforeEvade}。次のターン、必中を除く攻撃を全て回避。`
+  };
+}
 
   if (slotNumber === 4 && state.hp >= 200) {
     state.cpuGundamReducePending = true;
@@ -154,6 +158,19 @@ export function onCpuGundamMcTurnEnd(state) {
   state.cpuGundamTurnCount += 1;
 
   const messages = [];
+
+  // 追加特性：毎ターン1/6で回避+3
+  if (Math.floor(Math.random() * 6) === 0) {
+    const beforeEvade = state.evade;
+    state.evade = Math.min(state.evadeMax, state.evade + 3);
+    const gained = state.evade - beforeEvade;
+
+    if (gained > 0) {
+      messages.push(`CPU特性：1/6判定成功。回避+${gained}`);
+    } else {
+      messages.push("CPU特性：1/6判定成功。ただし回避は上限");
+    }
+  }
 
   if (state.cpuGundamFullEvadePending) {
     state.cpuGundamFullEvadePending = false;
