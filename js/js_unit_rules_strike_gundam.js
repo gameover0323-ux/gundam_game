@@ -30,6 +30,8 @@ function ensureStrikeState(state) {
   if (typeof state.strikeAnchorSureHitNext !== "boolean") state.strikeAnchorSureHitNext = false;
 if (typeof state.strikeAnchorSureHitActiveThisAction !== "boolean") state.strikeAnchorSureHitActiveThisAction = false;
 if (typeof state.strikeShortBattleUsedThisTurn !== "number") state.strikeShortBattleUsedThisTurn = 0;
+  if (typeof state.shieldCount !== "number") state.shieldCount = 3;
+if (typeof state.shieldActive !== "boolean") state.shieldActive = false;
 }
 
 function getSeedEffect(state) {
@@ -221,12 +223,6 @@ export function canUseStrikeSpecial(state, specialKey, context = {}) {
     const allowed = state.formId === "aile" && state.evade >= 1 && !state.strikeOsCheckUsedThisTurn;
     return { allowed, message: allowed ? null : "条件未達" };
   }
-
-  if (special.effectType === "aile_shield") {
-    const allowed = state.formId === "aile" && state.strikeShieldStock > 0 && !state.strikeShieldActive;
-    return { allowed, message: allowed ? null : "条件未達" };
-  }
-
   if (special.effectType === "sword_issen") {
     const allowed = state.formId === "sword" && !state.strikeSwordIssenUsed;
     return { allowed, message: allowed ? null : "条件未達" };
@@ -304,12 +300,6 @@ export function executeStrikeSpecial(state, specialKey, context = {}) {
     return { handled: true, redraw: true, message: "OSチェック: 回避-1/20回復" };
   }
 
-  if (special.effectType === "aile_shield") {
-    state.strikeShieldStock -= 1;
-    state.strikeShieldActive = true;
-    markStrikeActivity(state);
-    return { handled: true, redraw: true, message: "シールド展開" };
-  }
 
   if (special.effectType === "sword_issen") {
     state.strikeSwordIssenUsed = true;
@@ -426,7 +416,7 @@ export function onStrikeTurnEnd(state, context = {}) {
   let redraw = false;
 
   state.strikeOsCheckUsedThisTurn = false;
-  state.strikeShieldActive = false;
+  state.shieldActive = false;
   state.strikeAgniOutputUsedThisAction = false;
 state.strikeShortBattleUsedThisTurn = 0;
   if (!state.strikePsArmorBroken && state.strikePsArmor > 0) {
