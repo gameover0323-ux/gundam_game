@@ -42,7 +42,7 @@ export const strike_gundam = {
         { name: "特性.PS装甲", effectType: "trait_ps_armor", timing: "passive", desc: "PS耐久300。ビーム・軽減不可以外の攻撃を軽減する。", actionType: "auto" },
         { name: "ストライカーパック換装", effectType: "strike_pack_change", timing: "self", desc: "通常、エール、ソード、ランチャーへ換装する。", actionType: "instant" },
         { name: "OSチェック", effectType: "os_check", timing: "self", desc: "回避1消費。20回復。1ターン1回。", actionType: "instant" },
-        { name: "シールド", effectType: "aile_shield", timing: "defense", desc: "相手攻撃時、3回だけ1ターンに受けるダメージを半減する。", actionType: "instant" }
+        { name: "シールド", effectType: "shield", timing: "reaction"  desc: "3回まで使用可能。このターンの被ダメージを半減する。",actionType: "instant" }
       ]
     },
 
