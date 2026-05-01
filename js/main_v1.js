@@ -450,6 +450,15 @@ function handleChoiceRequest(requestChoice) {
   redrawBattleBoards();
   renderPendingChoice();
 }
+function shouldCpuUseEvade(defender) {
+  if (!defender) return false;
+  if (defender.evade <= 0) return false;
+
+  const evadeMax = Math.max(1, defender.evadeMax || 1);
+  const rate = defender.evade / evadeMax;
+
+  return Math.random() < rate;
+}
 
 function autoResolveBossQteIfNeeded() {
   if (!isChallengeMode()) return false;
@@ -572,6 +581,16 @@ if (checkBattleEnd()) {
   );
 
   return true;
+}
+
+function shouldCpuUseEvade(defender) {
+  if (!defender) return false;
+  if (defender.evade <= 0) return false;
+
+  const evadeMax = Math.max(1, defender.evadeMax || 1);
+  const rate = defender.evade / evadeMax;
+
+  return Math.random() < rate;
 }
 
 function isUnitDefeated(unit) {
@@ -845,7 +864,7 @@ actionLayer = createActionLayer({
   getBattleMode: () => battleMode,
   getCurrentPlayer: () => currentPlayer,
 
-getPendingChoice,
+  getPendingChoice,
   clearPendingChoice,
 
   getCurrentAttack,
@@ -1046,7 +1065,7 @@ gameSetup = createGameSetup({
     showScreen("battle");
   },
 
- initChallenge2v2: (unitsA, bossUnits) => {
+  initChallenge2v2: (unitsA, bossUnits) => {
     teamA = createTeam(unitsA[0], unitsA[1]);
 
     teamB = {
