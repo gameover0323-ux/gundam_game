@@ -7,7 +7,7 @@ export const cpu_mobile_ginn = {
   forms: {
     base: {
       name: "モビルジン",
-      hp: 550,
+      hp: 450,
       evadeMax: 4,
       rollableSlotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"],
       ownedSlotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"],
