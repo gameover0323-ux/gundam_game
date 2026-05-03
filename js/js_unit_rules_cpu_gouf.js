@@ -33,7 +33,7 @@ export function getCpuGoufDerivedState(state) {
   ensureCpuGoufState(state);
 
   const status = [
-    "CPU専用：初心者向け",
+    "難易度☆☆",
     "特性：相手が非攻撃行動なら次ターン連続行動"
   ];
 
