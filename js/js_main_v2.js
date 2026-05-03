@@ -1,3 +1,13 @@
+import {
+  createRoomId,
+  writeRoom,
+  readRoom,
+  updateRoom,
+  listenRoom,
+  buildInitialRoomData
+} from "./js_online_firebase.js";
+
+import { onlineState } from "./js_online_state.js";
 import { unitList, bossList, cpuList, cpuBeginnerList } from "./js_units_index.js";
 import {
   createBattleState,
@@ -46,16 +56,7 @@ import { createGameSetup } from "./js_game_setup.js";
 
 import { createActionLayer } from "./js_action_layer.js";
 
-import {
-  createRoomId,
-  writeRoom,
-  readRoom,
-  updateRoom,
-  listenRoom,
-  buildInitialRoomData
-} from "./js_online_firebase.js";
 
-import { onlineState } from "./js_online_state.js";
 
 const screens = {
   title: document.getElementById("title"),
