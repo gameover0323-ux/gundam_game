@@ -116,7 +116,16 @@ import {
   onCpuWingZeroDamaged
 } from "./js_unit_rules_cpu_wing_zero.js";
 
-
+import {
+  getCpuStrikeDerivedState,
+  onCpuStrikeBeforeSlot,
+  onCpuStrikeAfterSlotResolved,
+  onCpuStrikeActionResolved,
+  onCpuStrikeTurnEnd,
+  modifyCpuStrikeTakenDamage,
+  modifyCpuStrikeEvadeAttempt,
+  getCpuStrikeExtraWeaponResult
+} from "./js_unit_rules_cpu_strike_gundam.js";
 
 
 export const unitRulesMap = {
@@ -233,6 +242,18 @@ cpu_gundam_mc: {
   modifyEvadeAttempt: modifyCpuWingZeroEvadeAttempt,
   getExtraWeaponResult: getCpuWingZeroExtraWeaponResult
 },
+
+cpu_strike_gundam: {
+  getDerivedState: getCpuStrikeDerivedState,
+  onBeforeSlot: onCpuStrikeBeforeSlot,
+  onAfterSlotResolved: onCpuStrikeAfterSlotResolved,
+  onActionResolved: onCpuStrikeActionResolved,
+  onTurnEnd: onCpuStrikeTurnEnd,
+  modifyTakenDamage: modifyCpuStrikeTakenDamage,
+  modifyEvadeAttempt: modifyCpuStrikeEvadeAttempt,
+  getExtraWeaponResult: getCpuStrikeExtraWeaponResult
+},
+  
   //ボス機体//
 devil_gundam: devilGundamRules,
 };
