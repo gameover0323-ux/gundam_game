@@ -104,6 +104,21 @@ import {
   onCpuShiningDamaged
 } from "./js_unit_rules_cpu_shining_gundam.js";
 
+import {
+  getCpuWingZeroDerivedState,
+  onCpuWingZeroBeforeSlot,
+  onCpuWingZeroAfterSlotResolved,
+  onCpuWingZeroActionResolved,
+  onCpuWingZeroTurnEnd,
+  modifyCpuWingZeroTakenDamage,
+  modifyCpuWingZeroEvadeAttempt,
+  getCpuWingZeroExtraWeaponResult,
+  onCpuWingZeroDamaged
+} from "./js_unit_rules_cpu_wing_zero.js";
+
+
+
+
 export const unitRulesMap = {
   gundam_mc: {
     getDerivedState: getGundamMcDerivedState,
@@ -170,7 +185,7 @@ export const unitRulesMap = {
     onActionResolved: onStrikeActionResolved,
     onDamaged: onStrikeDamaged,
     modifyTakenDamage: modifyStrikeTakenDamage,
-       modifyEvadeAttempt: modifyStrikeEvadeAttempt,
+    modifyEvadeAttempt: modifyStrikeEvadeAttempt,
     onResolveChoice: onStrikeResolveChoice
   },
   
@@ -207,7 +222,17 @@ cpu_gundam_mc: {
   modifyEvadeAttempt: modifyCpuShiningEvadeAttempt,
   getExtraWeaponResult: getCpuShiningExtraWeaponResult
 },
-  
+  cpu_wing_zero: {
+  getDerivedState: getCpuWingZeroDerivedState,
+  onBeforeSlot: onCpuWingZeroBeforeSlot,
+  onAfterSlotResolved: onCpuWingZeroAfterSlotResolved,
+  onActionResolved: onCpuWingZeroActionResolved,
+  onTurnEnd: onCpuWingZeroTurnEnd,
+  onDamaged: onCpuWingZeroDamaged,
+  modifyTakenDamage: modifyCpuWingZeroTakenDamage,
+  modifyEvadeAttempt: modifyCpuWingZeroEvadeAttempt,
+  getExtraWeaponResult: getCpuWingZeroExtraWeaponResult
+},
   //ボス機体//
 devil_gundam: devilGundamRules,
 };
