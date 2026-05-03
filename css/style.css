@@ -214,3 +214,21 @@ button{
   flex-wrap: wrap;
   gap: 8px;
 }
+.titleModeBlock {
+  width: 100%;
+  max-width: 420px;
+  margin: 12px auto;
+}
+
+.titleModeBlock .titleMenuGrid {
+  margin: 0 auto 6px;
+}
+
+.titleModeInfo {
+  border: 1px solid #777;
+  background: #111;
+  padding: 8px 10px;
+  line-height: 1.5;
+  font-size: 13px;
+  text-align: left;
+}
