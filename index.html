@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GUNDAM BATTLE SLOT</title>
-<link rel="stylesheet" href="./css/style.css">
+<link rel="stylesheet" href="css_style.css">
 </head>
 <body>
 
@@ -42,14 +42,24 @@
     </div>
   </div>
 
+  <div class="titleModeBlock">
+    <div class="titleMenuGrid">
+      <button id="startOnline1v1Btn">オンライン1on1</button>
+      <button id="startOnline2v2Btn">オンライン2on2</button>
+    </div>
+    <div class="titleModeInfo">
+      遠方の友人とURLを共有して対戦するオンラインモード β
+    </div>
+  </div>
+
   <div class="updateInfoBox">
     <h2>アップデート情報</h2>
     <div class="updateInfoCell">
-2025/5/3
-アップデート中:初心者向け機体実装中
-ザクⅡ(一般兵)、グフ、モビルジン
-初心者向け施行中
-アップデート作業中はボタンが効かない場合があります。
+      2025/5/4<br>
+      アップデート中:初心者向け機体実装中<br>
+      オンラインモードβ施行中<br>
+      初心者向け施行<br>
+      アップデート作業中はボタンが効かない場合があります。
     </div>
   </div>
 </div>
@@ -131,11 +141,34 @@
   </div>
 
 </div>
+
+<!-- オンライン部屋画面 -->
+<div id="onlineRoom" class="screen">
+  <h2>オンライン対戦 β</h2>
+
+  <button id="createOnlineRoomBtn">部屋を作る</button>
+
+  <div style="margin:12px 0;">
+    <input id="onlineRoomIdInput" placeholder="部屋IDを入力">
+    <button id="joinOnlineRoomBtn">部屋に入る</button>
+  </div>
+
+  <div id="onlineRoomStatus">部屋未作成</div>
+
+  <div id="onlineInviteUrl" style="margin-top:12px; white-space:pre-wrap;"></div>
+
+  <button id="backFromOnlineRoomBtn">タイトルに戻る</button>
+</div>
+
 <!-- popup -->
 <div id="popup" class="popup"></div>
 
-  <script type="module" src="./js/js_main_v2.js"></script>
+<script type="module" src="js_main.js"></script>
 
-</script>
+<!-- popup -->
+<div id="popup" class="popup"></div>
+
+<script type="module" src="js_main.js"></script>
+
 </body>
 </html>
