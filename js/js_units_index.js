@@ -12,6 +12,8 @@ import { devil_gundam } from "./js_units_devil_gundam.js";
 import { cpu_gundam_mc } from "./js_units_cpu_gundam_mc.js";
 import { cpu_z_gundam } from "./js_units_cpu_z_gundam.js";
 import { cpu_shining_gundam } from "./js_units_cpu_shining_gundam.js";
+import { cpu_wing_zero } from "./js_units_cpu_wing_zero.js";
+
 
 export const unitList = [
   gundam_mc,
@@ -28,5 +30,6 @@ export const bossList = [
 export const cpuList = [
   cpu_gundam_mc,
   cpu_z_gundam,
-  cpu_shining_gundam
+  cpu_shining_gundam,
+  cpu_wing_zero
 ];
