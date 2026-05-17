@@ -1,3 +1,4 @@
+import { createOnlineRoomController } from "./js_online_room_controller.js";
 import { createBattleRecordController } from "./js_battle_record_controller.js";
 import { createOnlineActionSync } from "./js_online_action_sync.js";
 import { createOnlineBattleUi } from "./js_online_battle_ui.js";
@@ -318,6 +319,7 @@ let onlineBattleUi = null;
 let onlineActionSync = null;
 let twoVtwoCore = null;
 let battleRecordController = null;
+let onlineRoomController = null;
 /*
   battleMode:
   - 1v1
