@@ -366,11 +366,29 @@ function canUseDebugUnit() {
 function getTitleName(titleId) {
   return TITLE_NAME_MAP[titleId] || titleId;
 }
-
-function listenRandomMatchAnnouncementsOnceReady() {
-  return randomMatchController.listenRandomMatchAnnouncementsOnceReady();
+function renderAccountListPanel() {
+  return playerStatsUi.renderAccountListPanel();
 }
 
+function refreshPlayerAchievementsNow() {
+  return playerStatsUi.refreshPlayerAchievementsNow();
+}
+
+function renderPlayerStatsPanel() {
+  return playerStatsUi.renderPlayerStatsPanel();
+}
+
+function renderTitleCustomizePanel() {
+  return playerStatsUi.renderTitleCustomizePanel();
+}
+
+function renderTitleListPanel() {
+  return playerStatsUi.renderTitleListPanel();
+}
+
+function renderTrophyCustomizePanel() {
+  return playerStatsUi.renderTrophyCustomizePanel();
+}
 function getUnitTrophyText(profile, unitId) {
   const trophies =
     profile?.trophies?.byUnit?.[unitId] || [];
@@ -1677,12 +1695,13 @@ onlineBattleUi = createOnlineBattleUi({
   isOnlineEnabled: () => onlineState.enabled,
   getOnlineRoomId: () => onlineState.roomId,
   getOnlineMyPlayer: () => onlineState.myPlayer,
-getOnlineBattleStarted: () => onlineBattleStarted,
+
+  getOnlineBattleStarted: () => onlineBattleStarted,
   getOnlineBattleFinished: () => onlineBattleFinished,
   setOnlineBattleFinished: (value) => {
     onlineBattleFinished = value;
   },
-onlineBattleUi.bindBeforeUnloadLeaveHandler();
+
   updateRoom,
 
   showPopup,
@@ -1693,6 +1712,8 @@ onlineBattleUi.bindBeforeUnloadLeaveHandler();
   resetOnlineStateForLocalBattle,
   resetLocalSelectionAndBattleState
 });
+
+onlineBattleUi.bindBeforeUnloadLeaveHandler();
 uiController = createUiController({
   screens,
 
