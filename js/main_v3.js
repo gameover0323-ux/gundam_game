@@ -121,93 +121,11 @@ startOnline2v2Btn.addEventListener("click", () => {
   showPopup("オンライン2on2はオンライン1on1安定後に実装予定です");
 });
 
-createOnlineRoomBtn.addEventListener("click", async () => {
-  try {await cleanupOldRooms();
-    const roomId = createRoomId();
-
-    onlineState.enabled = true;
-    onlineState.roomId = roomId;
-    onlineState.myPlayer = "A";
-    onlineState.isHost = true;
-onlineSelectEntered = false;
-onlineBattleStarted = false;
-    onlineRoomStatus.textContent = `部屋作成中... 部屋ID：${roomId}`;
-
-    const initialRoomData = buildInitialRoomData({ mode: "online1v1" });
-Object.assign(initialRoomData.players.A, {
-  profileId: playerSession.profile?.id || null,
-  profileName: playerSession.profile?.name || playerSession.profile?.id || "ゲスト",
-  equippedTitles: Array.isArray(playerSession.profile?.equippedTitles)
-    ? playerSession.profile.equippedTitles
-    : [],
-  lastSeen: Date.now()
+createOnlineRoomBtn.addEventListener("click", () => {
+  onlineRoomController.createOnlineRoom();
 });
-
-await writeRoom(roomId, initialRoomData);
-    const inviteUrl = `${location.origin}${location.pathname}?mode=online1v1&room=${roomId}`;
-
-    onlineRoomStatus.textContent = `部屋を作成しました。あなたはPLAYER Aです。部屋ID：${roomId}`;
-    onlineInviteUrl.textContent = inviteUrl;
-
-    listenRoom(roomId, (roomData) => {
-  if (!roomData) return;
-
-  const playerBJoined = roomData.players?.B?.joined;
-
-  if (playerBJoined) {
-    onlineRoomStatus.textContent = `PLAYER B が参加しました。部屋ID：${roomId}`;
-    enterOnlineSelect();
-  } else {
-    onlineRoomStatus.textContent = `PLAYER B の参加待ちです。部屋ID：${roomId}`;
-  }
-
-  applyOnlineRoomData(roomData);
-});
-  } catch (error) {
-    console.error(error);
-    onlineRoomStatus.textContent = "部屋作成に失敗しました";
-    showPopup(`部屋作成エラー：${error.message}`);
-  }
-});
-
-joinOnlineRoomBtn.addEventListener("click", async () => {
-  await cleanupOldRooms();
-
-  const roomId = onlineRoomIdInput.value.trim();
-
-  if (!roomId) {
-    showPopup("部屋IDを入力してください");
-    return;
-  }
-
-  const snapshot = await readRoom(roomId);
-  if (!snapshot.exists()) {
-    showPopup("部屋が見つかりません");
-    return;
-  }
-
-  onlineState.enabled = true;
-  onlineState.roomId = roomId;
-  onlineState.myPlayer = "B";
-  onlineState.isHost = false;
-onlineSelectEntered = false;
-onlineBattleStarted = false;
-  await updateRoom(roomId, {
-  "players/B/joined": true,
-  "players/B/left": false,
-  "players/B/lastSeen": Date.now(),
-  ...getOnlineProfilePatch("B"),
-  "meta/updatedAt": Date.now()
-});
-  onlineRoomStatus.textContent = "部屋に参加しました。あなたはPLAYER Bです。";
-
-  listenRoom(roomId, (roomData) => {
-  if (!roomData) return;
-
-  onlineRoomStatus.textContent = "オンライン部屋に接続中です。";
-  enterOnlineSelect();
-  applyOnlineRoomData(roomData);
-});
+joinOnlineRoomBtn.addEventListener("click", () => {
+  onlineRoomController.joinOnlineRoom();
 });
 
 backFromOnlineRoomBtn.addEventListener("click", () => {
@@ -1435,24 +1353,7 @@ if (onlineState.enabled && beforePlayer !== currentPlayer) {
   return result;
 }
   
-function bootOnlineFromUrl() {
-  const params = new URLSearchParams(location.search);
-  const mode = params.get("mode");
-  const roomId = params.get("room");
 
-  if (mode !== "online1v1" || !roomId) return;
-
-  battleMode = "online1v1";
-  showScreen("onlineRoom");
-
-  if (onlineRoomIdInput) {
-    onlineRoomIdInput.value = roomId;
-  }
-
-  if (onlineRoomStatus) {
-    onlineRoomStatus.textContent = "招待URLから部屋IDを読み込みました。「部屋に入る」を押してください。";
-  }
-}
 let onlineEncounterSaved = false;
 let currentOnlineOpponentPlayerId = "";
 let onlineBattleStarted = false;
@@ -1511,27 +1412,6 @@ function abortCurrentBattleWithoutRecordForRandomMatch() {
   onlineSelectEntered = false;
   onlineActionSeq = 0;
 }
-
-function getOnlineProfilePatch(playerKey) {
-  const profile = playerSession.profile;
-
-  if (!profile) {
-    return {
-      [`players/${playerKey}/profileId`]: null,
-      [`players/${playerKey}/profileName`]: "ゲスト",
-      [`players/${playerKey}/equippedTitles`]: []
-    };
-  }
-
-  return {
-    [`players/${playerKey}/profileId`]: profile.id || null,
-    [`players/${playerKey}/profileName`]: profile.name || profile.id || "名無し",
-    [`players/${playerKey}/equippedTitles`]: Array.isArray(profile.equippedTitles)
-      ? profile.equippedTitles
-      : []
-  };
-}
-
 function getOnlineTitleText(playerData) {
   const titleIds = Array.isArray(playerData?.equippedTitles)
     ? playerData.equippedTitles
@@ -1544,86 +1424,30 @@ function getOnlineTitleText(playerData) {
   return titleIds.map(id => `[${getTitleName(id)}]`).join("");
 }
 
-function applyOnlineRoomData(roomData) {
-  if (!onlineState.enabled || !roomData) return;
-renderOnlineExtraUi(roomData);
-applyOnlinePeaceRequest(roomData);
-applyOnlineMetaResult(roomData);
-  const playerA = roomData.players?.A || {};
-  const playerB = roomData.players?.B || {};
 
-  if (playerA.unitId) {
-    selectedUnitA = getUnitById(playerA.unitId);
-  }
-
-  if (playerB.unitId) {
-    selectedUnitB = getUnitById(playerB.unitId);
-  }
-
-  updateSelectUi();
-applyOnlineAction(roomData.action);
-  if (
-    !onlineBattleStarted &&
-    playerA.ready &&
-    playerB.ready &&
-    selectedUnitA &&
-    selectedUnitB
-  ) {
-
-    saveOnlineEncounteredPlayer(roomData);
-    onlineBattleStarted = true;
-    initOnline1v1Battle(selectedUnitA, selectedUnitB);
-  }
-}
-
-function enterOnlineSelect() {
-  if (onlineSelectEntered) return;
-
-  battleMode = "online1v1";
-  teamA = null;
-  teamB = null;
-  selectedUnitA = null;
-  selectedUnitB = null;
-  selectingPlayer = onlineState.myPlayer === "B" ? "B" : "A";
-  onlineBattleStarted = false;
-  onlineSelectEntered = true;
-
-  showScreen("select");
-  loadUnitButtons();
-}
 function canOperateOnlinePlayer() {
   if (!onlineState.enabled) return true;
   return currentPlayer === onlineState.myPlayer;
 }
-
-function initOnline1v1Battle(unitA, unitB) {
-  playerAState = createBattleState(unitA);
-  playerBState = createBattleState(unitB);
-
-  resetActionCount(playerAState);
-  resetActionCount(playerBState);
-
-  currentTurn = 1;
-  currentPlayer = "A";
-  currentAttack = [];
-  currentAttackContext = null;
-  currentAttackContexts = [];
-  battleNotice = "";
-  currentActionHeader = "";
-  currentActionLabel = "";
-  pendingChoice = null;
-
-onlineBattleFinished = false;
-  
-  isTestMode = false;
-applyBattleDisplayNames();
-  redrawBattleBoards();
-  ensureOnlineBattleExtraUi();
-  document.getElementById("attackLog").textContent = "オンラインバトル開始";
-  updateDebugButtonVisibility();
-  showScreen("battle");
+function getOnlineProfilePatch(playerKey) {
+  return onlineRoomController.getOnlineProfilePatch(playerKey);
 }
 
+function bootOnlineFromUrl() {
+  return onlineRoomController.bootOnlineFromUrl();
+}
+
+function applyOnlineRoomData(roomData) {
+  return onlineRoomController.applyOnlineRoomData(roomData);
+}
+
+function enterOnlineSelect() {
+  return onlineRoomController.enterOnlineSelect();
+}
+
+function initOnline1v1Battle(unitA, unitB) {
+  return onlineRoomController.initOnline1v1Battle(unitA, unitB);
+}
 
 onlineActionSync = createOnlineActionSync({
   isOnlineEnabled: () => onlineState.enabled,
@@ -1888,6 +1712,115 @@ setCurrentAttackContexts,
   showPopup,
   getCurrentAttack,
 renderAttackChoices
+});
+onlineRoomController = createOnlineRoomController({
+  getPlayerProfile: () => playerSession.profile,
+
+  getOnlineRoomIdInput: () => onlineRoomIdInput,
+  getOnlineRoomStatus: () => onlineRoomStatus,
+  getOnlineInviteUrl: () => onlineInviteUrl,
+
+  isOnlineEnabled: () => onlineState.enabled,
+  getOnlineMyPlayer: () => onlineState.myPlayer,
+
+  setOnlineState: ({ enabled, roomId, myPlayer, isHost }) => {
+    onlineState.enabled = enabled;
+    onlineState.roomId = roomId;
+    onlineState.myPlayer = myPlayer;
+    onlineState.isHost = isHost;
+  },
+
+  getOnlineBattleStarted: () => onlineBattleStarted,
+  setOnlineBattleStarted: (value) => {
+    onlineBattleStarted = value;
+  },
+
+  getOnlineSelectEntered: () => onlineSelectEntered,
+  setOnlineSelectEntered: (value) => {
+    onlineSelectEntered = value;
+  },
+
+  setBattleMode: (value) => {
+    battleMode = value;
+  },
+
+  getSelectedUnitA: () => selectedUnitA,
+  setSelectedUnitA: (value) => {
+    selectedUnitA = value;
+  },
+
+  getSelectedUnitB: () => selectedUnitB,
+  setSelectedUnitB: (value) => {
+    selectedUnitB = value;
+  },
+
+  setSelectingPlayer: (value) => {
+    selectingPlayer = value;
+  },
+
+  setTeamA: (value) => {
+    teamA = value;
+  },
+
+  setTeamB: (value) => {
+    teamB = value;
+  },
+
+  setPlayerAState: (value) => {
+    playerAState = value;
+  },
+
+  setPlayerBState: (value) => {
+    playerBState = value;
+  },
+
+  resetBattleRuntimeState: ({
+    currentTurn: nextTurn,
+    currentPlayer: nextPlayer,
+    isTestMode: nextTestMode,
+    onlineBattleFinished: nextOnlineBattleFinished
+  }) => {
+    currentTurn = nextTurn;
+    currentPlayer = nextPlayer;
+    currentAttack = [];
+    currentAttackContext = null;
+    currentAttackContexts = [];
+    battleNotice = "";
+    currentActionHeader = "";
+    currentActionLabel = "";
+    pendingChoice = null;
+    isTestMode = nextTestMode;
+    onlineBattleFinished = nextOnlineBattleFinished;
+  },
+
+  createRoomId,
+  writeRoom,
+  readRoom,
+  updateRoom,
+  listenRoom,
+  buildInitialRoomData,
+  cleanupOldRooms,
+
+  createBattleState,
+  resetActionCount,
+
+  getUnitById,
+  updateSelectUi,
+  applyOnlineAction,
+  renderOnlineExtraUi,
+  applyOnlinePeaceRequest,
+  applyOnlineMetaResult,
+  saveOnlineEncounteredPlayer,
+
+  initOnline1v1Battle: (...args) => onlineRoomController.initOnline1v1Battle(...args),
+
+  applyBattleDisplayNames,
+  redrawBattleBoards,
+  ensureOnlineBattleExtraUi,
+  updateDebugButtonVisibility,
+  showScreen,
+  loadUnitButtons,
+  showPopup
 });
 randomMatchController = createRandomMatchController({
   getScreens: () => screens,
