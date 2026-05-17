@@ -1485,7 +1485,30 @@ function syncExtraUnlockedUnitsFromProfile() {
 
 }
 
+function abortCurrentBattleWithoutRecordForRandomMatch() {
+  currentAttack = [];
+  currentAttackContext = null;
+  currentAttackContexts = [];
+  pendingChoice = null;
+  battleNotice = "";
+  currentActionHeader = "";
+  currentActionLabel = "";
 
+  teamA = null;
+  teamB = null;
+  playerAState = null;
+  playerBState = null;
+  selectedUnitA = null;
+  selectedUnitB = null;
+  selectingPlayer = "A";
+  currentTurn = 1;
+  currentPlayer = "A";
+
+  onlineBattleStarted = false;
+  onlineBattleFinished = false;
+  onlineSelectEntered = false;
+  onlineActionSeq = 0;
+}
 
 function getOnlineProfilePatch(playerKey) {
   const profile = playerSession.profile;
@@ -1517,50 +1540,6 @@ function getOnlineTitleText(playerData) {
   }
 
   return titleIds.map(id => `[${getTitleName(id)}]`).join("");
-}
-
-  const battleScreen = document.getElementById("battle");
-  if (!battleScreen) return;
-
-  battleScreen.style.position = "relative";
-
-  const hud = document.createElement("div");
-  hud.id = "onlineTopPlayerHud";
-  hud.style.display = onlineState.enabled ? "grid" : "none";
-  hud.style.position = "absolute";
-  hud.style.top = "8px";
-  hud.style.left = "14px";
-  hud.style.right = "14px";
-  hud.style.zIndex = "5";
-  hud.style.gridTemplateColumns = "minmax(0, 1fr) 120px minmax(0, 1fr)";
-  hud.style.gap = "8px";
-  hud.style.alignItems = "start";
-  hud.style.pointerEvents = "none";
-
-  hud.innerHTML = `
-    <div id="onlineTopPlayerA" style="text-align:center;pointer-events:auto;min-width:0;">
-      <div style="display:flex;gap:4px;justify-content:center;align-items:center;min-width:0;">
-        <input id="onlineChatInputA" maxlength="50" placeholder="50文字まで" style="width:100%;min-width:0;max-width:210px;">
-        <button id="onlineChatSendBtnA" style="width:54px;min-width:54px;">送信</button>
-      </div>
-      <div id="onlinePlayerInfoA" style="font-size:14px;margin-top:8px;line-height:1.4;word-break:break-word;"></div>
-    </div>
-
-    <div></div>
-
-    <div id="onlineTopPlayerB" style="text-align:center;pointer-events:auto;min-width:0;">
-      <div style="display:flex;gap:4px;justify-content:center;align-items:center;min-width:0;">
-        <input id="onlineChatInputB" maxlength="50" placeholder="50文字まで" style="width:100%;min-width:0;max-width:210px;">
-        <button id="onlineChatSendBtnB" style="width:54px;min-width:54px;">送信</button>
-      </div>
-      <div id="onlinePlayerInfoB" style="font-size:14px;margin-top:8px;line-height:1.4;word-break:break-word;"></div>
-    </div>
-  `;
-
-  battleScreen.prepend(hud);
-
-  document.getElementById("onlineChatSendBtnA")?.addEventListener("click", () => sendOnlineChat("A"));
-document.getElementById("onlineChatSendBtnB")?.addEventListener("click", () => sendOnlineChat("B"));
 }
 
 function applyOnlineRoomData(roomData) {
