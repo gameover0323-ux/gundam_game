@@ -1519,6 +1519,21 @@ onlineBattleUi = createOnlineBattleUi({
 });
 
 onlineBattleUi.bindBeforeUnloadLeaveHandler();
+twoVtwoCore = create2v2Core({
+  getBattleMode: () => battleMode,
+  getCurrentPlayer: () => currentPlayer,
+
+  getTeamA: () => teamA,
+  getTeamB: () => teamB,
+
+  getPlayerStateRaw,
+
+  hasPendingChoice: () => !!pendingChoice,
+  hasCurrentAttack: () => currentAttack.length > 0,
+
+  createBattleState,
+  showPopup
+});
 uiController = createUiController({
   screens,
 
@@ -2105,21 +2120,7 @@ applyBattleDisplayNames();
     showScreen("battle");
   }
 });
-twoVtwoCore = create2v2Core({
-  getBattleMode: () => battleMode,
-  getCurrentPlayer: () => currentPlayer,
 
-  getTeamA: () => teamA,
-  getTeamB: () => teamB,
-
-  getPlayerStateRaw,
-
-  hasPendingChoice: () => !!pendingChoice,
-  hasCurrentAttack: () => currentAttack.length > 0,
-
-  createBattleState,
-  showPopup
-});
 twoVtwoHelpers = create2v2Helpers({
   getBattleMode: () => battleMode,
   getTeam
