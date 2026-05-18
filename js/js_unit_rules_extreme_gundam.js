@@ -562,11 +562,17 @@ if (context.slotLabel === "人馬一神・乱れ突き" && context.hitCount > 0)
     messages.push("タキオンフェイズ特性：次のターン行動不能。行動不能中は被ダメージ半減");
     redraw = true;
   }
-if (context.slotLabel === "カルネージストライカー連射" && context.hitCount > 0) {
+if (
+  context.slotLabel === "カルネージストライカー連射" &&
+  context.hitCount > 0 &&
+  context.appendedFrom !== "カルネージストライカー連射"
+) {
   return {
     redraw: true,
     message: messages.concat("カルネージストライカー連射：1回以上被弾したため本命攻撃").join("\n"),
-    appendAttackLabel: "カルネージストライカー連射",
+    appendAttackLabel: "カルネージストライカー連射 追撃",
+    appendSlotLabel: "カルネージストライカー連射 追撃",
+    appendSlotDesc: "60ダメージ。射撃。",
     appendAttacks: [
       {
         damage: 60,
@@ -575,12 +581,11 @@ if (context.slotLabel === "カルネージストライカー連射" && context.h
         cannotEvade: false,
         ignoreReduction: false,
         ignoreDefense: false,
-        source: "カルネージストライカー連射"
+        source: "カルネージストライカー連射 追撃"
       }
     ]
   };
 }
-
 
   return { redraw, message: messages.join("\n") || null };
 }
