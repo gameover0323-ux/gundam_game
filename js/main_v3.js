@@ -1,3 +1,4 @@
+import { createPlayerAccountUi } from "./js_player_account_ui.js";
 import { createLocalModeController } from "./js_local_mode_controller.js";
 import { createOnlineRoomController } from "./js_online_room_controller.js";
 import { createBattleRecordController } from "./js_battle_record_controller.js";
@@ -186,6 +187,7 @@ let twoVtwoCore = null;
 let battleRecordController = null;
 let onlineRoomController = null;
 let localModeController = null;
+let playerAccountUi = null;
 /*
   battleMode:
   - 1v1
@@ -258,39 +260,15 @@ function renderTrophyCustomizePanel() {
   return playerStatsUi.renderTrophyCustomizePanel();
 }
 function getUnitTrophyText(profile, unitId) {
-  const trophies =
-    profile?.trophies?.byUnit?.[unitId] || [];
-
-  if (!trophies.length) {
-    return "";
-  }
-
-  return trophies.join("");
+  return playerAccountUi.getUnitTrophyText(profile, unitId);
 }
+
 function formatPlayerComment(text) {
-  const raw = String(text || "")
-    .replace(/\s+/g, "")
-    .slice(0, 20);
-
-  if (!raw) return "";
-
-  const lines = [];
-  for (let i = 0; i < raw.length; i += 10) {
-    lines.push(raw.slice(i, i + 10));
-  }
-  return lines.join("<br>");
+  return playerAccountUi.formatPlayerComment(text);
 }
 
 function getFavoriteUnitIds(profile) {
-  if (Array.isArray(profile?.favoriteUnitIds)) {
-    return profile.favoriteUnitIds.filter(Boolean).slice(0, 3);
-  }
-
-  if (profile?.favoriteUnitId) {
-    return [profile.favoriteUnitId];
-  }
-
-  return [];
+  return playerAccountUi.getFavoriteUnitIds(profile);
 }
 
 function getUnitDisplayNameWithTrophy(unit, profile) {
@@ -605,51 +583,7 @@ function updateDebugButtonVisibility() {
   btn.style.display = canUseTestMode() ? "" : "none";
 }
 function updatePlayerCardUi() {
-  const summary = document.getElementById("playerCardSummary");
-  const loginBtn = document.getElementById("playerLoginBtn");
-  const registerBtn = document.getElementById("playerRegisterBtn");
-  const logoutBtn = document.getElementById("playerLogoutBtn");
-  const statsBtn = document.getElementById("playerStatsBtn");
-
-  if (!summary || !loginBtn || !registerBtn || !logoutBtn || !statsBtn) return;
-
-  const profile = playerSession.profile;
-
-  if (!profile) {
-    summary.innerHTML = "ゲスト参戦中<br>戦績は保存されません";
-    loginBtn.style.display = "";
-    registerBtn.style.display = "";
-    logoutBtn.style.display = "none";
-    statsBtn.style.display = "none";
-    return;
-  }
-
-  const titleText = Array.isArray(profile.equippedTitles) && profile.equippedTitles.length > 0
-  ? profile.equippedTitles
-      .map(id => `[${getTitleName(id)}]`)
-      .join("")
-  : "称号なし";
-  const favoriteUnitText = getFavoriteUnitIds(profile)
-  .map(unitId => `${getUnitNameById(unitId)}${getUnitTrophyText(profile, unitId)}`)
-  .join("<br>") || "未設定";
-
-const commentHtml = formatPlayerComment(profile.comment) || "未設定";
-
-summary.innerHTML = `
-ID：${profile.id}<br>
-名前：${profile.name}<br>
-登録日：${profile.registeredAt}<br>
-権限：${profile.role}<br>
-一言：<br>${commentHtml}<br>
-お気に入り機体：<br>${favoriteUnitText}<br>
-称号：${titleText}
-`;
-
-  loginBtn.style.display = "none";
-  registerBtn.style.display = "none";
-  logoutBtn.style.display = "";
-  statsBtn.style.display = "";
-  ensureAccountListButton();
+  return playerAccountUi.updatePlayerCardUi();
 }
 function getUnitNameById(unitId) {
   const allUnits = [
@@ -664,25 +598,7 @@ function getUnitNameById(unitId) {
   return unit ? unit.name : unitId;
 }
 function ensureAccountListButton() {
-  const statsBtn = document.getElementById("playerStatsBtn");
-  if (!statsBtn) return null;
-
-  let btn = document.getElementById("accountListBtn");
-  if (!btn) {
-    btn = document.createElement("button");
-    btn.id = "accountListBtn";
-    btn.textContent = "アカウントリスト";
-    statsBtn.insertAdjacentElement("afterend", btn);
-    btn.addEventListener("click", renderAccountListPanel);
-  }
-
-  const role = playerSession.profile?.role;
-  btn.style.display =
-    role === "debug" || role === "Ciel_debugger" || role === "account_viewer"
-      ? ""
-      : "none";
-
-  return btn;
+  return playerAccountUi.ensureAccountListButton();
 }
 
 function canExecuteSpecialForPlayer(playerKey, special) {
@@ -1396,6 +1312,32 @@ function enterOnlineSelect() {
 function initOnline1v1Battle(unitA, unitB) {
   return onlineRoomController.initOnline1v1Battle(unitA, unitB);
 }
+playerAccountUi = createPlayerAccountUi({
+  getPlayerProfile: () => playerSession.profile,
+
+  getTitleName,
+  getUnitNameById,
+
+  loginPlayer,
+  registerPlayer,
+  logoutPlayer,
+
+  syncExtraUnlockedUnitsFromProfile,
+  updateDebugButtonVisibility,
+  ensureRandomMatchUi,
+  listenRandomMatchAnnouncementsOnceReady,
+  renderAccountListPanel,
+
+  clearExtraUnlockedUnits: () => {
+    extraUnlockedUnits = [];
+  },
+
+  setTestMode: (value) => {
+    isTestMode = value;
+  },
+
+  showPopup
+});
 localModeController = createLocalModeController({
   resetOnlineStateForLocalBattle,
 
@@ -2163,65 +2105,17 @@ document.getElementById("executeUnit2SlotBtn").addEventListener("click", () => {
 document.getElementById("simulateSlotBtn").addEventListener("click", simulateSlot);
 document.getElementById("endTurnBtn").addEventListener("click", endTurn);
 document.getElementById("toggleTestModeBtn").addEventListener("click", toggleTestMode);
-document.getElementById("playerLoginBtn")?.addEventListener("click", async () => {
-  const id = prompt("プレイヤーIDを入力してください");
-  if (!id) return;
-
-  const password = prompt("パスワードを入力してください");
-  if (!password) return;
-
-  const result = await loginPlayer(id.trim(), password.trim());
-
-  if (!result.ok) {
-    showPopup(result.message || "ログインに失敗しました");
-    return;
-  }
-
-  syncExtraUnlockedUnitsFromProfile();
-  updatePlayerCardUi();
-  updateDebugButtonVisibility();
-  ensureRandomMatchUi();
-  listenRandomMatchAnnouncementsOnceReady();
-  showPopup("ログインしました");
+document.getElementById("playerLoginBtn")?.addEventListener("click", () => {
+  playerAccountUi.handleLogin();
 });
 
-document.getElementById("playerRegisterBtn")?.addEventListener("click", async () => {
-  const id = prompt("登録するプレイヤーIDを半角英数字で入力してください");
-  if (!id) return;
-
-  const password = prompt("設定するパスワードを半角英数字で入力してください");
-  if (!password) return;
-
-  const name = prompt("プレイヤー名を入力してください") || id;
-
-  const result = await registerPlayer({
-    id: id.trim(),
-    password: password.trim(),
-    name: name.trim()
-  });
-
-  if (!result.ok) {
-    showPopup(result.message || "登録に失敗しました");
-    return;
-  }
-
-  syncExtraUnlockedUnitsFromProfile();
-  updatePlayerCardUi();
-  updateDebugButtonVisibility();
-  ensureRandomMatchUi();
-  listenRandomMatchAnnouncementsOnceReady();
-  showPopup("プレイヤー登録しました");
+document.getElementById("playerRegisterBtn")?.addEventListener("click", () => {
+  playerAccountUi.handleRegister();
 });
 
 document.getElementById("playerLogoutBtn")?.addEventListener("click", () => {
-  logoutPlayer();
-  extraUnlockedUnits = [];
-  isTestMode = false;
-  updatePlayerCardUi();
-  updateDebugButtonVisibility();
-  showPopup("ログアウトしました");
+  playerAccountUi.handleLogout();
 });
-
 document.getElementById("playerStatsBtn")?.addEventListener("click", () => {
   renderPlayerStatsPanel();
 });
