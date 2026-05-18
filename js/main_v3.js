@@ -862,33 +862,15 @@ function clampEvadeToMax(state) {
 }
 
 function executeSlot() {
-  if (!canOperateOnlinePlayer()) {
-    showPopup("相手のターンです");
-    return;
-  }
-
-  return battleFlow.executeSlot();
+  return turnActionController.executeSlot();
 }
 
 function simulateSlot() {
-  return battleFlow.simulateSlot();
+  return turnActionController.simulateSlot();
 }
 
 function endTurn() {
-  if (!canOperateOnlinePlayer()) {
-    showPopup("相手のターンです");
-    return;
-  }
-
-  const beforePlayer = currentPlayer;
-
-  const result = battleFlow.endTurn();
-
-if (onlineState.enabled && beforePlayer !== currentPlayer) {
-  publishOnlineEndTurnAction(beforePlayer);
-}
-
-  return result;
+  return turnActionController.endTurn();
 }
   
 
@@ -962,11 +944,10 @@ function getOnlineTitleText(playerData) {
   return titleIds.map(id => `[${getTitleName(id)}]`).join("");
 }
 
-
 function canOperateOnlinePlayer() {
-  if (!onlineState.enabled) return true;
-  return currentPlayer === onlineState.myPlayer;
+  return turnActionController.canOperateOnlinePlayer();
 }
+
 function getOnlineProfilePatch(playerKey) {
   return onlineRoomController.getOnlineProfilePatch(playerKey);
 }
@@ -1443,6 +1424,17 @@ setCurrentAttackContexts,
   showPopup,
   getCurrentAttack,
 renderAttackChoices
+});turnActionController = createTurnActionController({
+  isOnlineEnabled: () => onlineState.enabled,
+  getOnlineMyPlayer: () => onlineState.myPlayer,
+  getCurrentPlayer: () => currentPlayer,
+
+  executeSlotRaw: () => battleFlow.executeSlot(),
+  simulateSlotRaw: () => battleFlow.simulateSlot(),
+  endTurnRaw: () => battleFlow.endTurn(),
+
+  publishOnlineEndTurnAction,
+  showPopup
 });
 onlineRoomController = createOnlineRoomController({
   getPlayerProfile: () => playerSession.profile,
