@@ -1,3 +1,4 @@
+import { createBattleInitController } from "./js_battle_init_controller.js";
 import { createResetController } from "./js_reset_controller.js";
 import { createUnitLookupController } from "./js_unit_lookup_controller.js";
 import { createTurnActionController } from "./js_turn_action_controller.js";
@@ -202,6 +203,7 @@ let specialActionController = null;
 let turnActionController = null;
 let unitLookupController = null;
 let resetController = null;
+let battleInitController = null;
 /*
   battleMode:
   - 1v1
@@ -1635,6 +1637,73 @@ playerStatsUi = createPlayerStatsUi({
   readAccountListForViewer,
   showPopup
 });
+battleInitController = createBattleInitController({
+  createBattleState,
+  createTeam,
+  resetActionCount,
+
+  getPlayerAState: () => playerAState,
+  getPlayerBState: () => playerBState,
+
+  setPlayerAState: (value) => {
+    playerAState = value;
+  },
+
+  setPlayerBState: (value) => {
+    playerBState = value;
+  },
+
+  setTeamA: (value) => {
+    teamA = value;
+  },
+
+  setTeamB: (value) => {
+    teamB = value;
+  },
+
+  setCurrentTurn: (value) => {
+    currentTurn = value;
+  },
+
+  setCurrentPlayer: (value) => {
+    currentPlayer = value;
+  },
+
+  clearCurrentAttackState: () => {
+    currentAttack = [];
+    currentAttackContext = null;
+    currentAttackContexts = [];
+  },
+
+  setBattleNotice: (value) => {
+    battleNotice = value || "";
+  },
+
+  setCurrentAction,
+
+  clearPendingChoice,
+
+  setTestMode: (value) => {
+    isTestMode = value;
+  },
+
+  setSelectingPlayer: (value) => {
+    selectingPlayer = value;
+  },
+
+  setSelectedUnitA: (value) => {
+    selectedUnitA = value;
+  },
+
+  setSelectedUnitB: (value) => {
+    selectedUnitB = value;
+  },
+
+  applyBattleDisplayNames,
+  redrawBattleBoards,
+  updateDebugButtonVisibility,
+  showScreen
+});
 gameSetup = createGameSetup({
   units,
   bosses: bossList,
@@ -1699,153 +1768,20 @@ showTitle: () => {
   setTeamB: (v) => teamB = v,
 
   init1v1: (unitA, unitB) => {
-    playerAState = createBattleState(unitA);
-    playerBState = createBattleState(unitB);
-
-    resetActionCount(playerAState);
-    resetActionCount(playerBState);
-
-    currentTurn = 1;
-    currentPlayer = "A";
-    currentAttack = [];
-    currentAttackContext = null;
-    currentAttackContexts = [];
-    battleNotice = "";
-    currentActionHeader = "";
-currentActionLabel = "";
-    pendingChoice = null;
-
-    isTestMode = false;
-    selectingPlayer = "A";
-    selectedUnitA = null;
-    selectedUnitB = null;
-applyBattleDisplayNames();
-    redrawBattleBoards();
-    document.getElementById("attackLog").textContent = "バトル開始待機中";
-  updateDebugButtonVisibility();
-    showScreen("battle");
+    return battleInitController.init1v1(unitA, unitB);
   },
 
   init2v2: (unitsA, unitsB) => {
-    teamA = createTeam(unitsA[0], unitsA[1]);
-    teamB = createTeam(unitsB[0], unitsB[1]);
-
-    teamA.activeUnitKey = "unit1";
-    teamA.focusUnitKey = "unit1";
-    teamB.activeUnitKey = "unit1";
-    teamB.focusUnitKey = "unit1";
-
-    playerAState = teamA.unit1;
-    playerBState = teamB.unit1;
-
-    resetActionCount(teamA.unit1);
-    resetActionCount(teamA.unit2);
-    resetActionCount(teamB.unit1);
-    resetActionCount(teamB.unit2);
-
-    currentTurn = 1;
-    currentPlayer = "A";
-    currentAttack = [];
-    currentAttackContext = null;
-    currentAttackContexts = [];
-    battleNotice = "";
-    currentActionHeader = "";
-    currentActionLabel = "";
-    pendingChoice = null;
-
-    isTestMode = false;
-    selectingPlayer = "A";
-    selectedUnitA = null;
-    selectedUnitB = null;
-applyBattleDisplayNames();
-    redrawBattleBoards();
-    document.getElementById("attackLog").textContent = "バトル開始待機中";
-  updateDebugButtonVisibility();
-    showScreen("battle");
+    return battleInitController.init2v2(unitsA, unitsB);
   },
-    
+
   initChallenge1v1: (unitA, bossUnit) => {
-    playerAState = createBattleState(unitA);
-    playerBState = createBattleState(bossUnit);
-
-    resetActionCount(playerAState);
-    resetActionCount(playerBState);
-
-    currentTurn = 1;
-    currentPlayer = "A";
-    currentAttack = [];
-    currentAttackContext = null;
-    currentAttackContexts = [];
-    battleNotice = "";
-    currentActionHeader = "";
-    currentActionLabel = "";
-    pendingChoice = null;
-
-    isTestMode = false;
-    selectingPlayer = "A";
-    selectedUnitA = null;
-    selectedUnitB = null;
-applyBattleDisplayNames();
-    redrawBattleBoards();
-    document.getElementById("attackLog").textContent = "チャレンジバトル開始";
-   updateDebugButtonVisibility();
-    showScreen("battle");
+    return battleInitController.initChallenge1v1(unitA, bossUnit);
   },
 
   initChallenge2v2: (unitsA, bossUnits) => {
-    teamA = createTeam(unitsA[0], unitsA[1]);
-
-    teamB = {
-      unit1: createBattleState(bossUnits[0]),
-      unit2: bossUnits[1] ? createBattleState(bossUnits[1]) : null,
-
-      mode: "split",
-      activeUnitKey: "unit1",
-      focusUnitKey: "unit1",
-
-      unified: {
-        baseHpA: 0,
-        baseHpB: 0,
-        totalDamage: 0,
-        healA: 0,
-        healB: 0
-      }
-    };
-
-    playerAState = teamA.unit1;
-    playerBState = teamB.unit1;
-
-    resetActionCount(teamA.unit1);
-    resetActionCount(teamA.unit2);
-    resetActionCount(teamB.unit1);
-    if (teamB.unit2) resetActionCount(teamB.unit2);
-
-    currentTurn = 1;
-    currentPlayer = "A";
-    currentAttack = [];
-    currentAttackContext = null;
-    currentAttackContexts = [];
-    battleNotice = "";
-    currentActionHeader = "";
-    currentActionLabel = "";
-    pendingChoice = null;
-
-    isTestMode = false;
-    selectingPlayer = "A";
-    selectedUnitA = null;
-    selectedUnitB = null;
-applyBattleDisplayNames();
-    redrawBattleBoards();
-    document.getElementById("attackLog").textContent = "2機チャレンジバトル開始";
-   updateDebugButtonVisibility();
-    showScreen("battle");
+    return battleInitController.initChallenge2v2(unitsA, bossUnits);
   }
-});
-
-twoVtwoHelpers = create2v2Helpers({
-  getBattleMode: () => battleMode,
-  getTeam
-});
 
 twoVtwoActions = create2v2Actions({
   getBattleMode: () => battleMode,
