@@ -1,3 +1,4 @@
+import { createResetController } from "./js_reset_controller.js";
 import { createUnitLookupController } from "./js_unit_lookup_controller.js";
 import { createTurnActionController } from "./js_turn_action_controller.js";
 import { createSpecialActionController } from "./js_special_action_controller.js";
@@ -200,6 +201,7 @@ let qteController = null;
 let specialActionController = null;
 let turnActionController = null;
 let unitLookupController = null;
+let resetController = null;
 /*
   battleMode:
   - 1v1
@@ -357,73 +359,19 @@ function markOnlinePlayerLeft() {
   return onlineBattleUi.markOnlinePlayerLeft();
 }
 function resetOnlineStateForLocalBattle() {
-  onlineState.enabled = false;
-  onlineState.roomId = null;
-  onlineState.myPlayer = null;
-  onlineState.isHost = false;
-  onlineState.lastAppliedActionId = 0;
-  onlineState.isApplyingRemote = false;
-
-  onlineBattleStarted = false;
-  onlineBattleFinished = false;
-  onlineSelectEntered = false;
-  onlineActionSeq = 0;
-  cleanupOnlineBattleUi();
-  onlineEncounterSaved = false;
-currentOnlineOpponentPlayerId = "";
+  return resetController.resetOnlineStateForLocalBattle();
 }
-function resetLocalSelectionAndBattleState() {
-  selectingPlayer = "A";
-  selectedUnitA = null;
-  selectedUnitB = null;
-  pendingSelectedUnit = null;
 
-  teamA = null;
-  teamB = null;
-  playerAState = null;
-  playerBState = null;
-
-  currentTurn = 1;
-  currentPlayer = "A";
-  currentAttack = [];
-  currentAttackContext = null;
-  currentAttackContexts = [];
-  battleNotice = "";
-  currentActionHeader = "";
-  currentActionLabel = "";
-  pendingChoice = null;
-
-  if (unitButtons) unitButtons.innerHTML = "";
-  if (selectedUnitsPreview) selectedUnitsPreview.innerHTML = "";
+  function resetLocalSelectionAndBattleState() {
+  return resetController.resetLocalSelectionAndBattleState();
 }
+
 function cleanupOnlineBattleUi() {
-  document.getElementById("onlineTopPlayerHud")?.remove();
-  document.getElementById("onlineBattleExtraArea")?.remove();
-  document.getElementById("onlinePeaceSurrenderBox")?.remove();
+  return resetController.cleanupOnlineBattleUi();
 }
+
 function showTitle() {
-  resetRandomMatchState();
-  if (
-  onlineState.enabled &&
-  onlineState.roomId &&
-  onlineState.myPlayer &&
-  onlineBattleStarted &&
-  !onlineBattleFinished
-) {
-  markOnlinePlayerLeft();
-}
-
-  cleanupOnlineBattleUi();
-  resetOnlineStateForLocalBattle();
-  resetLocalSelectionAndBattleState();
-
-  const popup = document.getElementById("popup");
-  if (popup) {
-    popup.style.display = "none";
-    popup.innerHTML = "";
-  }
-
-  showScreen("title");
+  return resetController.showTitle();
 }
 
 function isChallengeMode() {
@@ -864,28 +812,7 @@ function syncExtraUnlockedUnitsFromProfile() {
   return unitLookupController.syncExtraUnlockedUnitsFromProfile();
 }
 function abortCurrentBattleWithoutRecordForRandomMatch() {
-  currentAttack = [];
-  currentAttackContext = null;
-  currentAttackContexts = [];
-  pendingChoice = null;
-  battleNotice = "";
-  currentActionHeader = "";
-  currentActionLabel = "";
-
-  teamA = null;
-  teamB = null;
-  playerAState = null;
-  playerBState = null;
-  selectedUnitA = null;
-  selectedUnitB = null;
-  selectingPlayer = "A";
-  currentTurn = 1;
-  currentPlayer = "A";
-
-  onlineBattleStarted = false;
-  onlineBattleFinished = false;
-  onlineSelectEntered = false;
-  onlineActionSeq = 0;
+  return resetController.abortCurrentBattleWithoutRecordForRandomMatch();
 }
 function getOnlineTitleText(playerData) {
   const titleIds = Array.isArray(playerData?.equippedTitles)
@@ -1524,6 +1451,112 @@ onlineRoomController = createOnlineRoomController({
   showScreen,
   loadUnitButtons,
   showPopup
+});
+resetController = createResetController({
+  isOnlineEnabled: () => onlineState.enabled,
+  getOnlineRoomId: () => onlineState.roomId,
+  getOnlineMyPlayer: () => onlineState.myPlayer,
+
+  setOnlineState: ({
+    enabled,
+    roomId,
+    myPlayer,
+    isHost,
+    lastAppliedActionId,
+    isApplyingRemote
+  }) => {
+    onlineState.enabled = enabled;
+    onlineState.roomId = roomId;
+    onlineState.myPlayer = myPlayer;
+    onlineState.isHost = isHost;
+    onlineState.lastAppliedActionId = lastAppliedActionId;
+    onlineState.isApplyingRemote = isApplyingRemote;
+  },
+
+  getOnlineBattleStarted: () => onlineBattleStarted,
+  setOnlineBattleStarted: (value) => {
+    onlineBattleStarted = value;
+  },
+
+  getOnlineBattleFinished: () => onlineBattleFinished,
+  setOnlineBattleFinished: (value) => {
+    onlineBattleFinished = value;
+  },
+
+  setOnlineSelectEntered: (value) => {
+    onlineSelectEntered = value;
+  },
+
+  setOnlineActionSeq: (value) => {
+    onlineActionSeq = value;
+  },
+
+  setOnlineEncounterSaved: (value) => {
+    onlineEncounterSaved = value;
+  },
+
+  setCurrentOnlineOpponentPlayerId: (value) => {
+    currentOnlineOpponentPlayerId = value;
+  },
+
+  setSelectingPlayer: (value) => {
+    selectingPlayer = value;
+  },
+
+  setSelectedUnitA: (value) => {
+    selectedUnitA = value;
+  },
+
+  setSelectedUnitB: (value) => {
+    selectedUnitB = value;
+  },
+
+  setPendingSelectedUnit: (value) => {
+    pendingSelectedUnit = value;
+  },
+
+  setTeamA: (value) => {
+    teamA = value;
+  },
+
+  setTeamB: (value) => {
+    teamB = value;
+  },
+
+  setPlayerAState: (value) => {
+    playerAState = value;
+  },
+
+  setPlayerBState: (value) => {
+    playerBState = value;
+  },
+
+  setCurrentTurn: (value) => {
+    currentTurn = value;
+  },
+
+  setCurrentPlayer: (value) => {
+    currentPlayer = value;
+  },
+
+  resetBattleRuntime: () => {
+    currentTurn = 1;
+    currentPlayer = "A";
+    currentAttack = [];
+    currentAttackContext = null;
+    currentAttackContexts = [];
+    battleNotice = "";
+    currentActionHeader = "";
+    currentActionLabel = "";
+    pendingChoice = null;
+  },
+
+  getUnitButtons: () => unitButtons,
+  getSelectedUnitsPreview: () => selectedUnitsPreview,
+
+  resetRandomMatchState,
+  markOnlinePlayerLeft,
+  showScreen
 });
 randomMatchController = createRandomMatchController({
   getScreens: () => screens,
