@@ -1,3 +1,4 @@
+import { createQteController } from "./js_qte_controller.js";
 import { createBossQteAutoResolver } from "./js_boss_qte_auto_resolver.js";
 import { createBattleOutcomeController } from "./js_battle_outcome_controller.js";
 import { createPlayerAccountUi } from "./js_player_account_ui.js";
@@ -192,6 +193,7 @@ let localModeController = null;
 let playerAccountUi = null;
 let battleOutcomeController = null;
 let bossQteAutoResolver = null;
+let qteController = null;
 /*
   battleMode:
   - 1v1
@@ -814,77 +816,27 @@ function checkBattleEnd() {
 }
 
 function renderAttackChoices() {
-  if (autoResolveBossQteIfNeeded()) {
-    clearBattleNotice();
-    return;
-  }
-
-  renderAttackChoicesUI({
-    currentAttack,
-    battleNotice,
-    currentActionHeader,
-    currentActionLabel,
-    onHit: (index) => takeHit(index),
-    onEvade: (index) => evadeAttack(index),
-    onSupportDefense: (index) => supportDefenseAttack(index),
-    canSupportDefense: isTeamBattleMode()
-  });
-
-  clearBattleNotice();
+  return qteController.renderAttackChoices();
 }
 function canOperateQteDefender() {
-  if (!onlineState.enabled) return true;
-
-  const context = currentAttackContext;
-  if (!context) return false;
-
-  return context.enemyPlayer === onlineState.myPlayer;
+  return qteController.canOperateQteDefender();
 }
 
 function takeHit(i) {
-  if (!canOperateQteDefender()) {
-    showPopup("防御側プレイヤーのみ操作できます");
-    return;
-  }
-
-  const result = attackResolution.takeHit(i);
-  checkBattleEnd();
-
-  publishOnlineQteAction("hit", i);
-
-  return result;
+  return qteController.takeHit(i);
 }
 
 function evadeAttack(i) {
-  if (!canOperateQteDefender()) {
-    showPopup("防御側プレイヤーのみ操作できます");
-    return;
-  }
-
-  const result = attackResolution.evadeAttack(i);
-
-  publishOnlineQteAction("evade", i);
-
-  return result;
+  return qteController.evadeAttack(i);
 }
 
 function supportDefenseAttack(i) {
-  if (!canOperateQteDefender()) {
-    showPopup("防御側プレイヤーのみ操作できます");
-    return;
-  }
-
-  const result = attackResolution.supportDefenseAttack(i);
-  checkBattleEnd();
-
-  publishOnlineQteAction("supportDefense", i);
-
-  return result;
+  return qteController.supportDefenseAttack(i);
 }
+
 function finishCurrentAttackResolution() {
-  return attackResolution.finishCurrentAttackResolution();
+  return qteController.finishCurrentAttackResolution();
 }
-
 function startSlotAction(ownerPlayer, slotKey, slotOverride = null) {
   return actionLayer.startSlotAction(ownerPlayer, slotKey, slotOverride);
 }
@@ -1393,6 +1345,33 @@ attackResolution = createAttackResolution({
 
   resolveTakeHit,
   resolveEvadeAttack
+});
+qteController = createQteController({
+  isOnlineEnabled: () => onlineState.enabled,
+  getOnlineMyPlayer: () => onlineState.myPlayer,
+
+  getCurrentAttack: () => currentAttack,
+  getCurrentAttackContext: () => currentAttackContext,
+
+  getBattleNotice: () => battleNotice,
+  getCurrentActionHeader: () => currentActionHeader,
+  getCurrentActionLabel: () => currentActionLabel,
+
+  isTeamBattleMode,
+
+  autoResolveBossQteIfNeeded,
+  clearBattleNotice,
+
+  renderAttackChoicesUI,
+
+  attackTakeHit: (index) => attackResolution.takeHit(index),
+  attackEvadeAttack: (index) => attackResolution.evadeAttack(index),
+  attackSupportDefenseAttack: (index) => attackResolution.supportDefenseAttack(index),
+  finishCurrentAttackResolutionRaw: () => attackResolution.finishCurrentAttackResolution(),
+
+  checkBattleEnd,
+  publishOnlineQteAction,
+  showPopup
 });
 bossQteAutoResolver = createBossQteAutoResolver({
   isChallengeMode,
