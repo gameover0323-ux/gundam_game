@@ -1815,31 +1815,6 @@ setCurrentAttackContexts,
   executeSlot
 });
 
-bindMainEvents({
-  startOnline1v1Btn,
-  startOnline2v2Btn,
-  createOnlineRoomBtn,
-  joinOnlineRoomBtn,
-  backFromOnlineRoomBtn,
-
-  setBattleMode: (value) => {
-    battleMode = value;
-  },
-
-  localModeController,
-  onlineRoomController,
-  playerAccountUi,
-
-  twoVtwoActions,
-
-  showScreen,
-  showTitle,
-  showPopup,
-  simulateSlot,
-  endTurn,
-  toggleTestMode,
-  renderPlayerStatsPanel
-});
 
 loadUnitButtons();
 bindMainEvents({
