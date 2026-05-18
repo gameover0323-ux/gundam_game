@@ -1,3 +1,4 @@
+import { createSpecialActionController } from "./js_special_action_controller.js";
 import { createQteController } from "./js_qte_controller.js";
 import { createBossQteAutoResolver } from "./js_boss_qte_auto_resolver.js";
 import { createBattleOutcomeController } from "./js_battle_outcome_controller.js";
@@ -194,6 +195,7 @@ let playerAccountUi = null;
 let battleOutcomeController = null;
 let bossQteAutoResolver = null;
 let qteController = null;
+let specialActionController = null;
 /*
   battleMode:
   - 1v1
@@ -606,63 +608,9 @@ function getUnitNameById(unitId) {
 function ensureAccountListButton() {
   return playerAccountUi.ensureAccountListButton();
 }
-
 function canExecuteSpecialForPlayer(playerKey, special) {
-  if (!special || special.actionType === "auto") {
-    return false;
-  }
-
-  if (pendingChoice) {
-    return false;
-  }
-
-  const timing = special.timing || "self";
-if (
-  special.effectType === "jegan_request_arms" &&
-  currentAttack.length > 0 &&
-  playerKey !== currentPlayer
-) {
-  const actor = getPlayerState(playerKey);
-  if (!actor) return false;
-
-  const availability = executeUnitCanUseSpecial(actor, special.key, {
-    ownerPlayer: playerKey,
-    enemyPlayer: getOpponentPlayer(playerKey),
-    currentAttackContext,
-    currentAttack
-  });
-
-  return availability.allowed !== false;
+  return specialActionController.canExecuteSpecialForPlayer(playerKey, special);
 }
-  let timingAllowed = false;
-
-  if (timing === "self") {
-    timingAllowed = playerKey === currentPlayer && currentAttack.length === 0;
-  } else if (timing === "reaction") {
-    timingAllowed = playerKey !== currentPlayer && currentAttack.length > 0;
-  } else if (timing === "attack") {
-    timingAllowed = playerKey === currentPlayer && currentAttack.length > 0;
-  }
-
-  if (!timingAllowed) {
-    return false;
-  }
-
-  const actor = getPlayerState(playerKey);
-  if (!actor) return false;
-
-  const availability = withUnifiedEvadeForCheck(playerKey, actor, () =>
-    executeUnitCanUseSpecial(actor, special.key, {
-      ownerPlayer: playerKey,
-      enemyPlayer: getOpponentPlayer(playerKey),
-      currentAttackContext,
-      currentAttack
-    })
-  );
-
-  return availability.allowed !== false;
-}
-
 function loadUnitButtons() {
   return gameSetup.loadUnitButtons();
 }
@@ -739,14 +687,7 @@ function build2v2RenderHandlers(playerKey) {
 }
 
 function handleChoiceRequest(requestChoice) {
-  if (!requestChoice) return;
-
-  pendingChoice = {
-    ...requestChoice
-  };
-
-  redrawBattleBoards();
-  renderPendingChoice();
+  return specialActionController.handleChoiceRequest(requestChoice);
 }
 function shouldCpuUseEvade(defender) {
   return bossQteAutoResolver.shouldCpuUseEvade(defender);
@@ -852,33 +793,11 @@ function resolveSlot(slot, slotMeta = {}) {
 }
 
 function executeSpecial(ownerPlayer, specialKey) {
-  if (onlineState.enabled && ownerPlayer !== onlineState.myPlayer) {
-    showPopup("相手側の特殊行動は操作できません");
-    return;
-  }
-
-  const result = actionLayer.executeSpecial(ownerPlayer, specialKey);
-
-  publishOnlineSpecialAction(ownerPlayer, specialKey);
-
-  return result;
+  return specialActionController.executeSpecial(ownerPlayer, specialKey);
 }
 
 function resolvePendingChoice(selectedValue) {
-  const choice = pendingChoice;
-
-  if (onlineState.enabled && choice) {
-    const ownerPlayer = choice.ownerPlayer;
-
-    if (ownerPlayer !== onlineState.myPlayer) {
-      showPopup("選択権のあるプレイヤーのみ操作できます");
-      return;
-    }
-  }
-
-  publishOnlineChoiceAction(choice, selectedValue);
-
-  return actionLayer.resolvePendingChoice(selectedValue);
+  return specialActionController.resolvePendingChoice(selectedValue);
 }
 
   
@@ -1395,6 +1314,39 @@ bossQteAutoResolver = createBossQteAutoResolver({
 
   resolveTakeHit,
   resolveEvadeAttack
+});
+specialActionController = createSpecialActionController({
+  isOnlineEnabled: () => onlineState.enabled,
+  getOnlineMyPlayer: () => onlineState.myPlayer,
+
+  getCurrentPlayer: () => currentPlayer,
+  getCurrentAttack: () => currentAttack,
+  getCurrentAttackContext: () => currentAttackContext,
+
+  getPendingChoice: () => pendingChoice,
+  setPendingChoice: (value) => {
+    pendingChoice = value;
+  },
+  hasPendingChoice: () => !!pendingChoice,
+
+  getPlayerState,
+  getOpponentPlayer,
+
+  executeUnitCanUseSpecial,
+  withUnifiedEvadeForCheck,
+
+  executeSpecialRaw: (ownerPlayer, specialKey) =>
+    actionLayer.executeSpecial(ownerPlayer, specialKey),
+
+  resolvePendingChoiceRaw: (selectedValue) =>
+    actionLayer.resolvePendingChoice(selectedValue),
+
+  publishOnlineSpecialAction,
+  publishOnlineChoiceAction,
+
+  redrawBattleBoards,
+  renderPendingChoice,
+  showPopup
 });
 actionLayer = createActionLayer({
   getBattleMode: () => battleMode,
