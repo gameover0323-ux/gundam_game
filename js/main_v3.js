@@ -1,3 +1,4 @@
+import { createTurnActionController } from "./js_turn_action_controller.js";
 import { createSpecialActionController } from "./js_special_action_controller.js";
 import { createQteController } from "./js_qte_controller.js";
 import { createBossQteAutoResolver } from "./js_boss_qte_auto_resolver.js";
@@ -196,6 +197,7 @@ let battleOutcomeController = null;
 let bossQteAutoResolver = null;
 let qteController = null;
 let specialActionController = null;
+let turnActionController = null;
 /*
   battleMode:
   - 1v1
