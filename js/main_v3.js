@@ -1,3 +1,4 @@
+import { createUnitLookupController } from "./js_unit_lookup_controller.js";
 import { createTurnActionController } from "./js_turn_action_controller.js";
 import { createSpecialActionController } from "./js_special_action_controller.js";
 import { createQteController } from "./js_qte_controller.js";
@@ -198,6 +199,7 @@ let bossQteAutoResolver = null;
 let qteController = null;
 let specialActionController = null;
 let turnActionController = null;
+let unitLookupController = null;
 /*
   battleMode:
   - 1v1
@@ -280,33 +282,14 @@ function formatPlayerComment(text) {
 function getFavoriteUnitIds(profile) {
   return playerAccountUi.getFavoriteUnitIds(profile);
 }
-
 function getUnitDisplayNameWithTrophy(unit, profile) {
-  if (!unit) return "";
-  return `${unit.name}${getUnitTrophyText(profile, unit.id)}`;
+  return unitLookupController.getUnitDisplayNameWithTrophy(unit, profile);
 }
 
 function applyBattleDisplayNames() {
-  const profile = playerSession.profile;
-
-  if (playerAState) {
-    playerAState.displayName = getUnitDisplayNameWithTrophy(playerAState, profile);
-  }
-
-  if (playerBState) {
-    playerBState.displayName = getUnitDisplayNameWithTrophy(playerBState, null);
-  }
-
-  if (teamA) {
-    if (teamA.unit1) teamA.unit1.displayName = getUnitDisplayNameWithTrophy(teamA.unit1, profile);
-    if (teamA.unit2) teamA.unit2.displayName = getUnitDisplayNameWithTrophy(teamA.unit2, profile);
-  }
-
-  if (teamB) {
-    if (teamB.unit1) teamB.unit1.displayName = getUnitDisplayNameWithTrophy(teamB.unit1, null);
-    if (teamB.unit2) teamB.unit2.displayName = getUnitDisplayNameWithTrophy(teamB.unit2, null);
-  }
+  return unitLookupController.applyBattleDisplayNames();
 }
+
 function resetRandomMatchState() {
   return randomMatchController.resetRandomMatchState();
 }
@@ -595,17 +578,9 @@ function updateDebugButtonVisibility() {
 function updatePlayerCardUi() {
   return playerAccountUi.updatePlayerCardUi();
 }
-function getUnitNameById(unitId) {
-  const allUnits = [
-  ...unitList,
-  ...bossList,
-  ...cpuList,
-  ...cpuBeginnerList,
-  ...debugUnitList
-];
 
-  const unit = allUnits.find(u => u.id === unitId);
-  return unit ? unit.name : unitId;
+function getUnitNameById(unitId) {
+  return unitLookupController.getUnitNameById(unitId);
 }
 function ensureAccountListButton() {
   return playerAccountUi.ensureAccountListButton();
@@ -881,33 +856,13 @@ let onlineBattleFinished = false;
 let onlineActionSeq = 0;
 let onlineSelectEntered = false;
 
-
 function getUnitById(unitId) {
-  const allUnits = [
-  ...unitList,
-  ...bossList,
-  ...cpuList,
-  ...cpuBeginnerList,
-  ...debugUnitList
-];
-
-  return allUnits.find(unit => unit.id === unitId) || null;
+  return unitLookupController.getUnitById(unitId);
 }
+
 function syncExtraUnlockedUnitsFromProfile() {
-  if (!playerSession.profile?.unlocks) {
-    extraUnlockedUnits = [];
-  } else {
-    extraUnlockedUnits = Object.entries(playerSession.profile.unlocks)
-      .filter(([, unlocked]) => unlocked)
-      .map(([unlockKey]) => UNLOCKABLE_UNIT_MAP[unlockKey])
-      .filter(Boolean)
-      .map(unitId => getUnitById(unitId))
-      .filter(Boolean);
-  }
-
-
+  return unitLookupController.syncExtraUnlockedUnitsFromProfile();
 }
-
 function abortCurrentBattleWithoutRecordForRandomMatch() {
   currentAttack = [];
   currentAttackContext = null;
@@ -1007,6 +962,31 @@ battleOutcomeController = createBattleOutcomeController({
   },
 
   showTitle
+});
+unitLookupController = createUnitLookupController({
+  getAllUnits: () => [
+    ...unitList,
+    ...bossList,
+    ...cpuList,
+    ...cpuBeginnerList,
+    ...debugUnitList
+  ],
+
+  getPlayerProfile: () => playerSession.profile,
+
+  getUnitTrophyText,
+
+  getUnlockableUnitMap: () => UNLOCKABLE_UNIT_MAP,
+
+  getPlayerAState: () => playerAState,
+  getPlayerBState: () => playerBState,
+
+  getTeamA: () => teamA,
+  getTeamB: () => teamB,
+
+  setExtraUnlockedUnits: (value) => {
+    extraUnlockedUnits = value;
+  }
 });
 playerAccountUi = createPlayerAccountUi({
   getPlayerProfile: () => playerSession.profile,
