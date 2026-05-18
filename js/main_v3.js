@@ -1,3 +1,4 @@
+import { createLocalModeController } from "./js_local_mode_controller.js";
 import { createOnlineRoomController } from "./js_online_room_controller.js";
 import { createBattleRecordController } from "./js_battle_record_controller.js";
 import { createOnlineActionSync } from "./js_online_action_sync.js";
@@ -238,6 +239,7 @@ let onlineActionSync = null;
 let twoVtwoCore = null;
 let battleRecordController = null;
 let onlineRoomController = null;
+let localModeController = null;
 /*
   battleMode:
   - 1v1
@@ -1448,7 +1450,36 @@ function enterOnlineSelect() {
 function initOnline1v1Battle(unitA, unitB) {
   return onlineRoomController.initOnline1v1Battle(unitA, unitB);
 }
+localModeController = createLocalModeController({
+  resetOnlineStateForLocalBattle,
 
+  setBattleMode: (value) => {
+    battleMode = value;
+  },
+
+  setTeamA: (value) => {
+    teamA = value;
+  },
+
+  setTeamB: (value) => {
+    teamB = value;
+  },
+
+  setSelectingPlayer: (value) => {
+    selectingPlayer = value;
+  },
+
+  setSelectedUnitA: (value) => {
+    selectedUnitA = value;
+  },
+
+  setSelectedUnitB: (value) => {
+    selectedUnitB = value;
+  },
+
+  showScreen,
+  loadUnitButtons
+});
 onlineActionSync = createOnlineActionSync({
   isOnlineEnabled: () => onlineState.enabled,
   getOnlineRoomId: () => onlineState.roomId,
