@@ -1802,6 +1802,12 @@ showTitle: () => {
   initChallenge2v2: (unitsA, bossUnits) => {
     return battleInitController.initChallenge2v2(unitsA, bossUnits);
   }
+});
+
+twoVtwoHelpers = create2v2Helpers({
+  getBattleMode: () => battleMode,
+  getTeam
+});
 
 twoVtwoActions = create2v2Actions({
   getBattleMode: () => battleMode,
