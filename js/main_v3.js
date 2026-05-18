@@ -1,3 +1,4 @@
+import { createBossQteAutoResolver } from "./js_boss_qte_auto_resolver.js";
 import { createBattleOutcomeController } from "./js_battle_outcome_controller.js";
 import { createPlayerAccountUi } from "./js_player_account_ui.js";
 import { createLocalModeController } from "./js_local_mode_controller.js";
@@ -190,6 +191,7 @@ let onlineRoomController = null;
 let localModeController = null;
 let playerAccountUi = null;
 let battleOutcomeController = null;
+let bossQteAutoResolver = null;
 /*
   battleMode:
   - 1v1
@@ -745,136 +747,11 @@ function handleChoiceRequest(requestChoice) {
   renderPendingChoice();
 }
 function shouldCpuUseEvade(defender) {
-  if (!defender) return false;
-  if (defender.evade <= 0) return false;
-
-  const evadeMax = Math.max(1, defender.evadeMax || 1);
-  const rate = defender.evade / evadeMax;
-
-  return Math.random() < rate;
+  return bossQteAutoResolver.shouldCpuUseEvade(defender);
 }
 
 function autoResolveBossQteIfNeeded() {
-  if (!isChallengeMode()) return false;
-
-  const context = currentAttackContext;
-  if (!context) return false;
-
-  if (context.ownerPlayer !== "A") return false;
-  if (context.enemyPlayer !== "B") return false;
-  if (!currentAttack || currentAttack.length === 0) return false;
-
-  const attacker = getPlayerState("A");
-  const defender = getCombatTargetState("B");
-  if (!attacker || !defender) return false;
-
-  const damageBySource = new Map();
-  let totalDamage = 0;
-  let hitCount = 0;
-
-  while (currentAttack.length > 0) {
-  const attack = currentAttack[0];
-  const sourceLabel =
-    attack?.sourceLabel || `${attacker.name} ${context.slotNumber}.${context.slotLabel}`;
-  const baseDamage = attack ? attack.damage : 0;
-
-  // まずCPU側の特殊回避判定を試す
-  const customEvade = executeUnitModifyEvadeAttempt(
-    defender,
-    attacker,
-    attack,
-    {
-      attacker,
-      defender,
-      currentAttack,
-      attackIndex: 0,
-      currentAttackContext: context,
-      isCpuAutoResolve: true
-    }
-  );
-
-  if (customEvade && customEvade.handled) {
-    if (customEvade.ok) {
-      defender.evade -= customEvade.consumeEvade || 0;
-      currentAttack.splice(0, 1);
-      context.evadeCount++;
-
-      if (customEvade.message) {
-        appendBattleNotice(customEvade.message);
-      }
-
-      continue;
-    }
-  } else {
-// 通常回避を試す
-if (shouldCpuUseEvade(defender)) {
-  const evadeResult = resolveEvadeAttack({
-    defender,
-    currentAttack,
-    attackIndex: 0
-  });
-
-  if (evadeResult.ok) {
-    context.evadeCount++;
-    continue;
-  }
-}
-  }
-
-  // 回避できなければ被弾
-  const hitResult = resolveTakeHit({
-    attacker,
-    defender,
-    currentAttack,
-    attackIndex: 0,
-    modifyTakenDamage: (d, a, atk, dmg) =>
-      executeUnitModifyTakenDamage(d, a, atk, dmg)
-  });
-
-  if (!hitResult || !hitResult.cancelled) {
-    const finalDamage =
-      typeof hitResult?.finalDamage === "number"
-        ? hitResult.finalDamage
-        : baseDamage;
-
-    totalDamage += finalDamage;
-    hitCount++;
-
-    damageBySource.set(
-      sourceLabel,
-      (damageBySource.get(sourceLabel) || 0) + finalDamage
-    );
-
-    if (hitResult?.damageMessage) {
-      appendBattleNotice(hitResult.damageMessage);
-    }
-
-    const damagedResult = executeUnitOnDamaged(defender, attacker);
-    if (damagedResult.message) {
-      appendBattleNotice(damagedResult.message);
-    }
-  }
-}
-
-  context.hitCount += hitCount;
-
-  finishCurrentAttackResolution();
-
-if (checkBattleEnd()) {
-    return true;
-  }
-
-  const detailLines = [...damageBySource.entries()].map(
-    ([label, damage]) => `${label}<br>→ ${damage}ダメージ`
-  );
-
-  renderAttackLogText(
-    `${currentActionHeader}<br>` +
-    `${detailLines.join("<br>")}<br>` +
-    `合計${totalDamage}ダメージを与えた。`
-  );
-
-  return true;
+  return bossQteAutoResolver.autoResolveBossQteIfNeeded();
 }
 
 function isUnitDefeated(unit) {
@@ -1517,7 +1394,29 @@ attackResolution = createAttackResolution({
   resolveTakeHit,
   resolveEvadeAttack
 });
+bossQteAutoResolver = createBossQteAutoResolver({
+  isChallengeMode,
 
+  getCurrentAttack: () => currentAttack,
+  getCurrentAttackContext: () => currentAttackContext,
+
+  getCurrentActionHeader: () => currentActionHeader,
+
+  getPlayerState,
+  getCombatTargetState,
+
+  appendBattleNotice,
+  finishCurrentAttackResolution,
+  checkBattleEnd,
+  renderAttackLogText,
+
+  executeUnitModifyEvadeAttempt,
+  executeUnitModifyTakenDamage,
+  executeUnitOnDamaged,
+
+  resolveTakeHit,
+  resolveEvadeAttack
+});
 actionLayer = createActionLayer({
   getBattleMode: () => battleMode,
   getCurrentPlayer: () => currentPlayer,
