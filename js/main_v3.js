@@ -1,5 +1,7 @@
+//このファイルは関数呼び出し入口にのみ基本利用したいため、新規コード追加の際にこのファイルに入口以上の機能を増やしたくありません。このファイルを弄る場合は入口設置にとどめ、新たなファイルを作成して機能を追加してください//
+
+
 import { bindMainEvents } from "./js_main_event_bindings.js";
-import { bindMainEvents } from "./js_main_event_binder.js";
 import { createBattleRuntimeAccessors } from "./js_battle_runtime_accessors.js";
 import { createBattleInitController } from "./js_battle_init_controller.js";
 import { createResetController } from "./js_reset_controller.js";
