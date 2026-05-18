@@ -1,3 +1,4 @@
+import { createBattleRuntimeAccessors } from "./js_battle_runtime_accessors.js";
 import { createBattleInitController } from "./js_battle_init_controller.js";
 import { createResetController } from "./js_reset_controller.js";
 import { createUnitLookupController } from "./js_unit_lookup_controller.js";
@@ -204,6 +205,7 @@ let turnActionController = null;
 let unitLookupController = null;
 let resetController = null;
 let battleInitController = null;
+let battleRuntimeAccessors = null;
 /*
   battleMode:
   - 1v1
@@ -739,31 +741,31 @@ function reserveAction(state, action) {
     return actionLayer.processReservedActionsForTrigger(ownerPlayer, trigger);
   }
 function getPendingChoice() {
-  return pendingChoice;
+  return battleRuntimeAccessors.getPendingChoice();
 }
 
 function getCurrentAttack() {
-  return currentAttack;
+  return battleRuntimeAccessors.getCurrentAttack();
 }
 
 function getCurrentAttackContext() {
-  return currentAttackContext;
+  return battleRuntimeAccessors.getCurrentAttackContext();
 }
 
 function getCurrentAttackContexts() {
-  return currentAttackContexts;
+  return battleRuntimeAccessors.getCurrentAttackContexts();
 }
 
 function setCurrentAttack(value) {
-  currentAttack = value;
+  return battleRuntimeAccessors.setCurrentAttack(value);
 }
 
 function setCurrentAttackContext(value) {
-  currentAttackContext = value;
+  return battleRuntimeAccessors.setCurrentAttackContext(value);
 }
 
 function setCurrentAttackContexts(value) {
-  currentAttackContexts = value;
+  return battleRuntimeAccessors.setCurrentAttackContexts(value);
 }
 
 function ensureActionState(state) {
@@ -1286,7 +1288,25 @@ processReservedActionsForTrigger,
     twoVtwoActions.executeUnifiedSelectedSlot(...args)
 });
 
+battleRuntimeAccessors = createBattleRuntimeAccessors({
+  getPendingChoice: () => pendingChoice,
 
+  getCurrentAttack: () => currentAttack,
+  getCurrentAttackContext: () => currentAttackContext,
+  getCurrentAttackContexts: () => currentAttackContexts,
+
+  setCurrentAttack: (value) => {
+    currentAttack = value;
+  },
+
+  setCurrentAttackContext: (value) => {
+    currentAttackContext = value;
+  },
+
+  setCurrentAttackContexts: (value) => {
+    currentAttackContexts = value;
+  }
+});
 battleFlow = createBattleFlow({
   getBattleMode: () => battleMode,
 isTeamBattleMode,
