@@ -1,3 +1,4 @@
+import { bindMainEvents } from "./js_main_event_binder.js";
 import { createBattleRuntimeAccessors } from "./js_battle_runtime_accessors.js";
 import { createBattleInitController } from "./js_battle_init_controller.js";
 import { createResetController } from "./js_reset_controller.js";
@@ -123,49 +124,7 @@ const onlineRoomIdInput = document.getElementById("onlineRoomIdInput");
 const onlineRoomStatus = document.getElementById("onlineRoomStatus");
 const onlineInviteUrl = document.getElementById("onlineInviteUrl");
 
-startOnline1v1Btn.addEventListener("click", () => {
-  battleMode = "online1v1";
-  showScreen("onlineRoom");
-});
 
-startOnline2v2Btn.addEventListener("click", () => {
-  showPopup("オンライン2on2はオンライン1on1安定後に実装予定です");
-});
-
-createOnlineRoomBtn.addEventListener("click", () => {
-  onlineRoomController.createOnlineRoom();
-});
-joinOnlineRoomBtn.addEventListener("click", () => {
-  onlineRoomController.joinOnlineRoom();
-});
-
-backFromOnlineRoomBtn.addEventListener("click", () => {
-  showTitle();
-});
-
-document.getElementById("start1v1Btn").addEventListener("click", () => {
-  localModeController.startLocalMode("1v1");
-});
-
-document.getElementById("start2v2Btn").addEventListener("click", () => {
-  localModeController.startLocalMode("2v2");
-});
-
-document.getElementById("startChallenge1v1Btn").addEventListener("click", () => {
-  localModeController.startLocalMode("challenge1v1");
-});
-
-document.getElementById("startChallenge2v2Btn").addEventListener("click", () => {
-  localModeController.startLocalMode("challenge2v2");
-});
-
-document.getElementById("startVsCpu1v1Btn").addEventListener("click", () => {
-  localModeController.startLocalMode("vscpu1v1");
-});
-
-document.getElementById("startVsCpu2v2Btn").addEventListener("click", () => {
-  localModeController.startLocalMode("vscpu2v2");
-});
 
 const units = unitList;
 
@@ -1890,7 +1849,25 @@ document.getElementById("closePlayerStatsBtn")?.addEventListener("click", () => 
 });
 
 loadUnitButtons();
+bindMainEvents({
+  setBattleMode: (value) => {
+    battleMode = value;
+  },
 
+  showScreen,
+  showPopup,
+  showTitle,
+
+  onlineRoomController,
+  localModeController,
+  twoVtwoActions,
+  playerAccountUi,
+
+  simulateSlot,
+  endTurn,
+  toggleTestMode,
+  renderPlayerStatsPanel
+});
 restorePlayerSession().then(() => {
   syncExtraUnlockedUnitsFromProfile();
   updatePlayerCardUi();
