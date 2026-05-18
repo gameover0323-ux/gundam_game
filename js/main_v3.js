@@ -1,3 +1,4 @@
+import { bindMainEvents } from "./js_main_event_bindings.js";
 import { bindMainEvents } from "./js_main_event_binder.js";
 import { createBattleRuntimeAccessors } from "./js_battle_runtime_accessors.js";
 import { createBattleInitController } from "./js_battle_init_controller.js";
@@ -1814,38 +1815,30 @@ setCurrentAttackContexts,
   executeSlot
 });
 
-document.getElementById("executeSlotBtn").addEventListener("click", () => {
-  twoVtwoActions.executeTeamSlot();
-});
+bindMainEvents({
+  startOnline1v1Btn,
+  startOnline2v2Btn,
+  createOnlineRoomBtn,
+  joinOnlineRoomBtn,
+  backFromOnlineRoomBtn,
 
-document.getElementById("executeUnit1SlotBtn").addEventListener("click", () => {
-  twoVtwoActions.executeSingleTeamSlot("unit1");
-});
+  setBattleMode: (value) => {
+    battleMode = value;
+  },
 
-document.getElementById("executeUnit2SlotBtn").addEventListener("click", () => {
-  twoVtwoActions.executeSingleTeamSlot("unit2");
-});
-document.getElementById("simulateSlotBtn").addEventListener("click", simulateSlot);
-document.getElementById("endTurnBtn").addEventListener("click", endTurn);
-document.getElementById("toggleTestModeBtn").addEventListener("click", toggleTestMode);
-document.getElementById("playerLoginBtn")?.addEventListener("click", () => {
-  playerAccountUi.handleLogin();
-});
+  localModeController,
+  onlineRoomController,
+  playerAccountUi,
 
-document.getElementById("playerRegisterBtn")?.addEventListener("click", () => {
-  playerAccountUi.handleRegister();
-});
+  twoVtwoActions,
 
-document.getElementById("playerLogoutBtn")?.addEventListener("click", () => {
-  playerAccountUi.handleLogout();
-});
-document.getElementById("playerStatsBtn")?.addEventListener("click", () => {
-  renderPlayerStatsPanel();
-});
-
-document.getElementById("closePlayerStatsBtn")?.addEventListener("click", () => {
-  const panel = document.getElementById("playerStatsPanel");
-  if (panel) panel.style.display = "none";
+  showScreen,
+  showTitle,
+  showPopup,
+  simulateSlot,
+  endTurn,
+  toggleTestMode,
+  renderPlayerStatsPanel
 });
 
 loadUnitButtons();
