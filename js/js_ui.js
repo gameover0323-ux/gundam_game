@@ -205,7 +205,19 @@ export function renderPlayerState2v2(team, container, label, handlers) {
   const activeLabel = team.activeUnitKey === "unit1" ? "1" : "2";
   const focusLabel = team.focusUnitKey === "unit1" ? "1" : "2";
   const modeLabel = team.mode === "unified" ? "統合型" : "分散型";
+const unit1Focused =
+    team.mode === "unified" || team.focusUnitKey === "unit1";
 
+  const unit2Focused =
+    team.mode === "unified" || team.focusUnitKey === "unit2";
+
+  const unit1NameStyle = unit1Focused
+    ? "color:#ff4040;font-weight:bold;"
+    : "";
+
+  const unit2NameStyle = unit2Focused
+    ? "color:#ff4040;font-weight:bold;"
+    : "";
   const confuseText =
     activeState.isConfusedTurn && activeState.confuseHits > 0
       ? `<div>攻撃無効蓄積:${activeState.confuseHits}</div>`
@@ -234,18 +246,21 @@ export function renderPlayerState2v2(team, container, label, handlers) {
     <h3>${label}</h3>
 
 <div style="margin-bottom:8px;">
-      <button class="teamModeBtn"><button class="teamModeBtn">   ${team.mode === "unified" ? "分散型へ" : "統合型へ"} </button> <span>[現在:${modeLabel}]</span></button>
+      <button class="teamModeBtn">
+        ${team.mode === "unified" ? "分散型へ" : "統合型へ"}
+      </button>
+      <span>[現在:${modeLabel}]</span>
     </div>
 
     <div style="margin-bottom:8px; text-align:left;">
       <div style="margin-bottom:4px;">
-        <b>1. ${team.unit1.name}</b>
+ <b style="${unit1NameStyle}">1. ${team.unit1.name}</b>
         <div>HP:${team.unit1.hp}/${team.unit1.maxHp}</div>
         <div>${getEvadeDisplayHtml(team.unit1)}</div>
       </div>
 
       <div>
-        <b>2. ${team.unit2 ? team.unit2.name : "空き"}</b>
+      <b style="${unit2NameStyle}">2. ${team.unit2 ? team.unit2.name : "空き"}</b>
         <div>${team.unit2 ? `HP:${team.unit2.hp}/${team.unit2.maxHp}` : "HP:-"}</div>
         <div>${getEvadeDisplayHtml(team.unit2)}</div>
       </div>
