@@ -551,9 +551,14 @@ function build2v2RenderHandlers(playerKey) {
     playerKey,
     canChangeFocus: isBossSide ? false : canChangeFocus(playerKey),
   onToggleTeamMode: () => {
-  toggleTeamMode(playerKey);
-  redrawBattleBoards();
-},
+      if (currentPlayer !== playerKey) {
+        showPopup("型変更は自分ターン中のみ可能");
+        return;
+      }
+
+      toggleTeamMode(playerKey);
+      redrawBattleBoards();
+    },
     onSwitchActiveUnit: (unitKey) => {
       const team = getTeam(playerKey);
       if (!team || !team[unitKey]) return;
