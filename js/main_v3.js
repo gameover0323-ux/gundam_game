@@ -550,8 +550,8 @@ function build2v2RenderHandlers(playerKey) {
     currentPlayer,
     playerKey,
     canChangeFocus: isBossSide ? false : canChangeFocus(playerKey),
-    onToggleTeamMode: () => {
-  teamBattle.toggleTeamMode(playerKey);
+  onToggleTeamMode: () => {
+  toggleTeamMode(playerKey);
   redrawBattleBoards();
 },
     onSwitchActiveUnit: (unitKey) => {
