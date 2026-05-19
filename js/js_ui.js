@@ -233,8 +233,8 @@ export function renderPlayerState2v2(team, container, label, handlers) {
   container.innerHTML = `
     <h3>${label}</h3>
 
-    <div style="margin-bottom:8px;">
-      <button class="teamModeBtn">[${modeLabel}]</button>
+<div style="margin-bottom:8px;">
+      <button class="teamModeBtn"><button class="teamModeBtn">   ${team.mode === "unified" ? "分散型へ" : "統合型へ"} </button> <span>[現在:${modeLabel}]</span></button>
     </div>
 
     <div style="margin-bottom:8px; text-align:left;">
