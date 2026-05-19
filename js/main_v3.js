@@ -1243,7 +1243,7 @@ getRollableSlotKeys,
   isUnifiedTeam,
   getUnifiedEvade,
   consumeUnifiedEvade,
-
+twoVtwoAdapter,
   canExecuteSpecialForPlayer,
 
   setCurrentAction,
