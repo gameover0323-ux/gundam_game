@@ -242,52 +242,90 @@ function takeHit(index) {
   }
 
   function supportDefenseAttack(index) {
-    if (!isTeamBattleMode()) {
-      ctx.appendBattleNotice("援護防御は2on2専用");
-      return;
-    }
-
-    const currentAttack = ctx.getCurrentAttack();
-    const attack = currentAttack[index];
-    if (!attack) return;
-
-    const ctxAtk = ctx.getCurrentAttackContext();
-    const attackerPlayer = ctxAtk?.ownerPlayer || ctx.getCurrentPlayer();
-    const defenderPlayer = ctxAtk?.enemyPlayer || ctx.getOpponentPlayer(attackerPlayer);
-
-    const defenderTeam = ctx.getTeam(defenderPlayer);
-    if (!defenderTeam || defenderTeam.mode !== "split") return;
-
-    const focus = defenderTeam.focusUnitKey || "unit1";
-    const support = focus === "unit1" ? "unit2" : "unit1";
-    const supportUnit = defenderTeam[support];
-
-    if (!supportUnit || supportUnit.evade <= 0) return;
-
-    supportUnit.evade--;
-
-    let damage = attack.ignoreReduction
-      ? attack.damage
-      : Math.floor(attack.damage / 2);
-
-    supportUnit.hp -= damage;
-    if (supportUnit.hp < 0) supportUnit.hp = 0;
-
-    currentAttack.splice(index, 1);
-
-    if (ctxAtk) ctxAtk.hitCount++;
-
-    ctx.appendBattleNotice(`${supportUnit.name}が援護防御`);
-
-    if (currentAttack.length === 0) {
-      finishCurrentAttackResolution();
-      return;
-    }
-
-    ctx.redrawBattleBoards();
-    ctx.renderAttackChoices();
+  if (!isTeamBattleMode()) {
+    ctx.appendBattleNotice("援護防御は2on2専用");
+    return;
   }
 
+  const currentAttack = ctx.getCurrentAttack();
+  const attack = currentAttack[index];
+
+  if (!attack) return;
+
+  const ctxAtk = ctx.getCurrentAttackContext();
+
+  const attackerPlayer = ctxAtk?.ownerPlayer || ctx.getCurrentPlayer();
+  const defenderPlayer = ctxAtk?.enemyPlayer || ctx.getOpponentPlayer(attackerPlayer);
+
+  const attacker = ctx.getPlayerState(attackerPlayer);
+  const defenderTeam = ctx.getTeam(defenderPlayer);
+
+  if (!defenderTeam || defenderTeam.mode !== "split") {
+    ctx.appendBattleNotice("援護防御は分散型のみ使用可能");
+    ctx.redrawBattleBoards();
+    ctx.renderAttackChoices();
+    return;
+  }
+
+  const focusKey = defenderTeam.focusUnitKey || "unit1";
+  const supportKey = focusKey === "unit1" ? "unit2" : "unit1";
+  const supportUnit = defenderTeam[supportKey];
+
+  if (!supportUnit || supportUnit.evade <= 0) {
+    ctx.appendBattleNotice("援護防御失敗：相方の回避が足りない");
+    ctx.redrawBattleBoards();
+    ctx.renderAttackChoices();
+    return;
+  }
+
+  supportUnit.evade -= 1;
+
+  const baseDamage = Math.floor((attack.damage || 0) / 2);
+
+  const modifiedDamage = ctx.executeUnitModifyTakenDamage(
+    supportUnit,
+    attacker,
+    attack,
+    baseDamage
+  );
+
+  const finalDamage =
+    typeof modifiedDamage === "number"
+      ? modifiedDamage
+      : typeof modifiedDamage?.damage === "number"
+        ? modifiedDamage.damage
+        : baseDamage;
+
+  supportUnit.hp -= Math.max(0, finalDamage);
+
+  if (supportUnit.hp < 0) {
+    supportUnit.hp = 0;
+  }
+
+  supportUnit.lastDamageTaken = Math.max(0, finalDamage);
+
+  currentAttack.splice(index, 1);
+
+  if (ctxAtk) ctxAtk.hitCount++;
+
+  ctx.appendBattleNotice(
+    `${supportUnit.name}が援護防御：回避1消費、${Math.max(0, finalDamage)}ダメージ`
+  );
+
+  const damagedResult = ctx.executeUnitOnDamaged(supportUnit, attacker);
+
+  if (damagedResult.message) {
+    ctx.appendBattleNotice(damagedResult.message);
+  }
+
+  if (currentAttack.length === 0) {
+    finishCurrentAttackResolution();
+    return;
+  }
+
+  ctx.redrawBattleBoards();
+  ctx.renderAttackChoices();
+  }
   return {
     takeHit,
     evadeAttack,
