@@ -395,7 +395,9 @@ function setFocusUnit(playerKey, unitKey) {
 }
 
 function toggleTeamMode(playerKey) {
-  return twoVtwoCore.toggleTeamMode(playerKey);
+  const result = twoVtwoCore.toggleTeamMode(playerKey);
+  redrawBattleBoards();
+  return result;
 }
 
 function createTeam(unit1, unit2) {
