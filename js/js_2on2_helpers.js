@@ -19,38 +19,38 @@ export function create2v2Helpers({
 function consumeUnifiedEvade(team, amount) {
   if (!team) return false;
 
-  const useCount = Math.max(0, Number(amount || 0));
-  if (useCount <= 0) return true;
+  let remain = Math.max(0, Number(amount || 0));
 
-  const requiredTotal = useCount * 2;
+  const total =
+    Math.max(0, Number(team.unit1?.evade || 0)) +
+    Math.max(0, Number(team.unit2?.evade || 0));
 
-  const unit1Evade = Math.max(0, team.unit1?.evade || 0);
-  const unit2Evade = Math.max(0, team.unit2?.evade || 0);
-
-  if (unit1Evade + unit2Evade < requiredTotal) {
+  if (total < remain) {
     return false;
   }
 
-  let remain = requiredTotal;
+  while (remain > 0) {
+    if ((team.unit1?.evade || 0) >= (team.unit2?.evade || 0)) {
+      if (team.unit1.evade > 0) {
+        team.unit1.evade -= 1;
+        remain -= 1;
+        continue;
+      }
+    }
 
-  const normalPay1 = Math.min(unit1Evade, useCount);
-  team.unit1.evade -= normalPay1;
-  remain -= normalPay1;
+    if (team.unit2?.evade > 0) {
+      team.unit2.evade -= 1;
+      remain -= 1;
+      continue;
+    }
 
-  const normalPay2 = Math.min(unit2Evade, useCount);
-  team.unit2.evade -= normalPay2;
-  remain -= normalPay2;
+    if (team.unit1?.evade > 0) {
+      team.unit1.evade -= 1;
+      remain -= 1;
+      continue;
+    }
 
-  if (remain > 0) {
-    const extraPay1 = Math.min(Math.max(0, team.unit1.evade || 0), remain);
-    team.unit1.evade -= extraPay1;
-    remain -= extraPay1;
-  }
-
-  if (remain > 0) {
-    const extraPay2 = Math.min(Math.max(0, team.unit2.evade || 0), remain);
-    team.unit2.evade -= extraPay2;
-    remain -= extraPay2;
+    break;
   }
 
   return remain <= 0;
