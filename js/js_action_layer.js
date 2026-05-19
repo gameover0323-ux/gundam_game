@@ -376,7 +376,12 @@ function collectCpuSlotAction(ownerPlayer, slotKey, slotOverride = null, actionI
       }
     }
 
-    const result = resolveSlotEffect({ slot, actor });
+   const result = resolveSlotEffect({
+  slot,
+  actor,
+  ownerPlayer,
+  twoVtwoAdapter: ctx.twoVtwoAdapter || null
+});
 
     const afterResult = runAfterSlotResolvedHook(actor, slotNumber, result, {
       ownerPlayer,
@@ -547,7 +552,12 @@ function collectCpuSlotAction(ownerPlayer, slotKey, slotOverride = null, actionI
   ctx.setCurrentAttack([]);
 
   const actor = ctx.getPlayerState(ctx.getCurrentPlayer());
-  const result = resolveSlotEffect({ slot, actor });
+ const result = resolveSlotEffect({
+  slot,
+  actor,
+  ownerPlayer: slotMeta.ownerPlayer,
+  twoVtwoAdapter: ctx.twoVtwoAdapter || null
+});
 
   function mergeExtraResult(baseResult) {
     const merged = {
