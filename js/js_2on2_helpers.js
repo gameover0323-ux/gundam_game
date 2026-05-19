@@ -10,12 +10,11 @@ export function create2v2Helpers({
   function getUnifiedEvade(team) {
   if (!team) return 0;
 
-  const total =
-    Math.max(0, team.unit1?.evade || 0) +
-    Math.max(0, team.unit2?.evade || 0);
-
-  return Math.floor(total / 2);
-}
+  return (
+    Math.max(0, Number(team.unit1?.evade || 0)) +
+    Math.max(0, Number(team.unit2?.evade || 0))
+  );
+  }
 
 function consumeUnifiedEvade(team, amount) {
   if (!team) return false;
