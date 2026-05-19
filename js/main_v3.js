@@ -201,6 +201,7 @@ let attackResolution = null;
 
 let twoVtwoHelpers = null;
 let twoVtwoActions = null;
+let twoVtwoAdapter = null;
 
 let uiController = null;
 
@@ -1779,7 +1780,12 @@ twoVtwoHelpers = create2v2Helpers({
   getBattleMode: () => battleMode,
   getTeam
 });
-
+twoVtwoAdapter = create2v2Adapter({
+  isTeamBattleMode,
+  getTeam,
+  getUnifiedEvade,
+  consumeUnifiedEvade
+});
 twoVtwoActions = create2v2Actions({
   getBattleMode: () => battleMode,
 isTeamBattleMode,
