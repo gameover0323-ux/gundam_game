@@ -145,7 +145,27 @@ function takeHit(index) {
       ctx.renderAttackChoices();
       return;
     }
+const defenderTeam = ctx.getTeam(defenderPlayer);
 
+    if (defenderTeam && defenderTeam.mode === "unified" && hitResult && !hitResult.cancelled) {
+      const actualDamage =
+        typeof hitResult.finalDamage === "number"
+          ? hitResult.finalDamage
+          : damagePreview;
+
+      const unified = defenderTeam.unified || {
+        baseHpA: defenderTeam.unit1?.hp || 0,
+        baseHpB: defenderTeam.unit2?.hp || 0,
+        totalDamage: 0,
+        healA: 0,
+        healB: 0
+      };
+
+      unified.totalDamage = Math.max(0, Number(unified.totalDamage || 0)) + Math.max(0, actualDamage);
+      defenderTeam.unified = unified;
+
+      defender.hp += Math.max(0, actualDamage);
+    }
     defender.lastDamageTaken =
       typeof hitResult?.finalDamage === "number"
         ? hitResult.finalDamage
