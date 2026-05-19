@@ -559,7 +559,6 @@ function build2v2RenderHandlers(playerKey) {
       }
 
       toggleTeamMode(playerKey);
-      redrawBattleBoards();
     },
     onSwitchActiveUnit: (unitKey) => {
       const team = getTeam(playerKey);
