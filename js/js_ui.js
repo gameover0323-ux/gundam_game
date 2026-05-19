@@ -284,8 +284,7 @@ const unified = team.unified || {};
     </div>
 
     <div style="margin-bottom:8px; text-align:left;">
-    ${teamHpDisplayHtml}
-      ${teamEvadeDisplayHtml}
+    
       <div style="margin-bottom:4px;">
       
         <b style="${unit1NameStyle}">1. ${team.unit1.name}</b>
