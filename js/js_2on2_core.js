@@ -151,7 +151,25 @@ function floorHp(value) {
     const team = getTeam(playerKey);
     if (!team) return;
 
-    ctx.showPopup("統合型は未実装です");
+    if (!isTeamBattleMode()) {
+      ctx.showPopup("2on2専用操作です");
+      return;
+    }
+
+    if (ctx.hasPendingChoice() || ctx.hasCurrentAttack()) {
+      ctx.showPopup("QTE中は型を変更できません");
+      return;
+    }
+
+    if (team.mode === "unified") {
+      exitUnifiedMode(team);
+      ctx.appendBattleNotice(`${playerKey}チーム：分散型へ移行`);
+    } else {
+      enterUnifiedMode(team);
+      ctx.appendBattleNotice(`${playerKey}チーム：統合型へ移行`);
+    }
+
+    ctx.redrawBattleBoards();
   }
 
   function createTeam(unit1, unit2) {
@@ -184,6 +202,7 @@ function floorHp(value) {
     canChangeFocus,
     setFocusUnit,
     toggleTeamMode,
+    getUnifiedTotalHp,
     createTeam
   };
 }
