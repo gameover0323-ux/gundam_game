@@ -19,7 +19,7 @@ function parseAttributes(desc) {
   };
 }
 
-function resolveStructuredEffect({ slot, actor }) {
+function resolveStructuredEffect({ slot, actor, ownerPlayer, twoVtwoAdapter }) {
   const effect = slot?.effect;
 
   if (!effect || !effect.type) {
@@ -28,7 +28,12 @@ function resolveStructuredEffect({ slot, actor }) {
 
   if (effect.type === "evade") {
     const amount = Number(effect.amount || 0);
-    addEvade(actor, amount);
+
+    if (twoVtwoAdapter && ownerPlayer) {
+      twoVtwoAdapter.addTeamEvade(ownerPlayer, actor, amount);
+    } else {
+      addEvade(actor, amount);
+    }
 
     return {
       kind: "evade",
@@ -37,16 +42,21 @@ function resolveStructuredEffect({ slot, actor }) {
     };
   }
 
-  if (effect.type === "heal") {
+if (effect.type === "heal") {
     const amount = Number(effect.amount || 0);
-    actor.hp = Math.min(actor.maxHp, actor.hp + amount);
+
+    if (twoVtwoAdapter && ownerPlayer) {
+      twoVtwoAdapter.heal(ownerPlayer, actor, amount);
+    } else {
+      actor.hp = Math.min(actor.maxHp, actor.hp + amount);
+    }
 
     return {
       kind: "heal",
       attacks: [],
       message: `${actor.name} が ${amount} 回復`
     };
-  }
+}
 
   if (effect.type === "attack") {
   const damage = Number(effect.damage || 0);
@@ -106,42 +116,55 @@ if (effect.type === "custom") {
   };
 }
 
-function resolveLegacyDesc({ desc, actor }) {
+function resolveLegacyDesc({ desc, actor, ownerPlayer, twoVtwoAdapter }) {
   const result = {
     kind: "none",
     attacks: [],
     message: ""
   };
 
-  if (/^回避/.test(desc)) {
+if (/^回避/.test(desc)) {
     const ev = parseInt(desc.match(/(\d+)/)[1], 10);
-    addEvade(actor, ev);
+
+    if (twoVtwoAdapter && ownerPlayer) {
+      twoVtwoAdapter.addTeamEvade(ownerPlayer, actor, ev);
+    } else {
+      addEvade(actor, ev);
+    }
 
     result.kind = "evade";
     result.message = `${actor.name} の回避が ${ev} 増加`;
     return result;
-  }
+}
 
   const attr = parseAttributes(desc);
 
   if (attr.heal) {
     const heal = parseInt(desc.match(/(\d+)/)[1], 10);
-    actor.hp = Math.min(actor.maxHp, actor.hp + heal);
+
+    if (twoVtwoAdapter && ownerPlayer) {
+      twoVtwoAdapter.heal(ownerPlayer, actor, heal);
+    } else {
+      actor.hp = Math.min(actor.maxHp, actor.hp + heal);
+    }
 
     result.kind = "heal";
     result.message = `${actor.name} が ${heal} 回復`;
     return result;
   }
-
   if (attr.evade) {
     const ev = parseInt(desc.match(/(\d+)/)[1], 10);
-   addEvade(actor, ev);
+
+    if (twoVtwoAdapter && ownerPlayer) {
+      twoVtwoAdapter.addTeamEvade(ownerPlayer, actor, ev);
+    } else {
+      addEvade(actor, ev);
+    }
 
     result.kind = "evade";
     result.message = `${actor.name} の回避が ${ev} 増加`;
     return result;
   }
-
   const attacks = [];
   const multi = /(\d+)ダメージ[×x](\d+)/g;
   const single = /(\d+)ダメージ(?![×x\d])/g;
@@ -197,14 +220,27 @@ function resolveLegacyDesc({ desc, actor }) {
   return result;
 }
 
-export function resolveSlotEffect({ slot, actor }) {
-  const structured = resolveStructuredEffect({ slot, actor });
+export function resolveSlotEffect({
+  slot,
+  actor,
+  ownerPlayer = null,
+  twoVtwoAdapter = null
+}) {
+  const structured = resolveStructuredEffect({
+    slot,
+    actor,
+    ownerPlayer,
+    twoVtwoAdapter
+  });
+
   if (structured) {
     return structured;
   }
 
   return resolveLegacyDesc({
     desc: slot?.desc || "",
-    actor
+    actor,
+    ownerPlayer,
+    twoVtwoAdapter
   });
 }
