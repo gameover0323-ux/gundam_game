@@ -8,9 +8,14 @@ export function create2v2Actions(ctx) {
   }
 
   function getTeamSlotOrder(team) {
-    const focusKey = team.focusUnitKey || "unit1";
-    const partnerKey = focusKey === "unit1" ? "unit2" : "unit1";
-    return [focusKey, partnerKey];
+  if (!team) return [];
+
+  const order = [];
+
+  if (team.unit1) order.push("unit1");
+  if (team.unit2) order.push("unit2");
+
+  return order;
   }
 
   function processTeamUnitSlot(team, unitKey, enemyPlayer, forcedSlotKey = null) {
