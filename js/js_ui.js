@@ -221,12 +221,8 @@ const unified = team.unified || {};
     Math.max(0, Number(team.unit2?.maxHp || 0));
 
   const unifiedEvade =
-    Math.floor(
-      (
-        Math.max(0, Number(team.unit1?.evade || 0)) +
-        Math.max(0, Number(team.unit2?.evade || 0))
-      ) / 2
-    );
+  Math.max(0, Number(team.unit1?.evade || 0)) +
+  Math.max(0, Number(team.unit2?.evade || 0));
 
   const teamHpDisplayHtml =
     team.mode === "unified"
