@@ -298,15 +298,18 @@ const unit1Focused =
     <div class="specialArea"></div>
   `;
 
-  const teamModeBtn = container.querySelector(".teamModeBtn");
+ const teamModeBtn = container.querySelector(".teamModeBtn");
   if (teamModeBtn) {
     teamModeBtn.addEventListener("click", () => {
       if (handlers.onToggleTeamMode) {
         handlers.onToggleTeamMode();
       }
+
+      if (handlers.onAfterUiAction) {
+        handlers.onAfterUiAction();
+      }
     });
   }
-
   container.querySelectorAll(".switchUnitBtn").forEach((btn) => {
     btn.addEventListener("click", () => {
       if (handlers.onSwitchActiveUnit) {
