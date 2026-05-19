@@ -160,7 +160,10 @@ function floorHp(value) {
       ctx.showPopup("QTE中は型を変更できません");
       return;
     }
-
+if (ctx.getCurrentPlayer && ctx.getCurrentPlayer() !== playerKey) {
+      ctx.showPopup("型変更は自分ターン中のみ可能");
+      return;
+}
     if (team.mode === "unified") {
       exitUnifiedMode(team);
       ctx.appendBattleNotice(`${playerKey}チーム：分散型へ移行`);
