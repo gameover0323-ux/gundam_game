@@ -224,14 +224,24 @@ const unified = team.unified || {};
   Math.max(0, Number(team.unit1?.evade || 0)) +
   Math.max(0, Number(team.unit2?.evade || 0));
 
-  const teamHpDisplayHtml =
+  const teamHpBarHtml =
     team.mode === "unified"
-      ? `<div style="font-weight:bold;">チームHP:${unifiedHp}/${unifiedMaxHp}</div>`
+      ? `
+        <div class="hpbar">
+          <div class="hpfill" style="width:${unifiedMaxHp > 0 ? Math.max(0, unifiedHp / unifiedMaxHp * 100) : 0}%"></div>
+        </div>
+      `
       : "";
 
-  const teamEvadeDisplayHtml =
+  const teamStatusHtml =
     team.mode === "unified"
-      ? `<div style="font-weight:bold;">チーム回避:${unifiedEvade}</div>`
+      ? `
+        <div style="margin-bottom:8px;">
+          <div style="font-weight:bold;">統合HP:${unifiedHp}/${unifiedMaxHp}</div>
+          ${teamHpBarHtml}
+          <div style="font-weight:bold;">統合回避:${unifiedEvade}</div>
+        </div>
+      `
       : "";
   const unit1Focused = team.mode === "unified" || team.focusUnitKey === "unit1";
   const unit2Focused = team.mode === "unified" || team.focusUnitKey === "unit2";
@@ -279,15 +289,12 @@ const unified = team.unified || {};
       <div style="margin-bottom:4px;">
       
         <b style="${unit1NameStyle}">1. ${team.unit1.name}</b>
-        <div>HP:${team.unit1.hp}/${team.unit1.maxHp}</div>
-        <div>${getEvadeDisplayHtml(team.unit1)}</div>
-      </div>
-
+   <div>${team.mode === "unified" ? "HP:[統合中]" : `HP:${team.unit1.hp}/${team.unit1.maxHp}`}</div>
+        <div>${team.mode === "unified" ? "回避:[統合中]" : getEvadeDisplayHtml(team.unit1)}</div>
       <div>
         <b style="${unit2NameStyle}">2. ${team.unit2 ? team.unit2.name : "空き"}</b>
-        <div>${team.unit2 ? `HP:${team.unit2.hp}/${team.unit2.maxHp}` : "HP:-"}</div>
-        <div>${getEvadeDisplayHtml(team.unit2)}</div>
-      </div>
+    <div>${team.unit2 ? (team.mode === "unified" ? "HP:[統合中]" : `HP:${team.unit2.hp}/${team.unit2.maxHp}`) : "HP:-"}</div>
+        <div>${team.unit2 ? (team.mode === "unified" ? "回避:[統合中]" : getEvadeDisplayHtml(team.unit2)) : "回避:-"}</div>
     </div>
 
     <div style="margin-bottom:6px;">
@@ -303,14 +310,23 @@ const unified = team.unified || {};
       <button class="focusUnitBtn compact2v2Btn" data-unit-key="unit2" ${focusDisabled}>[2]</button>
       <div style="font-size:11px;">現在:${focusLabel}</div>
     </div>
+${teamStatusHtml}
+ <div ${nameStyle}><b>${activeState.displayName || activeState.name}</b></div>
 
-    <div ${nameStyle}><b>${activeState.displayName || activeState.name}</b></div>
-    <div>HP:${activeState.hp}/${activeState.maxHp}</div>
-    <div class="hpbar">
-      <div class="hpfill" style="width:${Math.max(0, activeState.hp / activeState.maxHp * 100)}%"></div>
-    </div>
-
-    ${evadeHtml}
+    ${
+      team.mode === "unified"
+        ? `
+          <div>HP:[統合中]</div>
+          <div>回避:[統合中]</div>
+        `
+        : `
+          <div>HP:${activeState.hp}/${activeState.maxHp}</div>
+          <div class="hpbar">
+            <div class="hpfill" style="width:${Math.max(0, activeState.hp / activeState.maxHp * 100)}%"></div>
+          </div>
+          ${evadeHtml}
+        `
+    }
     ${statusHtml}
     ${confuseText}
 
