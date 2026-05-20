@@ -55,50 +55,43 @@ export function createBattleFlow(ctx) {
   }
 
   function clampEvadeToMax(state) {
-    if (!state || typeof state.evadeMax !== "number") return;
+  if (!state || typeof state.evadeMax !== "number") return;
 
-    let clampMax = state.evadeMax;
+  const baseMax = state.evadeMax;
+  const absoluteMax = typeof state.overEvadeAbsoluteMax === "number"
+    ? state.overEvadeAbsoluteMax
+    : 50;
 
-    if (state.overEvadeMode) {
-      const redCap =
-        typeof state.overEvadeCap === "number"
-          ? state.overEvadeCap
-          : state.evadeMax;
+  let clampMax = baseMax;
 
-      clampMax = Math.max(state.evadeMax, redCap);
-    }
+  if (state.overEvadeMode) {
+    const redCap = typeof state.overEvadeCap === "number"
+      ? state.overEvadeCap
+      : baseMax;
 
-    if (state.evade > clampMax) {
-      state.evade = clampMax;
-    }
+    clampMax = Math.min(Math.max(baseMax, redCap), absoluteMax);
+  }
 
-    if (state.evade < 0) {
-      state.evade = 0;
-    }
+  if (state.evade > clampMax) {
+    state.evade = clampMax;
+  }
 
-    if (state.overEvadeMode) {
-      const currentRedCap =
-        typeof state.overEvadeCap === "number"
-          ? state.overEvadeCap
-          : state.evadeMax;
+  if (state.evade < 0) {
+    state.evade = 0;
+  }
 
-      const absoluteMax =
-        typeof state.overEvadeAbsoluteMax === "number"
-          ? state.overEvadeAbsoluteMax
-          : null;
+  if (state.evade <= baseMax) {
+    state.overEvadeMode = false;
+    state.overEvadeCap = baseMax;
+    state.overEvadeBaseMax = baseMax;
+  } else {
+    state.overEvadeMode = true;
+    state.overEvadeCap = clampMax;
+    state.overEvadeBaseMax = baseMax;
+  }
 
-      if (state.evade <= state.evadeMax) {
-        state.overEvadeMode = false;
-        state.overEvadeCap = state.evadeMax;
-        state.overEvadeBaseMax = state.evadeMax;
-        return;
-      }
-
-      state.overEvadeCap =
-        absoluteMax !== null
-          ? Math.min(currentRedCap, state.evade, absoluteMax)
-          : Math.min(currentRedCap, state.evade);
-    }
+  state.evadeGoldCap = state.overEvadeCap;
+  state.evadeRedCap = state.overEvadeCap;
   }
 
   function executeSlot() {
