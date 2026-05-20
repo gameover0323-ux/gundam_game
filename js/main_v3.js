@@ -1200,6 +1200,7 @@ specialActionController = createSpecialActionController({
 
   executeUnitCanUseSpecial,
   withUnifiedEvadeForCheck,
+  twoVtwoAdapter,
 
   executeSpecialRaw: (ownerPlayer, specialKey) =>
     actionLayer.executeSpecial(ownerPlayer, specialKey),
