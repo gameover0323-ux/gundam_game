@@ -88,11 +88,12 @@ const result = ctx.resolveSlotEffect({
       result.kind === "custom"
     ) {
       ctx.runAfterSlotResolvedHook(unit, slotNumber, result, {
-        ownerPlayer: currentPlayer,
-        enemyPlayer,
-        slotKey,
-        slotNumber
-      });
+  ownerPlayer: currentPlayer,
+  enemyPlayer,
+  slotKey,
+  slotNumber,
+  twoVtwoAdapter: ctx.twoVtwoAdapter || null
+});
 
       ctx.appendBattleNotice(
         result.message
