@@ -18,12 +18,15 @@ export function create2v2Actions(ctx) {
   return order;
   }
 
-  function processTeamUnitSlot(team, unitKey, enemyPlayer, forcedSlotKey = null) {
+  function processTeamUnitSlot(team, unitKey, enemyPlayer, forcedSlotKey = null, options = {}) {
     const unit = team[unitKey];
     if (!unit) return false;
 
     ctx.ensureActionState(unit);
-    if (!ctx.canConsumeAction(unit, 1)) return false;
+
+if (!options.skipActionCost) {
+  if (!ctx.canConsumeAction(unit, 1)) return false;
+}
 
     const rollableSlotKeys = ctx.getRollableSlotKeys(unit);
     if (!Array.isArray(rollableSlotKeys) || rollableSlotKeys.length === 0) return false;
