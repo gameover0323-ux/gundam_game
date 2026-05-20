@@ -271,13 +271,6 @@ if (
   ctx.twoVtwoAdapter.resetUnifiedActionCount(nextTeam);
 }
 
-if (
-  nextTeam.mode === "unified" &&
-  ctx.twoVtwoAdapter &&
-  typeof ctx.twoVtwoAdapter.resetUnifiedActionCount === "function"
-) {
-  ctx.twoVtwoAdapter.resetUnifiedActionCount(nextTeam);
-}
         if (ctx.getBattleMode && ctx.getBattleMode() === "vscpu2v2" && ctx.getCurrentPlayer() === "B") {
   const cpuTeam = ctx.getTeam("B");
   if (cpuTeam) {
