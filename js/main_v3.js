@@ -1843,7 +1843,12 @@ bindMainEvents({
   setBattleMode: (value) => {
     battleMode = value;
   },
-
+startOnline1v1Btn,
+  startOnline2v2Btn,
+  createOnlineRoomBtn,
+  joinOnlineRoomBtn,
+  backFromOnlineRoomBtn,
+  
   showScreen,
   showPopup,
   showTitle,
