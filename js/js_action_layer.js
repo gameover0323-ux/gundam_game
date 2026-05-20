@@ -895,7 +895,8 @@ function resolvePendingChoice(selectedValue) {
     enemyPlayer,
     enemyState: defender,
     currentAttackContext: ctx.getCurrentAttackContext(),
-    currentAttack: ctx.getCurrentAttack()
+    currentAttack: ctx.getCurrentAttack(),
+    twoVtwoAdapter: ctx.twoVtwoAdapter || null
   };
 
   let result = resolveCommonPendingChoice(actor, choice, selectedValue, choiceContext);
