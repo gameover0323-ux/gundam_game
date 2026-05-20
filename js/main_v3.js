@@ -1287,7 +1287,7 @@ executeTeamSlot: () => twoVtwoActions.executeTeamSlot(),
 executeCpuAutoSlotBatch,
   getCurrentPlayer: () => currentPlayer,
   setCurrentPlayer: (value) => { currentPlayer = value; },
-
+twoVtwoAdapter,
   getCurrentTurn: () => currentTurn,
   setCurrentTurn: (value) => { currentTurn = value; },
 
