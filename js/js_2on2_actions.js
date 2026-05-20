@@ -47,14 +47,14 @@ if (!options.skipActionCost) {
   ctx.consumeActionCount(unit, 1);
     }
 
-    const beforeResult = ctx.executeUnitBeforeSlot(unit, slotNumber, {
-  ownerPlayer: currentPlayer,
-  enemyPlayer,
-  enemyPlayerLabel: `PLAYER ${enemyPlayer}`,
-  enemyState: defender,
+    const enemyBeforeResult = ctx.executeUnitEnemyBeforeSlot(defender, slotNumber, {
+  ownerPlayer: enemyPlayer,
+  enemyPlayer: currentPlayer,
+  enemyPlayerLabel: `PLAYER ${currentPlayer}`,
+  enemyRolledSlotKey: slotKey,
+  enemyState: unit,
   twoVtwoAdapter: ctx.twoVtwoAdapter || null
 });
-
     if (beforeResult.message) {
       ctx.appendBattleNotice(beforeResult.message);
     }
