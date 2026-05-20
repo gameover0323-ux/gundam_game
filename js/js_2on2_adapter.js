@@ -151,6 +151,7 @@ export function create2v2Adapter(ctx) {
     return ctx.getUnifiedEvade(team);
   }
 
+
   function addActionCount(ownerPlayer, actor, amount) {
     const add = clampNumber(amount);
     if (add <= 0 || !actor) return 0;
@@ -162,17 +163,11 @@ export function create2v2Adapter(ctx) {
       return add;
     }
 
-    if (team.unit1) {
-      team.unit1.actionCount = clampNumber(team.unit1.actionCount) + add;
-    }
-
-    if (team.unit2) {
-      team.unit2.actionCount = clampNumber(team.unit2.actionCount) + add;
-    }
+    ensureUnifiedActionState(team);
+    team.unifiedActionCount = clampNumber(team.unifiedActionCount) + add;
 
     return add;
   }
-
   function applyToUnifiedPartners(ownerPlayer, callback) {
     const team = getOwnerTeam(ownerPlayer);
 
