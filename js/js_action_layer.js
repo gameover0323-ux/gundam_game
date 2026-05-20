@@ -712,11 +712,12 @@ const extra = mergeExtraResult(result);
     }
 
     const availability = executeUnitCanUseSpecial(actor, specialKey, {
-      ownerPlayer,
-      enemyPlayer: ctx.getOpponentPlayer(ownerPlayer),
-      currentAttackContext: ctx.getCurrentAttackContext(),
-      currentAttack: ctx.getCurrentAttack()
-    });
+  ownerPlayer,
+  enemyPlayer: ctx.getOpponentPlayer(ownerPlayer),
+  currentAttackContext: ctx.getCurrentAttackContext(),
+  currentAttack: ctx.getCurrentAttack(),
+  twoVtwoAdapter: ctx.twoVtwoAdapter || null
+});
 
     if (availability.allowed === false) {
       ctx.showPopup(availability.message || "このタイミングでは実行できない");
@@ -749,11 +750,12 @@ const extra = mergeExtraResult(result);
       actor.evade = totalEvade;
 
       const preview = executeUnitCanUseSpecial(actor, specialKey, {
-        ownerPlayer,
-        enemyPlayer: ctx.getOpponentPlayer(ownerPlayer),
-        currentAttackContext: ctx.getCurrentAttackContext(),
-        currentAttack: ctx.getCurrentAttack()
-      });
+  ownerPlayer,
+  enemyPlayer: ctx.getOpponentPlayer(ownerPlayer),
+  currentAttackContext: ctx.getCurrentAttackContext(),
+  currentAttack: ctx.getCurrentAttack(),
+  twoVtwoAdapter: ctx.twoVtwoAdapter || null
+});
 
       actor.evade = backup;
 
@@ -766,12 +768,13 @@ const extra = mergeExtraResult(result);
     const currentAttackContext = ctx.getCurrentAttackContext();
 
     const unitResult = executeUnitSpecial(actor, specialKey, {
-      ownerPlayer,
-      enemyPlayer: ctx.getOpponentPlayer(ownerPlayer),
-      enemyState: ctx.getPlayerState(ctx.getOpponentPlayer(ownerPlayer)),
-      currentAttackContext,
-      currentAttack
-    });
+  ownerPlayer,
+  enemyPlayer: ctx.getOpponentPlayer(ownerPlayer),
+  enemyState: ctx.getPlayerState(ctx.getOpponentPlayer(ownerPlayer)),
+  currentAttackContext,
+  currentAttack,
+  twoVtwoAdapter: ctx.twoVtwoAdapter || null
+});
 
     if (unitResult.handled) {
       if (unitResult.requestChoice) {
