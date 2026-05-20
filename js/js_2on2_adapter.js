@@ -185,8 +185,74 @@ export function create2v2Adapter(ctx) {
 
     return true;
   }
+function ensureUnifiedActionState(team) {
+    if (!team) return;
 
+    if (typeof team.unifiedBaseActionCount !== "number") {
+      team.unifiedBaseActionCount = 1;
+    }
+
+    if (typeof team.unifiedActionCount !== "number") {
+      team.unifiedActionCount = team.unifiedBaseActionCount;
+    }
+  }
+
+  function resetUnifiedActionCount(team) {
+    if (!team) return;
+    ensureUnifiedActionState(team);
+    team.unifiedActionCount = team.unifiedBaseActionCount;
+  }
+
+  function getActionCount(ownerPlayer, actor) {
+    const team = getOwnerTeam(ownerPlayer);
+
+    if (!team || team.mode !== "unified") {
+      return clampNumber(actor?.actionCount);
+    }
+
+    ensureUnifiedActionState(team);
+    return clampNumber(team.unifiedActionCount);
+  }
+
+  function canConsumeAction(ownerPlayer, actor, amount = 1) {
+    const cost = clampNumber(amount);
+    const team = getOwnerTeam(ownerPlayer);
+
+    if (!team || team.mode !== "unified") {
+      return !!actor && clampNumber(actor.actionCount) >= cost;
+    }
+
+    ensureUnifiedActionState(team);
+    return clampNumber(team.unifiedActionCount) >= cost;
+  }
+
+  function consumeAction(ownerPlayer, actor, amount = 1) {
+    const cost = clampNumber(amount);
+    if (cost <= 0) return true;
+
+    const team = getOwnerTeam(ownerPlayer);
+
+    if (!team || team.mode !== "unified") {
+      if (!actor || clampNumber(actor.actionCount) < cost) return false;
+      actor.actionCount = clampNumber(actor.actionCount) - cost;
+      return true;
+    }
+
+    ensureUnifiedActionState(team);
+
+    if (clampNumber(team.unifiedActionCount) < cost) {
+      return false;
+    }
+
+    team.unifiedActionCount = clampNumber(team.unifiedActionCount) - cost;
+    return true;
+  }
   return {
+    ensureUnifiedActionState,
+    resetUnifiedActionCount,
+    getActionCount,
+    canConsumeAction,
+    consumeAction,
     isUnifiedOwner,
     getOwnerTeam,
     getUnifiedHp,
