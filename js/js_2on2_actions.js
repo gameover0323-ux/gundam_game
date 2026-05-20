@@ -43,7 +43,9 @@ if (!options.skipActionCost) {
     const currentPlayer = ctx.getCurrentPlayer();
 
     unit.lastSlotKey = slotKey;
-    ctx.consumeActionCount(unit, 1);
+    if (!options.skipActionCost) {
+  ctx.consumeActionCount(unit, 1);
+    }
 
     const beforeResult = ctx.executeUnitBeforeSlot(unit, slotNumber, {
       ownerPlayer: currentPlayer,
@@ -69,11 +71,12 @@ if (!options.skipActionCost) {
         ctx.appendBattleNotice(enemyBeforeResult.message);
       }
     }
-
-    const result = ctx.resolveSlotEffect({
-      slot,
-      actor: unit
-    });
+const result = ctx.resolveSlotEffect({
+  slot,
+  actor: unit,
+  ownerPlayer: currentPlayer,
+  twoVtwoAdapter: ctx.twoVtwoAdapter || null
+});
 
     const actionLabel = `${unit.name} ${slotNumber}.${slot.label}`;
 
@@ -174,9 +177,26 @@ if (extraResult && Array.isArray(extraResult.appendAttacks)) {
     const enemyPlayer = ctx.getOpponentPlayer(currentPlayer);
     const order = getTeamSlotOrder(team);
 
-    order.forEach((unitKey) => {
-      processTeamUnitSlot(team, unitKey, enemyPlayer);
+if (team.mode === "unified") {
+  const actor = team[team.activeUnitKey] || team.unit1;
+
+  if (!ctx.twoVtwoAdapter || !ctx.twoVtwoAdapter.canConsumeAction(currentPlayer, actor, 1)) {
+    ctx.showPopup("統合行動権が足りません");
+    return;
+  }
+
+  ctx.twoVtwoAdapter.consumeAction(currentPlayer, actor, 1);
+
+  order.forEach((unitKey) => {
+    processTeamUnitSlot(team, unitKey, enemyPlayer, null, {
+      skipActionCost: true
     });
+  });
+} else {
+  order.forEach((unitKey) => {
+    processTeamUnitSlot(team, unitKey, enemyPlayer);
+  });
+}
 
     ctx.setCurrentAttackContext({
       ownerPlayer: currentPlayer,
@@ -253,8 +273,22 @@ if (extraResult && Array.isArray(extraResult.appendAttacks)) {
     ctx.clearBattleNotice();
     ctx.clearCurrentAction();
 
-    processTeamUnitSlot(team, "unit1", enemyPlayer, slotKey);
-    processTeamUnitSlot(team, "unit2", enemyPlayer, slotKey);
+    const actor = team[team.activeUnitKey] || team.unit1;
+
+if (!ctx.twoVtwoAdapter || !ctx.twoVtwoAdapter.canConsumeAction(ownerPlayer, actor, 1)) {
+  ctx.showPopup("統合行動権が足りません");
+  return false;
+}
+
+ctx.twoVtwoAdapter.consumeAction(ownerPlayer, actor, 1);
+
+processTeamUnitSlot(team, "unit1", enemyPlayer, slotKey, {
+  skipActionCost: true
+});
+
+processTeamUnitSlot(team, "unit2", enemyPlayer, slotKey, {
+  skipActionCost: true
+});
 
     ctx.setCurrentAttackContext({
       ownerPlayer,
