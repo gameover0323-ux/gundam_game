@@ -225,13 +225,14 @@ if (context.twoVtwoAdapter) {
   const enemyPlayer = slotMeta.enemyPlayer || ctx.getOpponentPlayer(slotMeta.ownerPlayer);
   const enemyState = ctx.getPlayerState(enemyPlayer);
 
-  const afterResult = executeUnitAfterSlotResolved(actor, slotNumber, {
-    ...slotMeta,
-    enemyPlayer,
-    enemyState,
-    resolveResult
-  });
-
+const afterResult = executeUnitAfterSlotResolved(actor, slotNumber, {
+  ...slotMeta,
+  enemyPlayer,
+  enemyState,
+  resolveResult,
+  twoVtwoAdapter: ctx.twoVtwoAdapter || null
+});
+    
   if (afterResult.redraw) {
     ctx.redrawBattleBoards();
   }
@@ -274,9 +275,9 @@ const beforeResult = executeUnitBeforeSlot(actor, slotNumber, {
       enemyState: defender,
       slotKey,
       slot,
-      isForcedSlotAction: !!slotOverride
+      isForcedSlotAction: !!slotOverride,
+      twoVtwoAdapter: ctx.twoVtwoAdapter || null
     });
-
     if (beforeResult.redraw) {
       ctx.redrawBattleBoards();
     }
@@ -296,9 +297,9 @@ const beforeResult = executeUnitBeforeSlot(actor, slotNumber, {
         enemyPlayer: ownerPlayer,
         enemyPlayerLabel: `PLAYER ${ownerPlayer}`,
         enemyRolledSlotKey: slotKey,
-        enemyState: actor
+        enemyState: actor,
+        twoVtwoAdapter: ctx.twoVtwoAdapter || null
       });
-
       if (enemyBeforeResult.redraw) {
         ctx.redrawBattleBoards();
       }
@@ -352,9 +353,9 @@ function collectCpuSlotAction(ownerPlayer, slotKey, slotOverride = null, actionI
       slotKey,
       slot,
       isForcedSlotAction: !!slotOverride,
-      isCpuBatchSlotAction: true
+      isCpuBatchSlotAction: true,
+      twoVtwoAdapter: ctx.twoVtwoAdapter || null
     });
-
     if (beforeResult.message) {
       notices.push(beforeResult.message);
     }
@@ -379,7 +380,8 @@ function collectCpuSlotAction(ownerPlayer, slotKey, slotOverride = null, actionI
         enemyPlayerLabel: `PLAYER ${ownerPlayer}`,
         enemyRolledSlotKey: slotKey,
         enemyState: actor,
-        isCpuBatchSlotAction: true
+        isCpuBatchSlotAction: true,
+        twoVtwoAdapter: ctx.twoVtwoAdapter || null
       });
 
       if (enemyBeforeResult.message) {
@@ -417,7 +419,8 @@ function collectCpuSlotAction(ownerPlayer, slotKey, slotOverride = null, actionI
       slotKey,
       slotNumber,
       slot,
-      isCpuBatchSlotAction: true
+      isCpuBatchSlotAction: true,
+      twoVtwoAdapter: ctx.twoVtwoAdapter || null
     });
 
     if (extraResult?.message) {
@@ -586,7 +589,8 @@ function collectCpuSlotAction(ownerPlayer, slotKey, slotOverride = null, actionI
       enemyPlayer: slotMeta.enemyPlayer,
       slotKey: slotMeta.slotKey,
       slotNumber: slotMeta.slotNumber,
-      slot
+      slot,
+      twoVtwoAdapter: ctx.twoVtwoAdapter || null
     });
 
     if (!extraResult) return merged;
