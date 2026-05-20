@@ -18,20 +18,40 @@ export function createBattleFlow(ctx) {
   }
 
   function canConsumeAction(state, amount = 1) {
-    if (!state) return false;
-    ensureActionState(state);
-    return state.actionCount >= amount;
+  if (!state) return false;
+  ensureActionState(state);
+
+  if (
+    ctx.twoVtwoAdapter &&
+    ctx.isTeamBattleMode &&
+    ctx.isTeamBattleMode()
+  ) {
+    const ownerPlayer = ctx.getCurrentPlayer();
+    return ctx.twoVtwoAdapter.canConsumeAction(ownerPlayer, state, amount);
+  }
+
+  return state.actionCount >= amount;
   }
 
   function consumeActionCount(state, amount = 1) {
-    if (!state) return;
-    ensureActionState(state);
+  if (!state) return;
+  ensureActionState(state);
 
-    if (ctx.getIsTestMode()) {
-      return;
-    }
+  if (ctx.getIsTestMode()) {
+    return;
+  }
 
-    state.actionCount = Math.max(0, state.actionCount - amount);
+  if (
+    ctx.twoVtwoAdapter &&
+    ctx.isTeamBattleMode &&
+    ctx.isTeamBattleMode()
+  ) {
+    const ownerPlayer = ctx.getCurrentPlayer();
+    ctx.twoVtwoAdapter.consumeAction(ownerPlayer, state, amount);
+    return;
+  }
+
+  state.actionCount = Math.max(0, state.actionCount - amount);
   }
 
   function clampEvadeToMax(state) {
@@ -249,6 +269,14 @@ if (Number(attacker.pendingActionPenalty || 0) > 0) {
         nextTeam.activeUnitKey = nextTeam.focusUnitKey || "unit1";
         resetActionCount(nextTeam.unit1);
 if (nextTeam.unit2) resetActionCount(nextTeam.unit2);
+
+if (
+  nextTeam.mode === "unified" &&
+  ctx.twoVtwoAdapter &&
+  typeof ctx.twoVtwoAdapter.resetUnifiedActionCount === "function"
+) {
+  ctx.twoVtwoAdapter.resetUnifiedActionCount(nextTeam);
+}
 
 if (
   nextTeam.mode === "unified" &&
