@@ -48,11 +48,12 @@ if (!options.skipActionCost) {
     }
 
     const beforeResult = ctx.executeUnitBeforeSlot(unit, slotNumber, {
-      ownerPlayer: currentPlayer,
-      enemyPlayer,
-      enemyPlayerLabel: `PLAYER ${enemyPlayer}`,
-      enemyState: defender
-    });
+  ownerPlayer: currentPlayer,
+  enemyPlayer,
+  enemyPlayerLabel: `PLAYER ${enemyPlayer}`,
+  enemyState: defender,
+  twoVtwoAdapter: ctx.twoVtwoAdapter || null
+});
 
     if (beforeResult.message) {
       ctx.appendBattleNotice(beforeResult.message);
