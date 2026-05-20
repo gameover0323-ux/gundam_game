@@ -569,7 +569,7 @@ function collectCpuSlotAction(ownerPlayer, slotKey, slotOverride = null, actionI
   function resolveSlot(slot, slotMeta = {}) {
   ctx.setCurrentAttack([]);
 
-  const actor = ctx.getPlayerState(ctx.getCurrentPlayer());
+  const actor = ctx.getPlayerState(slotMeta.ownerPlayer || ctx.getCurrentPlayer());
  const result = resolveSlotEffect({
   slot,
   actor,
