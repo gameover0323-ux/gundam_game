@@ -123,12 +123,19 @@ export function createActionLayer(ctx) {
       return { handled: true, redraw: false, message: null };
     }
 
-    if (hpCost >= actor.hp) {
-      return { handled: true, redraw: false, message: "HPが足りません" };
+    if (context.twoVtwoAdapter) {
+  const paid = context.twoVtwoAdapter.consumeHp(context.ownerPlayer, actor, hpCost);
+
+  if (!paid) {
+    return { handled: true, redraw: false, message: "HPが足りません" };
+  }
+} else {
+  if (hpCost >= actor.hp) {
+    return { handled: true, redraw: false, message: "HPが足りません" };
+  }
+
+  actor.hp -= hpCost;
     }
-
-    actor.hp -= hpCost;
-
     if (choice.params?.setFlag) {
       actor[choice.params.setFlag] = true;
     }
@@ -164,11 +171,19 @@ export function createActionLayer(ctx) {
       return { handled: true, redraw: false, message: null };
     }
 
-    if (hpCost >= actor.hp) {
-      return { handled: true, redraw: false, message: "HPが足りません" };
-    }
+if (context.twoVtwoAdapter) {
+  const paid = context.twoVtwoAdapter.consumeHp(context.ownerPlayer, actor, hpCost);
 
-    actor.hp -= hpCost;
+  if (!paid) {
+    return { handled: true, redraw: false, message: "HPが足りません" };
+  }
+} else {
+  if (hpCost >= actor.hp) {
+    return { handled: true, redraw: false, message: "HPが足りません" };
+  }
+
+  actor.hp -= hpCost;
+}
 
     if (choice.params?.setFlag) {
       actor[choice.params.setFlag] = true;
