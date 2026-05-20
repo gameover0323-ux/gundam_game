@@ -19,7 +19,6 @@ export function createSpecialActionController(ctx) {
       if (!actor) return false;
 
       const availability = ctx.executeUnitCanUseSpecial(actor, special.key, {
-        {
   ownerPlayer: playerKey,
   enemyPlayer: ctx.getOpponentPlayer(playerKey),
   currentAttackContext: ctx.getCurrentAttackContext(),
@@ -54,15 +53,14 @@ export function createSpecialActionController(ctx) {
     if (!actor) return false;
 
     const availability = ctx.withUnifiedEvadeForCheck(playerKey, actor, () =>
-      ctx.executeUnitCanUseSpecial(actor, special.key, {
-        {
-  ownerPlayer: playerKey,
-  enemyPlayer: ctx.getOpponentPlayer(playerKey),
-  currentAttackContext: ctx.getCurrentAttackContext(),
-  currentAttack: ctx.getCurrentAttack(),
-  twoVtwoAdapter: ctx.twoVtwoAdapter || null
-})
-    );
+  ctx.executeUnitCanUseSpecial(actor, special.key, {
+    ownerPlayer: playerKey,
+    enemyPlayer: ctx.getOpponentPlayer(playerKey),
+    currentAttackContext: ctx.getCurrentAttackContext(),
+    currentAttack: ctx.getCurrentAttack(),
+    twoVtwoAdapter: ctx.twoVtwoAdapter || null
+  })
+);
 
     return availability.allowed !== false;
   }
