@@ -1809,7 +1809,7 @@ setCurrentAttackContexts,
   ensureActionState,
   canConsumeAction,
   consumeActionCount,
-
+twoVtwoAdapter,
   getRollableSlotKeys,
   getSlotByKey,
   getSlotNumberFromKey,
