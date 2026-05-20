@@ -401,14 +401,14 @@ function collectCpuSlotAction(ownerPlayer, slotKey, slotOverride = null, actionI
 });
 
     const afterResult = runAfterSlotResolvedHook(actor, slotNumber, result, {
-      ownerPlayer,
-      enemyPlayer,
-      slotKey,
-      slotNumber,
-      slot,
-      isCpuBatchSlotAction: true
-    });
-
+  ownerPlayer,
+  enemyPlayer,
+  slotKey,
+  slotNumber,
+  slot,
+  isCpuBatchSlotAction: true,
+  twoVtwoAdapter: ctx.twoVtwoAdapter || null
+});
     if (afterResult?.message) {
       notices.push(afterResult.message);
     }
