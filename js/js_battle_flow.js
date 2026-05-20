@@ -248,7 +248,15 @@ if (Number(attacker.pendingActionPenalty || 0) > 0) {
       if (nextTeam) {
         nextTeam.activeUnitKey = nextTeam.focusUnitKey || "unit1";
         resetActionCount(nextTeam.unit1);
-        if (nextTeam.unit2) resetActionCount(nextTeam.unit2);
+if (nextTeam.unit2) resetActionCount(nextTeam.unit2);
+
+if (
+  nextTeam.mode === "unified" &&
+  ctx.twoVtwoAdapter &&
+  typeof ctx.twoVtwoAdapter.resetUnifiedActionCount === "function"
+) {
+  ctx.twoVtwoAdapter.resetUnifiedActionCount(nextTeam);
+}
         if (ctx.getBattleMode && ctx.getBattleMode() === "vscpu2v2" && ctx.getCurrentPlayer() === "B") {
   const cpuTeam = ctx.getTeam("B");
   if (cpuTeam) {
