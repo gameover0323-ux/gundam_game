@@ -224,7 +224,24 @@ export function reduceEvade(state, amount = 1) {
 
   normalizeEvadeCapState(state);
 
-  state.evade = Math.max(0, Number(state.evade || 0) - Number(amount || 0));
+  const consume = Math.max(0, Number(amount || 0));
+  const beforeCap = typeof state.overEvadeCap === "number"
+    ? state.overEvadeCap
+    : Number(state.evadeMax || 0);
+
+  state.evade = Math.max(0, Number(state.evade || 0) - consume);
+
+  if (state.overEvadeMode) {
+    const baseMax = Number(state.evadeMax || 0);
+    const absoluteMax = typeof state.overEvadeAbsoluteMax === "number"
+      ? state.overEvadeAbsoluteMax
+      : EVADE_OVER_CAP_LIMIT;
+
+    state.overEvadeCap = Math.min(
+      Math.max(baseMax, Math.min(beforeCap, state.evade)),
+      absoluteMax
+    );
+  }
 
   normalizeEvadeCapState(state);
 }
