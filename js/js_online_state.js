@@ -4,7 +4,8 @@ export const onlineState = {
   myPlayer: null,
   isHost: false,
   lastAppliedActionId: 0,
-  isApplyingRemote: false
+  isApplyingRemote: false,
+  isSpectator: false
 };
 
 export function resetOnlineState() {
@@ -14,4 +15,5 @@ export function resetOnlineState() {
   onlineState.isHost = false;
   onlineState.lastAppliedActionId = 0;
   onlineState.isApplyingRemote = false;
+  onlineState.isSpectator = false;
 }
