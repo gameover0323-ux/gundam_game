@@ -8,25 +8,27 @@ export function create2v2Actions(ctx) {
   }
 
   function getTeamSlotOrder(team) {
-  if (!team) return [];
+    if (!team) return [];
 
-  const order = [];
+    const order = [];
 
-  if (team.unit1) order.push("unit1");
-  if (team.unit2) order.push("unit2");
+    if (team.unit1) order.push("unit1");
+    if (team.unit2) order.push("unit2");
 
-  return order;
+    return order;
   }
 
   function processTeamUnitSlot(team, unitKey, enemyPlayer, forcedSlotKey = null, options = {}) {
     const unit = team[unitKey];
     if (!unit) return false;
 
+    const currentPlayer = options.ownerPlayer || ctx.getCurrentPlayer();
+
     ctx.ensureActionState(unit);
 
-if (!options.skipActionCost) {
-  if (!ctx.canConsumeAction(unit, 1)) return false;
-}
+    if (!options.skipActionCost) {
+      if (!ctx.canConsumeAction(unit, 1)) return false;
+    }
 
     const rollableSlotKeys = ctx.getRollableSlotKeys(unit);
     if (!Array.isArray(rollableSlotKeys) || rollableSlotKeys.length === 0) return false;
@@ -40,23 +42,37 @@ if (!options.skipActionCost) {
 
     const slotNumber = ctx.getSlotNumberFromKey(slotKey);
     const defender = ctx.getCombatTargetState(enemyPlayer);
-    const currentPlayer = ctx.getCurrentPlayer();
 
     unit.lastSlotKey = slotKey;
+
     if (!options.skipActionCost) {
-  ctx.consumeActionCount(unit, 1);
+      ctx.consumeActionCount(unit, 1);
     }
 
-    const enemyBeforeResult = ctx.executeUnitEnemyBeforeSlot(defender, slotNumber, {
-  ownerPlayer: enemyPlayer,
-  enemyPlayer: currentPlayer,
-  enemyPlayerLabel: `PLAYER ${currentPlayer}`,
-  enemyRolledSlotKey: slotKey,
-  enemyState: unit,
-  twoVtwoAdapter: ctx.twoVtwoAdapter || null
-});
+    const hookContext = {
+      ownerPlayer: currentPlayer,
+      enemyPlayer,
+      enemyPlayerLabel: `PLAYER ${enemyPlayer}`,
+      enemyState: defender,
+      slotKey,
+      slot,
+      isForcedSlotAction: !!forcedSlotKey,
+      twoVtwoAdapter: ctx.twoVtwoAdapter || null
+    };
+
+    const beforeResult = ctx.executeUnitBeforeSlot(unit, slotNumber, hookContext);
+
     if (beforeResult.message) {
       ctx.appendBattleNotice(beforeResult.message);
+    }
+
+    if (beforeResult.redraw) {
+      ctx.redrawBattleBoards();
+    }
+
+    if (beforeResult.cancelSlot) {
+      ctx.appendBattleNotice(beforeResult.message || `${unit.name}：行動不能`);
+      return false;
     }
 
     if (defender) {
@@ -65,19 +81,25 @@ if (!options.skipActionCost) {
         enemyPlayer: currentPlayer,
         enemyPlayerLabel: `PLAYER ${currentPlayer}`,
         enemyRolledSlotKey: slotKey,
-        enemyState: unit
+        enemyState: unit,
+        twoVtwoAdapter: ctx.twoVtwoAdapter || null
       });
 
       if (enemyBeforeResult.message) {
         ctx.appendBattleNotice(enemyBeforeResult.message);
       }
+
+      if (enemyBeforeResult.redraw) {
+        ctx.redrawBattleBoards();
+      }
     }
-const result = ctx.resolveSlotEffect({
-  slot,
-  actor: unit,
-  ownerPlayer: currentPlayer,
-  twoVtwoAdapter: ctx.twoVtwoAdapter || null
-});
+
+    const result = ctx.resolveSlotEffect({
+      slot,
+      actor: unit,
+      ownerPlayer: currentPlayer,
+      twoVtwoAdapter: ctx.twoVtwoAdapter || null
+    });
 
     const actionLabel = `${unit.name} ${slotNumber}.${slot.label}`;
 
@@ -87,13 +109,18 @@ const result = ctx.resolveSlotEffect({
       result.kind === "none" ||
       result.kind === "custom"
     ) {
-      ctx.runAfterSlotResolvedHook(unit, slotNumber, result, {
-  ownerPlayer: currentPlayer,
-  enemyPlayer,
-  slotKey,
-  slotNumber,
-  twoVtwoAdapter: ctx.twoVtwoAdapter || null
-});
+      const afterResult = ctx.runAfterSlotResolvedHook(unit, slotNumber, result, {
+        ownerPlayer: currentPlayer,
+        enemyPlayer,
+        slotKey,
+        slotNumber,
+        slot,
+        twoVtwoAdapter: ctx.twoVtwoAdapter || null
+      });
+
+      if (afterResult?.message) {
+        ctx.appendBattleNotice(afterResult.message);
+      }
 
       ctx.appendBattleNotice(
         result.message
@@ -105,7 +132,21 @@ const result = ctx.resolveSlotEffect({
     }
 
     if (result.kind === "attack") {
+      const afterResult = ctx.runAfterSlotResolvedHook(unit, slotNumber, result, {
+        ownerPlayer: currentPlayer,
+        enemyPlayer,
+        slotKey,
+        slotNumber,
+        slot,
+        twoVtwoAdapter: ctx.twoVtwoAdapter || null
+      });
+
       const groupId = `${currentPlayer}_${unitKey}_${Date.now()}_${Math.random()}`;
+
+      const attacks = [
+        ...(Array.isArray(result.attacks) ? result.attacks : []),
+        ...(Array.isArray(afterResult?.appendAttacks) ? afterResult.appendAttacks : [])
+      ];
 
       const context = {
         groupId,
@@ -118,7 +159,7 @@ const result = ctx.resolveSlotEffect({
         slotLabel: slot.label,
         slotDesc: slot.desc,
         actionLabel,
-        totalCount: result.attacks.length,
+        totalCount: attacks.length,
         hitCount: 0,
         evadeCount: 0
       };
@@ -127,30 +168,47 @@ const result = ctx.resolveSlotEffect({
       const currentAttack = ctx.getCurrentAttack();
 
       currentAttackContexts.push(context);
-const extraResult = executeUnitExtraWeaponResult(unit, {
-  ownerPlayer: currentPlayer,
-  enemyPlayer,
-  slotKey,
-  slotNumber,
-  slot
-});
 
-if (extraResult && Array.isArray(extraResult.appendAttacks)) {
-  result.attacks.push(...extraResult.appendAttacks);
+      const extraResult = executeUnitExtraWeaponResult(unit, {
+        ownerPlayer: currentPlayer,
+        enemyPlayer,
+        slotKey,
+        slotNumber,
+        slot,
+        twoVtwoAdapter: ctx.twoVtwoAdapter || null
+      });
 
-  if (extraResult.message) {
-    ctx.appendBattleNotice(extraResult.message);
-  }
+      if (extraResult?.message) {
+        ctx.appendBattleNotice(extraResult.message);
+      }
 
-  context.totalCount = result.attacks.length;
-}
-      result.attacks.forEach((attack) => {
+      if (Array.isArray(extraResult?.appendMessages)) {
+        extraResult.appendMessages
+          .filter(Boolean)
+          .forEach((message) => ctx.appendBattleNotice(message));
+      }
+
+      if (Array.isArray(extraResult?.appendAttacks)) {
+        attacks.push(...extraResult.appendAttacks);
+      }
+
+      context.totalCount = attacks.length;
+
+      attacks.forEach((attack) => {
         currentAttack.push({
           ...attack,
           groupId,
           sourceLabel: actionLabel
         });
       });
+
+      if (afterResult?.message) {
+        ctx.appendBattleNotice(afterResult.message);
+      }
+
+      if (afterResult?.redraw || extraResult?.redraw) {
+        ctx.redrawBattleBoards();
+      }
 
       return true;
     }
@@ -179,26 +237,32 @@ if (extraResult && Array.isArray(extraResult.appendAttacks)) {
     const enemyPlayer = ctx.getOpponentPlayer(currentPlayer);
     const order = getTeamSlotOrder(team);
 
-if (team.mode === "unified") {
-  const actor = team[team.activeUnitKey] || team.unit1;
+    if (team.mode === "unified") {
+      const actor = team[team.activeUnitKey] || team.unit1;
 
-  if (!ctx.twoVtwoAdapter || !ctx.twoVtwoAdapter.canConsumeAction(currentPlayer, actor, 1)) {
-    ctx.showPopup("統合行動権が足りません");
-    return;
-  }
+      if (
+        !ctx.twoVtwoAdapter ||
+        !ctx.twoVtwoAdapter.canConsumeAction(currentPlayer, actor, 1)
+      ) {
+        ctx.showPopup("統合行動権が足りません");
+        return;
+      }
 
-  ctx.twoVtwoAdapter.consumeAction(currentPlayer, actor, 1);
+      ctx.twoVtwoAdapter.consumeAction(currentPlayer, actor, 1);
 
-  order.forEach((unitKey) => {
-    processTeamUnitSlot(team, unitKey, enemyPlayer, null, {
-      skipActionCost: true
-    });
-  });
-} else {
-  order.forEach((unitKey) => {
-    processTeamUnitSlot(team, unitKey, enemyPlayer);
-  });
-}
+      order.forEach((unitKey) => {
+        processTeamUnitSlot(team, unitKey, enemyPlayer, null, {
+          ownerPlayer: currentPlayer,
+          skipActionCost: true
+        });
+      });
+    } else {
+      order.forEach((unitKey) => {
+        processTeamUnitSlot(team, unitKey, enemyPlayer, null, {
+          ownerPlayer: currentPlayer
+        });
+      });
+    }
 
     ctx.setCurrentAttackContext({
       ownerPlayer: currentPlayer,
@@ -241,7 +305,9 @@ if (team.mode === "unified") {
 
     const enemyPlayer = ctx.getOpponentPlayer(currentPlayer);
 
-    processTeamUnitSlot(team, unitKey, enemyPlayer);
+    processTeamUnitSlot(team, unitKey, enemyPlayer, null, {
+      ownerPlayer: currentPlayer
+    });
 
     ctx.setCurrentAttackContext({
       ownerPlayer: currentPlayer,
@@ -277,20 +343,25 @@ if (team.mode === "unified") {
 
     const actor = team[team.activeUnitKey] || team.unit1;
 
-if (!ctx.twoVtwoAdapter || !ctx.twoVtwoAdapter.canConsumeAction(ownerPlayer, actor, 1)) {
-  ctx.showPopup("統合行動権が足りません");
-  return false;
-}
+    if (
+      !ctx.twoVtwoAdapter ||
+      !ctx.twoVtwoAdapter.canConsumeAction(ownerPlayer, actor, 1)
+    ) {
+      ctx.showPopup("統合行動権が足りません");
+      return false;
+    }
 
-ctx.twoVtwoAdapter.consumeAction(ownerPlayer, actor, 1);
+    ctx.twoVtwoAdapter.consumeAction(ownerPlayer, actor, 1);
 
-processTeamUnitSlot(team, "unit1", enemyPlayer, slotKey, {
-  skipActionCost: true
-});
+    processTeamUnitSlot(team, "unit1", enemyPlayer, slotKey, {
+      ownerPlayer,
+      skipActionCost: true
+    });
 
-processTeamUnitSlot(team, "unit2", enemyPlayer, slotKey, {
-  skipActionCost: true
-});
+    processTeamUnitSlot(team, "unit2", enemyPlayer, slotKey, {
+      ownerPlayer,
+      skipActionCost: true
+    });
 
     ctx.setCurrentAttackContext({
       ownerPlayer,
