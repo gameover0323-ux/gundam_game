@@ -1,4 +1,16 @@
 export function createOnlineActionSync(ctx) {
+  function buildRoomUpdateWithSnapshot(action) {
+    const update = {
+      action,
+      "meta/updatedAt": Date.now()
+    };
+
+    if (typeof ctx.buildOnlineBattleSnapshot === "function") {
+      update.battleSnapshot = ctx.buildOnlineBattleSnapshot();
+    }
+
+    return update;
+  }
   function publishOnlineChoiceAction(choice, selectedValue) {
     if (!ctx.isOnlineEnabled()) return;
     if (ctx.isApplyingRemote()) return;
