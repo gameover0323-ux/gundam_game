@@ -80,7 +80,7 @@ export function createOnlineSpectatorController(ctx) {
       return;
     }
 
-    ctx.setOnlineState({
+  
   ctx.setOnlineState({
   enabled: true,
   roomId,
