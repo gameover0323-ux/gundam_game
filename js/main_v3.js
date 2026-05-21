@@ -861,7 +861,7 @@ battleOutcomeController = createBattleOutcomeController({
     battleNotice = "";
     currentActionHeader = "";
     currentActionLabel = "";
-onlineState.isSpectator = false;
+
     teamA = null;
     teamB = null;
     playerAState = null;
@@ -1454,7 +1454,7 @@ applyOnlineBattleSnapshot,
   getOnlineMyPlayer: () => onlineState.myPlayer,
 
   setOnlineState: (patch) => {
-  Object.assign(onlineState, patch);
+  Object.assign(onlineState, { isSpectator: false }, patch);
 },
 
   getOnlineBattleStarted: () => onlineBattleStarted,
@@ -1554,22 +1554,15 @@ resetController = createResetController({
   getOnlineRoomId: () => onlineState.roomId,
   getOnlineMyPlayer: () => onlineState.myPlayer,
 
-  setOnlineState: ({
-    enabled,
-    roomId,
-    myPlayer,
-    isHost,
-    lastAppliedActionId,
-    isApplyingRemote
-  }) => {
-    onlineState.enabled = enabled;
-    onlineState.roomId = roomId;
-    onlineState.myPlayer = myPlayer;
-    onlineState.isHost = isHost;
-    onlineState.lastAppliedActionId = lastAppliedActionId;
-    onlineState.isApplyingRemote = isApplyingRemote;
-  },
-
+  setOnlineState: (patch = {}) => {
+  onlineState.enabled = patch.enabled ?? false;
+  onlineState.roomId = patch.roomId ?? null;
+  onlineState.myPlayer = patch.myPlayer ?? null;
+  onlineState.isHost = patch.isHost ?? false;
+  onlineState.lastAppliedActionId = patch.lastAppliedActionId ?? 0;
+  onlineState.isApplyingRemote = patch.isApplyingRemote ?? false;
+  onlineState.isSpectator = patch.isSpectator ?? false;
+},
   getOnlineBattleStarted: () => onlineBattleStarted,
   setOnlineBattleStarted: (value) => {
     onlineBattleStarted = value;
