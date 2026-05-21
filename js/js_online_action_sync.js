@@ -19,19 +19,17 @@ export function createOnlineActionSync(ctx) {
     const actionId = ctx.nextOnlineActionSeq();
 
     ctx.updateRoom(ctx.getOnlineRoomId(), {
-      action: {
-        actionId,
-        actor: choice.ownerPlayer,
-        type: "choice",
-        payload: {
-          source: choice.source || null,
-          choiceType: choice.choiceType || null,
-          selectedValue
-        },
-        createdAt: Date.now()
-      },
-      "meta/updatedAt": Date.now()
-    });
+    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
+  actionId,
+  actor: choice.ownerPlayer,
+  type: "choice",
+  payload: {
+    source: choice.source || null,
+    choiceType: choice.choiceType || null,
+    selectedValue
+  },
+  createdAt: Date.now()
+}));
   }
 
   function publishOnlineSpecialAction(ownerPlayer, specialKey) {
