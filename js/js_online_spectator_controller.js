@@ -109,7 +109,7 @@ export function createOnlineSpectatorController(ctx) {
   }
 
   function isOnlineSpectator() {
-    return ctx.getOnlineMyPlayer() === "SPECTATOR" || ctx.getOnlineState()?.isSpectator === true;
+  return ctx.getOnlineState()?.isSpectator === true;
   }
 
   return {
