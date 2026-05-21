@@ -97,13 +97,20 @@ export function createOnlineSpectatorController(ctx) {
       onlineRoomStatus.textContent = `観戦中です。部屋ID：${roomId}`;
     }
 
-    ctx.listenRoom(roomId, latestRoomData => {
+ ctx.listenRoom(roomId, latestRoomData => {
       if (!latestRoomData) return;
 
       ctx.applyOnlineRoomData(latestRoomData);
 
       if (latestRoomData.battleSnapshot) {
         applyOnlineBattleSnapshot(latestRoomData.battleSnapshot);
+        return;
+      }
+
+      if (latestRoomData.players?.A?.unitId && latestRoomData.players?.B?.unitId) {
+        ctx.showScreen("battle");
+        ctx.redrawBattleBoards();
+        ctx.ensureOnlineBattleExtraUi();
       }
     });
   }
