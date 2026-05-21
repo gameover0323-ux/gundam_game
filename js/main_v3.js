@@ -861,7 +861,7 @@ battleOutcomeController = createBattleOutcomeController({
     battleNotice = "";
     currentActionHeader = "";
     currentActionLabel = "";
-
+onlineState.isSpectator = false;
     teamA = null;
     teamB = null;
     playerAState = null;
@@ -871,7 +871,7 @@ battleOutcomeController = createBattleOutcomeController({
     selectingPlayer = "A";
     currentTurn = 1;
     currentPlayer = "A";
-
+onlineState.isSpectator = false;
     onlineState.enabled = false;
     onlineState.roomId = null;
     onlineState.myPlayer = null;
@@ -967,6 +967,45 @@ localModeController = createLocalModeController({
 
   showScreen,
   loadUnitButtons
+});
+
+onlineBattleUi = createOnlineBattleUi({
+  isOnlineEnabled: () => onlineState.enabled,
+  getOnlineRoomId: () => onlineState.roomId,
+  getOnlineMyPlayer: () => onlineState.myPlayer,
+
+  getOnlineBattleStarted: () => onlineBattleStarted,
+  getOnlineBattleFinished: () => onlineBattleFinished,
+  setOnlineBattleFinished: (value) => {
+    onlineBattleFinished = value;
+  },
+
+  updateRoom,
+
+  showPopup,
+  showScreen,
+  finishBattle,
+
+  cleanupOnlineBattleUi,
+  resetOnlineStateForLocalBattle,
+  resetLocalSelectionAndBattleState
+});
+
+onlineBattleUi.bindBeforeUnloadLeaveHandler();
+twoVtwoCore = create2v2Core({
+  getBattleMode: () => battleMode,
+  getCurrentPlayer: () => currentPlayer,
+
+  getTeamA: () => teamA,
+  getTeamB: () => teamB,
+
+  getPlayerStateRaw,
+
+  hasPendingChoice: () => !!pendingChoice,
+  hasCurrentAttack: () => currentAttack.length > 0,
+
+  createBattleState,
+  showPopup
 });
 onlineSpectatorController = createOnlineSpectatorController({
   getBattleMode: () => battleMode,
@@ -1096,44 +1135,6 @@ buildOnlineBattleSnapshot,
   checkBattleEnd,
   finishBattle,
   endTurnRaw: () => battleFlow.endTurn()
-});
-onlineBattleUi = createOnlineBattleUi({
-  isOnlineEnabled: () => onlineState.enabled,
-  getOnlineRoomId: () => onlineState.roomId,
-  getOnlineMyPlayer: () => onlineState.myPlayer,
-
-  getOnlineBattleStarted: () => onlineBattleStarted,
-  getOnlineBattleFinished: () => onlineBattleFinished,
-  setOnlineBattleFinished: (value) => {
-    onlineBattleFinished = value;
-  },
-
-  updateRoom,
-
-  showPopup,
-  showScreen,
-  finishBattle,
-
-  cleanupOnlineBattleUi,
-  resetOnlineStateForLocalBattle,
-  resetLocalSelectionAndBattleState
-});
-
-onlineBattleUi.bindBeforeUnloadLeaveHandler();
-twoVtwoCore = create2v2Core({
-  getBattleMode: () => battleMode,
-  getCurrentPlayer: () => currentPlayer,
-
-  getTeamA: () => teamA,
-  getTeamB: () => teamB,
-
-  getPlayerStateRaw,
-
-  hasPendingChoice: () => !!pendingChoice,
-  hasCurrentAttack: () => currentAttack.length > 0,
-
-  createBattleState,
-  showPopup
 });
 uiController = createUiController({
   screens,
@@ -1452,12 +1453,9 @@ applyOnlineBattleSnapshot,
   isOnlineEnabled: () => onlineState.enabled,
   getOnlineMyPlayer: () => onlineState.myPlayer,
 
-  setOnlineState: ({ enabled, roomId, myPlayer, isHost }) => {
-    onlineState.enabled = enabled;
-    onlineState.roomId = roomId;
-    onlineState.myPlayer = myPlayer;
-    onlineState.isHost = isHost;
-  },
+  setOnlineState: (patch) => {
+  Object.assign(onlineState, patch);
+},
 
   getOnlineBattleStarted: () => onlineBattleStarted,
   setOnlineBattleStarted: (value) => {
