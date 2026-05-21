@@ -1690,7 +1690,7 @@ randomMatchController = createRandomMatchController({
   onlineState.isHost = playerSide === "A";
   onlineState.lastAppliedActionId = 0;
   onlineState.isApplyingRemote = false;
-
+onlineState.isSpectator = false;
   onlineSelectEntered = false;
   onlineBattleStarted = false;
   onlineBattleFinished = false;
