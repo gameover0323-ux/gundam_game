@@ -147,7 +147,58 @@ export function createOnlineRoomController(ctx) {
       ctx.applyOnlineRoomData(roomData);
     });
   }
+async function spectateOnlineRoom() {
+  await ctx.cleanupOldRooms();
 
+  const onlineRoomIdInput = ctx.getOnlineRoomIdInput();
+  const onlineRoomStatus = ctx.getOnlineRoomStatus();
+  const roomId = onlineRoomIdInput?.value.trim();
+
+  if (!roomId) {
+    ctx.showPopup("観戦する部屋IDを入力してください");
+    return;
+  }
+
+  const snapshot = await ctx.readRoom(roomId);
+
+  if (!snapshot.exists()) {
+    ctx.showPopup("部屋が見つかりません");
+    return;
+  }
+
+  const roomData = snapshot.val();
+
+  if (!roomData?.players?.A?.unitId || !roomData?.players?.B?.unitId) {
+    ctx.showPopup("まだ戦闘開始前の部屋です");
+    return;
+  }
+
+  ctx.setOnlineState({
+    enabled: true,
+    roomId,
+    myPlayer: "SPECTATOR",
+    isHost: false,
+    isSpectator: true
+  });
+
+  ctx.setBattleMode("online1v1");
+  ctx.setOnlineSelectEntered(true);
+  ctx.setOnlineBattleStarted(true);
+
+  if (onlineRoomStatus) {
+    onlineRoomStatus.textContent = `観戦中です。部屋ID：${roomId}`;
+  }
+
+  ctx.listenRoom(roomId, latestRoomData => {
+    if (!latestRoomData) return;
+
+    ctx.applyOnlineRoomData(latestRoomData);
+
+    if (latestRoomData.battleSnapshot) {
+      ctx.applyOnlineBattleSnapshot(latestRoomData.battleSnapshot);
+    }
+  });
+}
   function bootOnlineFromUrl() {
     const params = new URLSearchParams(location.search);
     const mode = params.get("mode");
@@ -192,12 +243,13 @@ export function createOnlineRoomController(ctx) {
     ctx.applyOnlineAction(roomData.action);
 
     if (
-      !ctx.getOnlineBattleStarted() &&
-      playerA.ready &&
-      playerB.ready &&
-      ctx.getSelectedUnitA() &&
-      ctx.getSelectedUnitB()
-    ) {
+  !ctx.isOnlineSpectator() &&
+  !ctx.getOnlineBattleStarted() &&
+  playerA.ready &&
+  playerB.ready &&
+  ctx.getSelectedUnitA() &&
+  ctx.getSelectedUnitB()
+) {
       ctx.saveOnlineEncounteredPlayer(roomData);
       ctx.setOnlineBattleStarted(true);
       ctx.initOnline1v1Battle(ctx.getSelectedUnitA(), ctx.getSelectedUnitB());
@@ -251,12 +303,13 @@ export function createOnlineRoomController(ctx) {
   }
 
   return {
-    getOnlineProfilePatch,
-    createOnlineRoom,
-    joinOnlineRoom,
-    bootOnlineFromUrl,
-    applyOnlineRoomData,
-    enterOnlineSelect,
-    initOnline1v1Battle
-  };
+  getOnlineProfilePatch,
+  createOnlineRoom,
+  joinOnlineRoom,
+  spectateOnlineRoom,
+  bootOnlineFromUrl,
+  applyOnlineRoomData,
+  enterOnlineSelect,
+  initOnline1v1Battle
+};
 }
