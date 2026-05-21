@@ -81,12 +81,13 @@ export function createOnlineSpectatorController(ctx) {
     }
 
     ctx.setOnlineState({
-      enabled: true,
-      roomId,
-      myPlayer: "SPECTATOR",
-      isHost: false,
-      isSpectator: true
-    });
+  ctx.setOnlineState({
+  enabled: true,
+  roomId,
+  myPlayer: null,
+  isHost: false,
+  isSpectator: true
+});
 
     ctx.setBattleMode("online1v1");
     ctx.setOnlineSelectEntered(true);
