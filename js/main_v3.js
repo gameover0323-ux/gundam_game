@@ -21,6 +21,7 @@ import { createOnlineRoomController } from "./js_online_room_controller.js";
 import { createBattleRecordController } from "./js_battle_record_controller.js";
 import { createOnlineActionSync } from "./js_online_action_sync.js";
 import { createOnlineBattleUi } from "./js_online_battle_ui.js";
+import { createOnlineSpectatorController } from "./js_online_spectator_controller.js";
 import { createRandomMatchController } from "./js_random_match_controller.js";
 import { createPlayerStatsUi } from "./js_player_stats_ui.js";
 import {
@@ -158,6 +159,7 @@ let playerStatsUi = null;
 let randomMatchController = null;
 let onlineBattleUi = null;
 let onlineActionSync = null;
+let onlineSpectatorController = null;
 let twoVtwoCore = null;
 let battleRecordController = null;
 let onlineRoomController = null;
@@ -277,6 +279,21 @@ function listenRandomMatchAnnouncementsOnceReady() {
 
 function startRandomMatch() {
   return randomMatchController.startRandomMatch();
+}
+function spectateOnlineRoom() {
+  return onlineSpectatorController.spectateOnlineRoom();
+}
+
+function buildOnlineBattleSnapshot() {
+  return onlineSpectatorController.buildOnlineBattleSnapshot();
+}
+
+function applyOnlineBattleSnapshot(snapshot) {
+  return onlineSpectatorController.applyOnlineBattleSnapshot(snapshot);
+}
+
+function isOnlineSpectator() {
+  return onlineSpectatorController.isOnlineSpectator();
 }
 function ensureOnlineBattleExtraUi() {
   return onlineBattleUi.ensureOnlineBattleExtraUi();
@@ -951,11 +968,93 @@ localModeController = createLocalModeController({
   showScreen,
   loadUnitButtons
 });
+onlineSpectatorController = createOnlineSpectatorController({
+  getBattleMode: () => battleMode,
+  setBattleMode: value => {
+    battleMode = value;
+  },
+
+  getCurrentTurn: () => currentTurn,
+  setCurrentTurn: value => {
+    currentTurn = value;
+  },
+
+  getCurrentPlayer: () => currentPlayer,
+  setCurrentPlayer: value => {
+    currentPlayer = value;
+  },
+
+  getPlayerAState: () => playerAState,
+  setPlayerAState: value => {
+    playerAState = value;
+  },
+
+  getPlayerBState: () => playerBState,
+  setPlayerBState: value => {
+    playerBState = value;
+  },
+
+  getCurrentAttack: () => currentAttack,
+  setCurrentAttack: value => {
+    currentAttack = value;
+  },
+
+  getCurrentAttackContext: () => currentAttackContext,
+  setCurrentAttackContext: value => {
+    currentAttackContext = value;
+  },
+
+  getCurrentAttackContexts: () => currentAttackContexts,
+  setCurrentAttackContexts: value => {
+    currentAttackContexts = value;
+  },
+
+  getBattleNotice: () => battleNotice,
+  setBattleNotice: value => {
+    battleNotice = value;
+  },
+
+  getCurrentActionHeader: () => currentActionHeader,
+  setCurrentActionHeader: value => {
+    currentActionHeader = value;
+  },
+
+  getCurrentActionLabel: () => currentActionLabel,
+  setCurrentActionLabel: value => {
+    currentActionLabel = value;
+  },
+
+  getOnlineState: () => onlineState,
+  setOnlineState: patch => {
+    Object.assign(onlineState, patch);
+  },
+  getOnlineMyPlayer: () => onlineState.myPlayer,
+
+  setOnlineSelectEntered: value => {
+    onlineSelectEntered = value;
+  },
+  setOnlineBattleStarted: value => {
+    onlineBattleStarted = value;
+  },
+
+  getOnlineRoomIdInput: () => onlineRoomIdInput,
+  getOnlineRoomStatus: () => onlineRoomStatus,
+
+  cleanupOldRooms,
+  readRoom,
+  listenRoom,
+  applyOnlineRoomData,
+  redrawBattleBoards,
+  renderAttackChoices,
+  ensureOnlineBattleExtraUi,
+  showScreen,
+  showPopup
+});
 onlineActionSync = createOnlineActionSync({
   isOnlineEnabled: () => onlineState.enabled,
   getOnlineRoomId: () => onlineState.roomId,
   getOnlineMyPlayer: () => onlineState.myPlayer,
-
+buildOnlineBattleSnapshot,
   isApplyingRemote: () => onlineState.isApplyingRemote,
   setApplyingRemote: (value) => {
     onlineState.isApplyingRemote = value;
@@ -1344,7 +1443,8 @@ renderAttackChoices
 });
 onlineRoomController = createOnlineRoomController({
   getPlayerProfile: () => playerSession.profile,
-
+isOnlineSpectator,
+applyOnlineBattleSnapshot,
   getOnlineRoomIdInput: () => onlineRoomIdInput,
   getOnlineRoomStatus: () => onlineRoomStatus,
   getOnlineInviteUrl: () => onlineInviteUrl,
@@ -1843,6 +1943,7 @@ bindMainEvents({
   setBattleMode: (value) => {
     battleMode = value;
   },
+  spectateOnlineRoom,
 startOnline1v1Btn,
   startOnline2v2Btn,
   createOnlineRoomBtn,
