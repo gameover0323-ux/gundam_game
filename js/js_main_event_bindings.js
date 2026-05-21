@@ -33,8 +33,12 @@ export function bindMainEvents(ctx) {
   });
 
   joinOnlineRoomBtn?.addEventListener("click", () => {
-    onlineRoomController.joinOnlineRoom();
-  });
+  onlineRoomController.joinOnlineRoom();
+});
+
+document.getElementById("spectateOnlineRoomBtn")?.addEventListener("click", () => {
+  ctx.spectateOnlineRoom();
+});
 
   backFromOnlineRoomBtn?.addEventListener("click", () => {
     showTitle();
