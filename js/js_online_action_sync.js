@@ -11,6 +11,7 @@ export function createOnlineActionSync(ctx) {
 
     return update;
   }
+
   function publishOnlineChoiceAction(choice, selectedValue) {
     if (!ctx.isOnlineEnabled()) return;
     if (ctx.isApplyingRemote()) return;
@@ -18,18 +19,17 @@ export function createOnlineActionSync(ctx) {
 
     const actionId = ctx.nextOnlineActionSeq();
 
-    ctx.updateRoom(ctx.getOnlineRoomId(), {
     ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
-  actionId,
-  actor: choice.ownerPlayer,
-  type: "choice",
-  payload: {
-    source: choice.source || null,
-    choiceType: choice.choiceType || null,
-    selectedValue
-  },
-  createdAt: Date.now()
-}));
+      actionId,
+      actor: choice.ownerPlayer,
+      type: "choice",
+      payload: {
+        source: choice.source || null,
+        choiceType: choice.choiceType || null,
+        selectedValue
+      },
+      createdAt: Date.now()
+    }));
   }
 
   function publishOnlineSpecialAction(ownerPlayer, specialKey) {
@@ -39,16 +39,13 @@ export function createOnlineActionSync(ctx) {
 
     const actionId = ctx.nextOnlineActionSeq();
 
-    ctx.updateRoom(ctx.getOnlineRoomId(), {
-      action: {
-        actionId,
-        actor: ownerPlayer,
-        type: "special",
-        payload: { specialKey },
-        createdAt: Date.now()
-      },
-      "meta/updatedAt": Date.now()
-    });
+    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
+      actionId,
+      actor: ownerPlayer,
+      type: "special",
+      payload: { specialKey },
+      createdAt: Date.now()
+    }));
   }
 
   function publishOnlineQteAction(kind, index) {
@@ -57,16 +54,13 @@ export function createOnlineActionSync(ctx) {
 
     const actionId = ctx.nextOnlineActionSeq();
 
-    ctx.updateRoom(ctx.getOnlineRoomId(), {
-      action: {
-        actionId,
-        actor: ctx.getOnlineMyPlayer(),
-        type: "qte",
-        payload: { kind, index },
-        createdAt: Date.now()
-      },
-      "meta/updatedAt": Date.now()
-    });
+    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
+      actionId,
+      actor: ctx.getOnlineMyPlayer(),
+      type: "qte",
+      payload: { kind, index },
+      createdAt: Date.now()
+    }));
   }
 
   function publishOnlineEndTurnAction(actorPlayer) {
@@ -76,16 +70,13 @@ export function createOnlineActionSync(ctx) {
 
     const actionId = ctx.nextOnlineActionSeq();
 
-    ctx.updateRoom(ctx.getOnlineRoomId(), {
-      action: {
-        actionId,
-        actor: actorPlayer,
-        type: "endTurn",
-        payload: {},
-        createdAt: Date.now()
-      },
-      "meta/updatedAt": Date.now()
-    });
+    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
+      actionId,
+      actor: actorPlayer,
+      type: "endTurn",
+      payload: {},
+      createdAt: Date.now()
+    }));
   }
 
   function publishOnlineSlotAction(ownerPlayer, slotKey) {
@@ -95,16 +86,13 @@ export function createOnlineActionSync(ctx) {
 
     const actionId = ctx.nextOnlineActionSeq();
 
-    ctx.updateRoom(ctx.getOnlineRoomId(), {
-      action: {
-        actionId,
-        actor: ownerPlayer,
-        type: "slot",
-        payload: { slotKey },
-        createdAt: Date.now()
-      },
-      "meta/updatedAt": Date.now()
-    });
+    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
+      actionId,
+      actor: ownerPlayer,
+      type: "slot",
+      payload: { slotKey },
+      createdAt: Date.now()
+    }));
   }
 
   function publishOnlineBattleEnd(winnerPlayer) {
@@ -113,16 +101,13 @@ export function createOnlineActionSync(ctx) {
 
     const actionId = ctx.nextOnlineActionSeq();
 
-    ctx.updateRoom(ctx.getOnlineRoomId(), {
-      action: {
-        actionId,
-        actor: winnerPlayer,
-        type: "battleEnd",
-        payload: { winner: winnerPlayer },
-        createdAt: Date.now()
-      },
-      "meta/updatedAt": Date.now()
-    });
+    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
+      actionId,
+      actor: winnerPlayer,
+      type: "battleEnd",
+      payload: { winner: winnerPlayer },
+      createdAt: Date.now()
+    }));
   }
 
   function applyOnlineAction(action) {
@@ -212,4 +197,4 @@ export function createOnlineActionSync(ctx) {
     publishOnlineBattleEnd,
     applyOnlineAction
   };
-  }
+}
