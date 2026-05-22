@@ -1,4 +1,6 @@
 export function createOnlineSpectatorController(ctx) {
+  let lastAppliedSnapshotUpdatedAt = 0;
+
   function cloneValue(value) {
     return JSON.parse(JSON.stringify(value ?? null));
   }
@@ -22,6 +24,16 @@ export function createOnlineSpectatorController(ctx) {
 
   function applyOnlineBattleSnapshot(snapshot) {
     if (!snapshot) return;
+
+    const snapshotUpdatedAt = Number(snapshot.updatedAt || 0);
+
+    if (snapshotUpdatedAt > 0 && snapshotUpdatedAt < lastAppliedSnapshotUpdatedAt) {
+      return;
+    }
+
+    if (snapshotUpdatedAt > 0) {
+      lastAppliedSnapshotUpdatedAt = snapshotUpdatedAt;
+    }
 
     if (snapshot.playerAState) {
       ctx.setPlayerAState(cloneValue(snapshot.playerAState));
