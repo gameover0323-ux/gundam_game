@@ -16,6 +16,102 @@ function ensureWingZeroState(state) {
   if (!state.wingZeroHitAppliedThisTurn) state.wingZeroHitAppliedThisTurn = false;
 }
 
+function getAdapter(context) {
+  return context?.twoVtwoAdapter || null;
+}
+
+function getOwnerPlayer(context) {
+  return context?.ownerPlayer || null;
+}
+
+function getEnemyPlayer(context) {
+  return context?.enemyPlayer || null;
+}
+
+function getRuleEvade(state, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.getEvade && ownerPlayer) {
+    return adapter.getEvade(ownerPlayer, state);
+  }
+
+  return Math.max(0, Number(state?.evade || 0));
+}
+
+function consumeRuleEvade(state, amount, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.consumeEvade && ownerPlayer) {
+    return adapter.consumeEvade(ownerPlayer, state, amount);
+  }
+
+  if (!state || Number(state.evade || 0) < amount) return false;
+  reduceEvade(state, amount);
+  return true;
+}
+
+function addRuleEvadeAtLeast(state, amount, context = {}) {
+  const current = getRuleEvade(state, context);
+  if (current >= amount) return 0;
+
+  const add = amount - current;
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.addTeamEvade && ownerPlayer) {
+    return adapter.addTeamEvade(ownerPlayer, state, add);
+  }
+
+  state.evade = Math.max(0, Number(state.evade || 0)) + add;
+  normalizeEvadeCapState(state);
+  return add;
+}
+
+function healRuleHp(state, amount, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.heal && ownerPlayer) {
+    return adapter.heal(ownerPlayer, state, amount);
+  }
+
+  state.hp = Math.min(state.maxHp, Number(state.hp || 0) + amount);
+  return amount;
+}
+
+function zeroEnemyRuleEvade(defender, context = {}) {
+  const adapter = getAdapter(context);
+  const enemyPlayer = getEnemyPlayer(context);
+
+  if (adapter?.zeroEvade && enemyPlayer) {
+    return adapter.zeroEvade(enemyPlayer, defender);
+  }
+
+  if (defender) {
+    defender.evade = 0;
+    normalizeEvadeCapState(defender);
+  }
+
+  return true;
+}
+
+function doubleRuleEvadeRedCap(state, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.applyToUnifiedPartners && ownerPlayer && adapter.isUnifiedOwner?.(ownerPlayer)) {
+    adapter.applyToUnifiedPartners(ownerPlayer, unit => {
+      doubleEvadeRedCap(unit);
+    });
+    return true;
+  }
+
+  doubleEvadeRedCap(state);
+  return true;
+}
+
 function activateWingZeroSystem(state) {
   ensureWingZeroState(state);
 
@@ -73,14 +169,8 @@ function hasWingZeroEvade(state) {
 }
 
 function isWingAttackSlot(slotKey, formId) {
-  if (formId === "ms") {
-    return ["slot1", "slot2", "slot4", "slot5"].includes(slotKey);
-  }
-
-  if (formId === "neo") {
-    return ["slot1", "slot4", "slot5", "slot6"].includes(slotKey);
-  }
-
+  if (formId === "ms") return ["slot1", "slot2", "slot4", "slot5"].includes(slotKey);
+  if (formId === "neo") return ["slot1", "slot4", "slot5", "slot6"].includes(slotKey);
   return false;
 }
 
@@ -197,7 +287,7 @@ export function canUseWingZeroSpecial(state, specialKey, context = {}) {
     const allowed =
       slotKey === "slot5" &&
       context.currentAttack.length > 0 &&
-      state.evade >= 3 &&
+      getRuleEvade(state, context) >= 3 &&
       !state.wingBusterUnlockUsedThisAction;
 
     return {
@@ -319,8 +409,7 @@ export function executeWingZeroSpecial(state, specialKey, context = {}) {
       boostName: "ゼロシステム(命中)"
     });
 
-    state.evade = Math.max(state.evade, 3);
-    normalizeEvadeCapState(state);
+    addRuleEvadeAtLeast(state, 3, context);
 
     state.zeroBerserkUsed = true;
     state.zeroSystemActivated = true;
@@ -388,8 +477,7 @@ export function onWingZeroBeforeSlot(state, rolledSlotNumber, context = {}) {
   state.wingBusterUnlockUsedThisAction = false;
 
   if (hasWingZeroHit(state) && !state.wingZeroHitAppliedThisTurn && context.enemyState) {
-    context.enemyState.evade = 0;
-    normalizeEvadeCapState(context.enemyState);
+    zeroEnemyRuleEvade(context.enemyState, context);
 
     state.wingZeroHitAppliedThisTurn = true;
 
@@ -450,7 +538,7 @@ export function onWingZeroActionResolved(attacker, defender, context = {}) {
     isWingAttackSlot(actionSlotKey, actionFormId);
 
   if (actionFormId === "neo" && context.slotNumber === 6 && attacker.wingMode === "evade") {
-    attacker.hp = Math.min(attacker.maxHp, attacker.hp + 80);
+    healRuleHp(attacker, 80, context);
     redraw = true;
     messages.push("80回復");
   }
@@ -467,13 +555,13 @@ export function onWingZeroActionResolved(attacker, defender, context = {}) {
     });
 
     if (changed) {
-      doubleEvadeRedCap(attacker);
+      doubleRuleEvadeRedCap(attacker, context);
       redraw = true;
       messages.push("MS形態へ復帰");
     }
   }
 
-  if (canChaseThisAction && attacker.evade >= 3) {
+  if (canChaseThisAction && getRuleEvade(attacker, context) >= 3) {
     return {
       redraw: true,
       message: messages.length > 0 ? messages.join("<br>") : null,
@@ -535,8 +623,13 @@ export function modifyWingZeroEvadeAttempt(defender, attacker, attack, context =
     return { handled: false };
   }
 
+  const defenderEvade = getRuleEvade(defender, {
+    ...context,
+    ownerPlayer: context.enemyPlayer || context.defenderPlayer
+  });
+
   if (attack.cannotEvade) {
-    if (defender.evade <= 0) {
+    if (defenderEvade <= 0) {
       return {
         handled: true,
         ok: false,
@@ -549,6 +642,7 @@ export function modifyWingZeroEvadeAttempt(defender, attacker, attack, context =
       handled: true,
       ok: true,
       consumeEvade: 1,
+      consumeByAdapter: true,
       message: null
     };
   }
@@ -556,7 +650,8 @@ export function modifyWingZeroEvadeAttempt(defender, attacker, attack, context =
   return {
     handled: true,
     ok: true,
-    consumeEvade: defender.evade > 0 ? 1 : 0,
+    consumeEvade: defenderEvade > 0 ? 1 : 0,
+    consumeByAdapter: true,
     message: null
   };
 }
@@ -578,7 +673,7 @@ export function onWingZeroResolveChoice(
       };
     }
 
-    if (state.evade < 3) {
+    if (getRuleEvade(state, context) < 3) {
       return {
         handled: true,
         redraw: true,
@@ -586,7 +681,7 @@ export function onWingZeroResolveChoice(
       };
     }
 
-    reduceEvade(state, 3);
+    consumeRuleEvade(state, 3, context);
 
     return {
       handled: true,
@@ -601,7 +696,7 @@ export function onWingZeroResolveChoice(
   if (pendingChoice.source === "extra_weapon") {
     const slotKey = selectedValue;
 
-    if (state.evade < 2) {
+    if (getRuleEvade(state, context) < 2) {
       return {
         handled: true,
         redraw: true,
@@ -609,7 +704,7 @@ export function onWingZeroResolveChoice(
       };
     }
 
-    reduceEvade(state, 2);
+    consumeRuleEvade(state, 2, context);
 
     return {
       handled: true,
