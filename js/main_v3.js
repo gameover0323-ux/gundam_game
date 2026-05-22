@@ -1430,9 +1430,11 @@ setCurrentAttackContexts,
   showPopup,
   getCurrentAttack,
 renderAttackChoices
-});turnActionController = createTurnActionController({
+});
+turnActionController = createTurnActionController({
   isOnlineEnabled: () => onlineState.enabled,
   getOnlineMyPlayer: () => onlineState.myPlayer,
+  isOnlineSpectator,
   getCurrentPlayer: () => currentPlayer,
 
   executeSlotRaw: () => battleFlow.executeSlot(),
