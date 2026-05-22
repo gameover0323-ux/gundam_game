@@ -1,4 +1,8 @@
 export function createOnlineBattleUi(ctx) {
+  function isSpectator() {
+    return ctx.isOnlineSpectator && ctx.isOnlineSpectator();
+  }
+
   function ensureOnlineBattleExtraUi() {
     ensureOnlineTopPlayerHud();
 
@@ -77,6 +81,13 @@ export function createOnlineBattleUi(ctx) {
 
   function ensureOnlineCenterButtons() {
     if (!ctx.isOnlineEnabled()) return;
+
+    if (isSpectator()) {
+      const existingBox = document.getElementById("onlinePeaceSurrenderBox");
+      if (existingBox) existingBox.style.display = "none";
+      return;
+    }
+
     if (document.getElementById("onlinePeaceSurrenderBox")) return;
 
     const actionCounterValue = document.getElementById("actionCounterValue");
@@ -109,6 +120,11 @@ export function createOnlineBattleUi(ctx) {
 
   async function sendOnlineChat(playerKey) {
     if (!ctx.isOnlineEnabled() || !ctx.getOnlineRoomId()) return;
+
+    if (isSpectator()) {
+      ctx.showPopup("観戦中はPLAYERチャットを送信できません");
+      return;
+    }
 
     if (playerKey !== ctx.getOnlineMyPlayer()) {
       ctx.showPopup("自分側のチャット欄だけ送信できます");
@@ -152,11 +168,12 @@ export function createOnlineBattleUi(ctx) {
     const inputB = document.getElementById("onlineChatInputB");
     const sendA = document.getElementById("onlineChatSendBtnA");
     const sendB = document.getElementById("onlineChatSendBtnB");
+    const spectator = isSpectator();
 
-    if (inputA) inputA.disabled = ctx.getOnlineMyPlayer() !== "A";
-    if (inputB) inputB.disabled = ctx.getOnlineMyPlayer() !== "B";
-    if (sendA) sendA.disabled = ctx.getOnlineMyPlayer() !== "A";
-    if (sendB) sendB.disabled = ctx.getOnlineMyPlayer() !== "B";
+    if (inputA) inputA.disabled = spectator || ctx.getOnlineMyPlayer() !== "A";
+    if (inputB) inputB.disabled = spectator || ctx.getOnlineMyPlayer() !== "B";
+    if (sendA) sendA.disabled = spectator || ctx.getOnlineMyPlayer() !== "A";
+    if (sendB) sendB.disabled = spectator || ctx.getOnlineMyPlayer() !== "B";
 
     const infoA = document.getElementById("onlinePlayerInfoA");
     const infoB = document.getElementById("onlinePlayerInfoB");
@@ -193,10 +210,20 @@ export function createOnlineBattleUi(ctx) {
         peaceArea.textContent = "";
       }
     }
+
+    const peaceBox = document.getElementById("onlinePeaceSurrenderBox");
+    if (peaceBox) {
+      peaceBox.style.display = spectator ? "none" : "flex";
+    }
   }
 
   async function requestOnlinePeace() {
     if (!ctx.isOnlineEnabled() || !ctx.getOnlineRoomId()) return;
+
+    if (isSpectator()) {
+      ctx.showPopup("観戦中は和平交渉できません");
+      return;
+    }
 
     const ok = confirm("和平交渉しますか？");
     if (!ok) return;
@@ -216,6 +243,11 @@ export function createOnlineBattleUi(ctx) {
 
   async function respondOnlinePeace(accept) {
     if (!ctx.isOnlineEnabled() || !ctx.getOnlineRoomId()) return;
+
+    if (isSpectator()) {
+      ctx.showPopup("観戦中は和平に応答できません");
+      return;
+    }
 
     if (accept) {
       await ctx.updateRoom(ctx.getOnlineRoomId(), {
@@ -247,6 +279,8 @@ export function createOnlineBattleUi(ctx) {
   }
 
   function showOnlinePeaceRequestPopup() {
+    if (isSpectator()) return;
+
     const popup = document.getElementById("popup");
     if (!popup) return;
 
@@ -306,6 +340,11 @@ export function createOnlineBattleUi(ctx) {
   async function requestOnlineSurrender() {
     if (!ctx.isOnlineEnabled() || !ctx.getOnlineRoomId() || !ctx.getOnlineMyPlayer()) return;
 
+    if (isSpectator()) {
+      ctx.showPopup("観戦中は降伏できません");
+      return;
+    }
+
     const ok = confirm("降伏しますか？");
     if (!ok) return;
 
@@ -346,6 +385,8 @@ export function createOnlineBattleUi(ctx) {
   }
 
   function applyOnlinePeaceRequest(roomData) {
+    if (isSpectator()) return;
+
     const peace = roomData?.peace;
     if (!peace) return;
     if (peace.status !== "requested") return;
@@ -361,6 +402,7 @@ export function createOnlineBattleUi(ctx) {
   async function markOnlinePlayerLeft() {
     if (ctx.getOnlineBattleFinished()) return;
     if (!ctx.isOnlineEnabled() || !ctx.getOnlineRoomId() || !ctx.getOnlineMyPlayer()) return;
+    if (isSpectator()) return;
 
     const leaver = ctx.getOnlineMyPlayer();
     const winner = leaver === "A" ? "B" : "A";
@@ -384,31 +426,34 @@ export function createOnlineBattleUi(ctx) {
       console.error(error);
     }
   }
-function bindBeforeUnloadLeaveHandler() {
-  window.addEventListener("beforeunload", () => {
-    if (ctx.getOnlineBattleFinished()) return;
-    if (!ctx.getOnlineBattleStarted()) return;
-    if (!ctx.isOnlineEnabled() || !ctx.getOnlineRoomId() || !ctx.getOnlineMyPlayer()) return;
 
-    const leaver = ctx.getOnlineMyPlayer();
-    const winner = leaver === "A" ? "B" : "A";
+  function bindBeforeUnloadLeaveHandler() {
+    window.addEventListener("beforeunload", () => {
+      if (ctx.getOnlineBattleFinished()) return;
+      if (!ctx.getOnlineBattleStarted()) return;
+      if (!ctx.isOnlineEnabled() || !ctx.getOnlineRoomId() || !ctx.getOnlineMyPlayer()) return;
+      if (isSpectator()) return;
 
-    ctx.updateRoom(ctx.getOnlineRoomId(), {
-      [`players/${leaver}/left`]: true,
-      [`players/${leaver}/lastSeen`]: Date.now(),
-      "meta/status": "finished",
-      "meta/result": {
-        type: "leave",
-        winner,
-        loser: leaver,
-        reason: "leave",
-        finishedAt: Date.now()
-      },
-      "meta/notice": `PLAYER ${leaver} が退室しました`,
-      "meta/updatedAt": Date.now()
+      const leaver = ctx.getOnlineMyPlayer();
+      const winner = leaver === "A" ? "B" : "A";
+
+      ctx.updateRoom(ctx.getOnlineRoomId(), {
+        [`players/${leaver}/left`]: true,
+        [`players/${leaver}/lastSeen`]: Date.now(),
+        "meta/status": "finished",
+        "meta/result": {
+          type: "leave",
+          winner,
+          loser: leaver,
+          reason: "leave",
+          finishedAt: Date.now()
+        },
+        "meta/notice": `PLAYER ${leaver} が退室しました`,
+        "meta/updatedAt": Date.now()
+      });
     });
-  });
-}
+  }
+
   return {
     ensureOnlineBattleExtraUi,
     ensureOnlineTopPlayerHud,
