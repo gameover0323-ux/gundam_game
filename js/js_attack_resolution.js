@@ -177,7 +177,15 @@ const defenderTeam = ctx.getTeam(defenderPlayer);
 
     if (ctxAtk) ctxAtk.hitCount++;
 
-    const damagedResult = ctx.executeUnitOnDamaged(defender, attacker);
+    const damagedResult = ctx.executeUnitOnDamaged(defender, attacker, {
+  ownerPlayer: defenderPlayer,
+  enemyPlayer: attackerPlayer,
+  defender,
+  attacker,
+  attack,
+  currentAttack,
+  attackIndex: index
+});
 
     if (currentAttack.length === 0) {
       if (damagedResult.message) {
