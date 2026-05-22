@@ -814,17 +814,12 @@ export function executeUnitExtraWeaponResult(state, context = {}) {
   return null;
 }
 
-export function executeUnitOnDamaged(defender, attacker) {
+export function executeUnitOnDamaged(defender, attacker, context = {}) {
   const rules = unitRulesMap[defender.unitId];
-
   if (rules && rules.onDamaged) {
-    return rules.onDamaged(defender, attacker);
+    return rules.onDamaged(defender, attacker, context);
   }
-
-  return {
-    redraw: false,
-    message: null
-  };
+  return { redraw: false, message: null };
 }
 
 export function executeUnitModifyTakenDamage(defender, attacker, attack, damage) {
