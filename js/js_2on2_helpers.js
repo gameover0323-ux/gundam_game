@@ -55,6 +55,12 @@ function consumeUnifiedEvade(team, amount) {
 
   return remain <= 0;
 }
+  function zeroUnifiedEvade(team) {
+  if (!team) return false;
+  if (team.unit1) team.unit1.evade = 0;
+  if (team.unit2) team.unit2.evade = 0;
+  return true;
+  }
   function withUnifiedEvadeForCheck(playerKey, actor, callback) {
     if (!isUnifiedTeam(playerKey) || !actor) {
       return callback();
@@ -71,9 +77,10 @@ function consumeUnifiedEvade(team, amount) {
   }
 
   return {
-    isUnifiedTeam,
-    getUnifiedEvade,
-    consumeUnifiedEvade,
-    withUnifiedEvadeForCheck
-  };
+  isUnifiedTeam,
+  getUnifiedEvade,
+  consumeUnifiedEvade,
+  zeroUnifiedEvade,
+  withUnifiedEvadeForCheck
+};
 }
