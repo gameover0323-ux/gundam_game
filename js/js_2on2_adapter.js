@@ -266,9 +266,9 @@ function ensureUnifiedActionState(team) {
     consumeHp,
     addTeamEvade,
     consumeEvade,
-    getEvade,
-    addActionCount,
-    zeroEvade,
+zeroEvade,
+getEvade,
+addActionCount,
     applyToUnifiedPartners
   };
 }
