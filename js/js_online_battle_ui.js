@@ -3,7 +3,8 @@ export function createOnlineBattleUi(ctx) {
     return ctx.isOnlineSpectator && ctx.isOnlineSpectator();
   }
 
-  function ensureOnlineBattleExtraUi() {
+ function ensureOnlineBattleExtraUi() {
+    ensureOnlineBattleRoomIdHeader();
     ensureOnlineTopPlayerHud();
 
     if (!document.getElementById("onlineBattleExtraArea")) {
@@ -30,6 +31,30 @@ export function createOnlineBattleUi(ctx) {
     }
 
     ensureOnlineCenterButtons();
+  }
+
+  function ensureOnlineBattleRoomIdHeader() {
+    let header = document.getElementById("onlineBattleRoomIdHeader");
+
+    if (!header) {
+      const battleScreen = document.getElementById("battle");
+      if (!battleScreen) return;
+
+      header = document.createElement("div");
+      header.id = "onlineBattleRoomIdHeader";
+      header.style.fontSize = "14px";
+      header.style.fontWeight = "bold";
+      header.style.textAlign = "center";
+      header.style.margin = "0 0 4px 0";
+      header.style.opacity = "0.85";
+      header.style.display = ctx.isOnlineEnabled() && ctx.getOnlineRoomId() ? "" : "none";
+
+      battleScreen.prepend(header);
+    }
+
+    const roomId = ctx.getOnlineRoomId();
+    header.textContent = roomId ? `ROOM ID：${roomId}` : "";
+    header.style.display = ctx.isOnlineEnabled() && roomId ? "" : "none";
   }
 
   function ensureOnlineTopPlayerHud() {
@@ -146,6 +171,7 @@ export function createOnlineBattleUi(ctx) {
 
   function renderOnlineExtraUi(roomData) {
     ensureOnlineBattleExtraUi();
+    ensureOnlineBattleRoomIdHeader();
 
     const area = document.getElementById("onlineBattleExtraArea");
     if (area) {
@@ -456,6 +482,7 @@ export function createOnlineBattleUi(ctx) {
 
   return {
     ensureOnlineBattleExtraUi,
+    ensureOnlineBattleRoomIdHeader,
     ensureOnlineTopPlayerHud,
     ensureOnlineCenterButtons,
     sendOnlineChat,
