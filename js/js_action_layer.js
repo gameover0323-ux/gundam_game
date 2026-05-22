@@ -140,14 +140,14 @@ export function createActionLayer(ctx) {
       actor[choice.params.setFlag] = true;
     }
 
-  if (choice.params?.zeroEvade) {
+   if (choice.params?.zeroEvade) {
   if (context.twoVtwoAdapter && context.ownerPlayer) {
     const currentEvade = context.twoVtwoAdapter.getEvade(context.ownerPlayer, actor);
     context.twoVtwoAdapter.consumeEvade(context.ownerPlayer, actor, currentEvade);
   } else {
     actor.evade = 0;
   }
-  }
+}
 
     const rate =
       typeof choice.params?.damageRate === "number"
@@ -194,14 +194,14 @@ if (context.twoVtwoAdapter) {
       actor[choice.params.setFlag] = true;
     }
 
-    if (choice.params?.zeroEvade) {
+ if (choice.params?.zeroEvade) {
   if (context.twoVtwoAdapter && context.ownerPlayer) {
     const currentEvade = context.twoVtwoAdapter.getEvade(context.ownerPlayer, actor);
     context.twoVtwoAdapter.consumeEvade(context.ownerPlayer, actor, currentEvade);
   } else {
     actor.evade = 0;
   }
-    }
+}
 
     const rate =
       typeof choice.params?.damageRate === "number"
@@ -235,14 +235,14 @@ if (context.twoVtwoAdapter) {
   const enemyPlayer = slotMeta.enemyPlayer || ctx.getOpponentPlayer(slotMeta.ownerPlayer);
   const enemyState = ctx.getPlayerState(enemyPlayer);
 
-const afterResult = executeUnitAfterSlotResolved(actor, slotNumber, {
+  const afterResult = executeUnitAfterSlotResolved(actor, slotNumber, {
   ...slotMeta,
   enemyPlayer,
   enemyState,
   resolveResult,
   twoVtwoAdapter: ctx.twoVtwoAdapter || null
 });
-    
+
   if (afterResult.redraw) {
     ctx.redrawBattleBoards();
   }
@@ -288,6 +288,7 @@ const beforeResult = executeUnitBeforeSlot(actor, slotNumber, {
       isForcedSlotAction: !!slotOverride,
       twoVtwoAdapter: ctx.twoVtwoAdapter || null
     });
+
     if (beforeResult.redraw) {
       ctx.redrawBattleBoards();
     }
@@ -310,6 +311,7 @@ const beforeResult = executeUnitBeforeSlot(actor, slotNumber, {
         enemyState: actor,
         twoVtwoAdapter: ctx.twoVtwoAdapter || null
       });
+
       if (enemyBeforeResult.redraw) {
         ctx.redrawBattleBoards();
       }
@@ -366,6 +368,7 @@ function collectCpuSlotAction(ownerPlayer, slotKey, slotOverride = null, actionI
       isCpuBatchSlotAction: true,
       twoVtwoAdapter: ctx.twoVtwoAdapter || null
     });
+
     if (beforeResult.message) {
       notices.push(beforeResult.message);
     }
@@ -411,14 +414,14 @@ function collectCpuSlotAction(ownerPlayer, slotKey, slotOverride = null, actionI
 });
 
     const afterResult = runAfterSlotResolvedHook(actor, slotNumber, result, {
-  ownerPlayer,
-  enemyPlayer,
-  slotKey,
-  slotNumber,
-  slot,
-  isCpuBatchSlotAction: true,
-  twoVtwoAdapter: ctx.twoVtwoAdapter || null
-});
+      ownerPlayer,
+      enemyPlayer,
+      slotKey,
+      slotNumber,
+      slot,
+      isCpuBatchSlotAction: true
+    });
+
     if (afterResult?.message) {
       notices.push(afterResult.message);
     }
@@ -470,99 +473,6 @@ function collectCpuSlotAction(ownerPlayer, slotKey, slotOverride = null, actionI
   }
 
   function executeCpuAutoSlotBatch(ownerPlayer) {
-    const actor = ctx.getPlayerState(ownerPlayer);
-    if (!actor) return false;
-
-    if (typeof ctx.ensureActionState === "function") {
-      ctx.ensureActionState(actor);
-    }
-
-    const maxLoop = Math.max(1, Number(actor.actionCount || 0));
-    const allAttacks = [];
-    const notices = [];
-    const labels = [];
-
-    let usedCount = 0;
-
-    for (let i = 1; i <= maxLoop; i += 1) {
-      if (typeof ctx.canConsumeAction === "function" && !ctx.canConsumeAction(actor, 1)) {
-        break;
-      }
-
-      const rollableSlotKeys = ctx.getRollableSlotKeys(actor);
-      if (!Array.isArray(rollableSlotKeys) || rollableSlotKeys.length === 0) {
-        notices.push(`${actor.name}：使用可能なスロットがない`);
-        break;
-      }
-
-      const slotKey = rollableSlotKeys[Math.floor(Math.random() * rollableSlotKeys.length)];
-      const part = collectCpuSlotAction(ownerPlayer, slotKey, null, i);
-
-      if (!part) {
-        break;
-      }
-
-      usedCount += 1;
-
-      if (typeof ctx.consumeActionCount === "function") {
-        ctx.consumeActionCount(actor, 1);
-      } else {
-        actor.actionCount = Math.max(0, Number(actor.actionCount || 0) - 1);
-      }
-
-      if (part.message) {
-        notices.push(part.message);
-      }
-
-      if (Array.isArray(part.notices)) {
-        notices.push(...part.notices.filter(Boolean));
-      }
-
-      if (part.sourceLabel) {
-        labels.push(part.sourceLabel);
-      }
-
-      if (Array.isArray(part.attacks) && part.attacks.length > 0) {
-        allAttacks.push(...part.attacks);
-      }
-
-      if (ctx.getPendingChoice && ctx.getPendingChoice()) {
-        break;
-      }
-
-      if (ctx.getCurrentAttack && ctx.getCurrentAttack().length > 0) {
-        break;
-      }
-    }
-
-    ctx.redrawBattleBoards();
-
-    if (notices.length > 0) {
-      notices.forEach((text) => ctx.appendBattleNotice(text));
-    }
-
-    if (allAttacks.length > 0) {
-      const enemyPlayer = ctx.getOpponentPlayer(ownerPlayer);
-
-      ctx.setCurrentAction(
-        `${actor.name} の連続行動`,
-        labels.join(" + ")
-      );
-
-      ctx.setCurrentAttack(allAttacks);
-      ctx.setCurrentAttackContext({
-        ownerPlayer,
-        enemyPlayer,
-        slotKey: null,
-        slotNumber: null,
-        slotLabel: "連続スロット行動",
-        slotDesc: labels.join(" / "),
-        totalCount: allAttacks.length,
-        hitCount: 0,
-        evadeCount: 0,
-        cpuBatchAction: true,
-        usedActionCount: usedCount
-function executeCpuAutoSlotBatch(ownerPlayer) {
   const actor = ctx.getPlayerState(ownerPlayer);
   if (!actor) return false;
 
@@ -694,11 +604,11 @@ function executeCpuAutoSlotBatch(ownerPlayer) {
   );
 
   return usedCount > 0;
-      }
+}
   function resolveSlot(slot, slotMeta = {}) {
   ctx.setCurrentAttack([]);
 
-  const actor = ctx.getPlayerState(slotMeta.ownerPlayer || ctx.getCurrentPlayer());
+  const actor = ctx.getPlayerState(ctx.getCurrentPlayer());
  const result = resolveSlotEffect({
   slot,
   actor,
@@ -875,8 +785,7 @@ const extra = mergeExtraResult(result);
       return;
     }
 
-    if (ctx.isUnifiedTeam(ownerPlayer)) {
-    if (ctx.twoVtwoAdapter && ctx.twoVtwoAdapter.isUnifiedOwner(ownerPlayer)) {
+  if (ctx.twoVtwoAdapter && ctx.twoVtwoAdapter.isUnifiedOwner(ownerPlayer)) {
   const totalEvade = ctx.twoVtwoAdapter.getEvade(ownerPlayer, actor);
   const backup = actor.evade;
 
