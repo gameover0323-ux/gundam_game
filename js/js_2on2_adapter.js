@@ -106,7 +106,21 @@ export function create2v2Adapter(ctx) {
     unified.totalDamage = clampNumber(unified.totalDamage) + cost;
     return true;
   }
+function damageHp(ownerPlayer, actor, amount) {
+  const damage = clampNumber(amount);
+  if (damage <= 0 || !actor) return 0;
 
+  const team = getOwnerTeam(ownerPlayer);
+
+  if (!team || team.mode !== "unified") {
+    actor.hp = Math.max(0, Number(actor.hp || 0) - damage);
+    return damage;
+  }
+
+  const unified = getUnifiedData(team);
+  unified.totalDamage = clampNumber(unified.totalDamage) + damage;
+  return damage;
+}
   function addTeamEvade(ownerPlayer, actor, amount) {
     const add = clampNumber(amount);
     if (add <= 0 || !actor) return 0;
@@ -264,7 +278,8 @@ function ensureUnifiedActionState(team) {
     getUnifiedMaxHp,
     heal,
     consumeHp,
-    addTeamEvade,
+damageHp,
+addTeamEvade,
     consumeEvade,
 zeroEvade,
 getEvade,
