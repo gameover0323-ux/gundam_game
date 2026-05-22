@@ -345,7 +345,7 @@ if (special.effectType === "short_decisive_battle") {
   return {
     handled: true,
     redraw: true,
-    message: `短期決戦: 行動回数+1（${state.strikeShortBattleUsedThisTurn}/5）`
+    message: `短期決戦: 行動回数+1（${state.strikeShortBattleUsedThisTurn}/3）`
   };
 }
 
