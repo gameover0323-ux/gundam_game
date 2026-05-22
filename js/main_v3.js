@@ -441,7 +441,9 @@ function getUnifiedEvade(team) {
 function consumeUnifiedEvade(team, amount) {
   return twoVtwoHelpers.consumeUnifiedEvade(team, amount);
 }
-
+function zeroUnifiedEvade(team) {
+  return twoVtwoHelpers.zeroUnifiedEvade(team);
+}
 function withUnifiedEvadeForCheck(playerKey, actor, callback) {
   return twoVtwoHelpers.withUnifiedEvadeForCheck(playerKey, actor, callback);
 }
