@@ -38,8 +38,12 @@ export function bindMainEvents(ctx) {
 });
 
 document.getElementById("spectateOnlineRoomBtn")?.addEventListener("click", () => {
-  ctx.spectateOnlineRoom();
-});
+    ctx.spectateOnlineRoom();
+  });
+
+  document.getElementById("randomSpectateRoomBtn")?.addEventListener("click", () => {
+    showRandomSpectateRooms();
+  });
 
   backFromOnlineRoomBtn?.addEventListener("click", () => {
     showTitle();
