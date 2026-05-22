@@ -1893,7 +1893,8 @@ twoVtwoAdapter = create2v2Adapter({
   isTeamBattleMode,
   getTeam,
   getUnifiedEvade,
-  consumeUnifiedEvade
+  consumeUnifiedEvade,
+  zeroUnifiedEvade
 });
 twoVtwoActions = create2v2Actions({
   getBattleMode: () => battleMode,
