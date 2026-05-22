@@ -140,9 +140,14 @@ export function createActionLayer(ctx) {
       actor[choice.params.setFlag] = true;
     }
 
-    if (choice.params?.zeroEvade) {
-      actor.evade = 0;
-    }
+  if (choice.params?.zeroEvade) {
+  if (context.twoVtwoAdapter && context.ownerPlayer) {
+    const currentEvade = context.twoVtwoAdapter.getEvade(context.ownerPlayer, actor);
+    context.twoVtwoAdapter.consumeEvade(context.ownerPlayer, actor, currentEvade);
+  } else {
+    actor.evade = 0;
+  }
+  }
 
     const rate =
       typeof choice.params?.damageRate === "number"
