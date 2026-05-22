@@ -1,8 +1,17 @@
 export function createOnlineSpectatorController(ctx) {
   let lastAppliedSnapshotUpdatedAt = 0;
 
+  const spectatorSessionId =
+    `spectator_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+
   function cloneValue(value) {
     return JSON.parse(JSON.stringify(value ?? null));
+  }
+
+  function getSpectatorName() {
+    const profile = ctx.getPlayerProfile?.();
+
+    return profile?.name || profile?.id || "観戦者";
   }
 
   function buildOnlineBattleSnapshot() {
@@ -63,7 +72,116 @@ export function createOnlineSpectatorController(ctx) {
     ctx.redrawBattleBoards();
     ctx.renderAttackChoices();
     ctx.ensureOnlineBattleExtraUi();
+    ensureSpectatorBattleUi();
     ctx.showScreen("battle");
+  }
+
+  function ensureSpectatorBattleUi() {
+    if (document.getElementById("spectatorBattleUi")) return;
+
+    const battleScreen = document.getElementById("battle");
+    if (!battleScreen) return;
+
+    const box = document.createElement("div");
+    box.id = "spectatorBattleUi";
+    box.style.marginTop = "12px";
+    box.style.padding = "8px";
+    box.style.borderTop = "2px solid #fff";
+    box.style.textAlign = "left";
+    box.style.display = isOnlineSpectator() ? "" : "none";
+
+    box.innerHTML = `
+      <div id="spectatorRoomIdView" style="font-size:12px;margin-bottom:6px;"></div>
+      <div id="spectatorChatView" style="min-height:24px;margin-bottom:6px;">
+        [観戦者チャット]
+      </div>
+      <div style="display:flex;gap:4px;align-items:center;">
+        <input id="spectatorChatInput" maxlength="50" placeholder="観戦チャット 50文字まで" style="flex:1;min-width:0;">
+        <button id="spectatorChatSendBtn">送信</button>
+        <button id="spectatorLeaveBtn">退室</button>
+      </div>
+    `;
+
+    battleScreen.appendChild(box);
+
+    document.getElementById("spectatorChatSendBtn")?.addEventListener("click", sendSpectatorChat);
+    document.getElementById("spectatorLeaveBtn")?.addEventListener("click", leaveSpectatorRoom);
+  }
+
+  function renderSpectatorBattleUi(roomData) {
+    ensureSpectatorBattleUi();
+
+    const box = document.getElementById("spectatorBattleUi");
+    if (box) {
+      box.style.display = isOnlineSpectator() ? "" : "none";
+    }
+
+    const roomIdView = document.getElementById("spectatorRoomIdView");
+    if (roomIdView) {
+      roomIdView.textContent = `観戦中 部屋ID：${ctx.getOnlineState()?.roomId || ""}`;
+    }
+
+    const chatView = document.getElementById("spectatorChatView");
+    if (chatView) {
+      const latest = roomData?.spectatorChat?.latest || null;
+
+      if (latest?.text) {
+        chatView.textContent = `(${latest.name || "観戦者"}) ${latest.text}`;
+      } else {
+        chatView.textContent = "[観戦者チャット]";
+      }
+    }
+  }
+
+  async function sendSpectatorChat() {
+    if (!isOnlineSpectator()) return;
+
+    const roomId = ctx.getOnlineState()?.roomId;
+    if (!roomId) return;
+
+    const input = document.getElementById("spectatorChatInput");
+    const text = String(input?.value || "").trim().slice(0, 50);
+
+    if (!text) return;
+
+    await ctx.updateRoom(roomId, {
+      [`spectators/${spectatorSessionId}/name`]: getSpectatorName(),
+      [`spectators/${spectatorSessionId}/lastSeen`]: Date.now(),
+      "spectatorChat/latest": {
+        id: spectatorSessionId,
+        name: getSpectatorName(),
+        text,
+        updatedAt: Date.now()
+      },
+      "meta/updatedAt": Date.now()
+    });
+
+    if (input) input.value = "";
+  }
+
+  async function leaveSpectatorRoom() {
+    const roomId = ctx.getOnlineState()?.roomId;
+
+    if (roomId) {
+      await ctx.updateRoom(roomId, {
+        [`spectators/${spectatorSessionId}/left`]: true,
+        [`spectators/${spectatorSessionId}/lastSeen`]: Date.now(),
+        "meta/updatedAt": Date.now()
+      });
+    }
+
+    ctx.setOnlineState({
+      enabled: false,
+      roomId: null,
+      myPlayer: null,
+      isHost: false,
+      isSpectator: false
+    });
+
+    const spectatorUi = document.getElementById("spectatorBattleUi");
+    if (spectatorUi) spectatorUi.remove();
+
+    ctx.showScreen("title");
   }
 
   async function spectateOnlineRoom() {
@@ -92,14 +210,21 @@ export function createOnlineSpectatorController(ctx) {
       return;
     }
 
-  
-  ctx.setOnlineState({
-  enabled: true,
-  roomId,
-  myPlayer: null,
-  isHost: false,
-  isSpectator: true
-});
+    ctx.setOnlineState({
+      enabled: true,
+      roomId,
+      myPlayer: null,
+      isHost: false,
+      isSpectator: true
+    });
+
+    await ctx.updateRoom(roomId, {
+      [`spectators/${spectatorSessionId}/name`]: getSpectatorName(),
+      [`spectators/${spectatorSessionId}/joinedAt`]: Date.now(),
+      [`spectators/${spectatorSessionId}/lastSeen`]: Date.now(),
+      [`spectators/${spectatorSessionId}/left`]: false,
+      "meta/updatedAt": Date.now()
+    });
 
     ctx.setBattleMode("online1v1");
     ctx.setOnlineSelectEntered(true);
@@ -109,13 +234,15 @@ export function createOnlineSpectatorController(ctx) {
       onlineRoomStatus.textContent = `観戦中です。部屋ID：${roomId}`;
     }
 
- ctx.listenRoom(roomId, latestRoomData => {
+    ctx.listenRoom(roomId, latestRoomData => {
       if (!latestRoomData) return;
 
       ctx.applyOnlineRoomData(latestRoomData);
+      renderSpectatorBattleUi(latestRoomData);
 
       if (latestRoomData.battleSnapshot) {
         applyOnlineBattleSnapshot(latestRoomData.battleSnapshot);
+        renderSpectatorBattleUi(latestRoomData);
         return;
       }
 
@@ -123,12 +250,14 @@ export function createOnlineSpectatorController(ctx) {
         ctx.showScreen("battle");
         ctx.redrawBattleBoards();
         ctx.ensureOnlineBattleExtraUi();
+        ensureSpectatorBattleUi();
+        renderSpectatorBattleUi(latestRoomData);
       }
     });
   }
 
   function isOnlineSpectator() {
-  return ctx.getOnlineState()?.isSpectator === true;
+    return ctx.getOnlineState()?.isSpectator === true;
   }
 
   return {
