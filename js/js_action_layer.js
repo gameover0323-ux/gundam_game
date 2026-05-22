@@ -608,7 +608,7 @@ function collectCpuSlotAction(ownerPlayer, slotKey, slotOverride = null, actionI
   function resolveSlot(slot, slotMeta = {}) {
   ctx.setCurrentAttack([]);
 
-  const actor = ctx.getPlayerState(ctx.getCurrentPlayer());
+  const actor = ctx.getPlayerState(slotMeta.ownerPlayer || ctx.getCurrentPlayer());
  const result = resolveSlotEffect({
   slot,
   actor,
@@ -754,13 +754,32 @@ const extra = mergeExtraResult(result);
       return;
     }
 
-    const availability = executeUnitCanUseSpecial(actor, specialKey, {
-  ownerPlayer,
-  enemyPlayer: ctx.getOpponentPlayer(ownerPlayer),
-  currentAttackContext: ctx.getCurrentAttackContext(),
-  currentAttack: ctx.getCurrentAttack(),
-  twoVtwoAdapter: ctx.twoVtwoAdapter || null
-});
+    let availability;
+
+if (ctx.twoVtwoAdapter && ctx.twoVtwoAdapter.isUnifiedOwner(ownerPlayer)) {
+  const totalEvade = ctx.twoVtwoAdapter.getEvade(ownerPlayer, actor);
+  const backup = actor.evade;
+
+  actor.evade = totalEvade;
+
+  availability = executeUnitCanUseSpecial(actor, specialKey, {
+    ownerPlayer,
+    enemyPlayer: ctx.getOpponentPlayer(ownerPlayer),
+    currentAttackContext: ctx.getCurrentAttackContext(),
+    currentAttack: ctx.getCurrentAttack(),
+    twoVtwoAdapter: ctx.twoVtwoAdapter || null
+  });
+
+  actor.evade = backup;
+} else {
+  availability = executeUnitCanUseSpecial(actor, specialKey, {
+    ownerPlayer,
+    enemyPlayer: ctx.getOpponentPlayer(ownerPlayer),
+    currentAttackContext: ctx.getCurrentAttackContext(),
+    currentAttack: ctx.getCurrentAttack(),
+    twoVtwoAdapter: ctx.twoVtwoAdapter || null
+  });
+}
 
     if (availability.allowed === false) {
       ctx.showPopup(availability.message || "このタイミングでは実行できない");
@@ -785,25 +804,13 @@ const extra = mergeExtraResult(result);
       return;
     }
 
-  if (ctx.twoVtwoAdapter && ctx.twoVtwoAdapter.isUnifiedOwner(ownerPlayer)) {
-  const totalEvade = ctx.twoVtwoAdapter.getEvade(ownerPlayer, actor);
-  const backup = actor.evade;
-
-  actor.evade = totalEvade;
-
-  const preview = executeUnitCanUseSpecial(actor, specialKey, {
-    ownerPlayer,
-    enemyPlayer: ctx.getOpponentPlayer(ownerPlayer),
-    currentAttackContext: ctx.getCurrentAttackContext(),
-    currentAttack: ctx.getCurrentAttack(),
-    twoVtwoAdapter: ctx.twoVtwoAdapter || null
-  });
-
-  actor.evade = backup;
-
-  if (preview.allowed !== false && preview.costEvade) {
-    ctx.twoVtwoAdapter.consumeEvade(ownerPlayer, actor, preview.costEvade);
-  }
+if (
+  ctx.twoVtwoAdapter &&
+  ctx.twoVtwoAdapter.isUnifiedOwner(ownerPlayer) &&
+  availability.allowed !== false &&
+  availability.costEvade
+) {
+  ctx.twoVtwoAdapter.consumeEvade(ownerPlayer, actor, availability.costEvade);
 }
 
     const currentAttack = ctx.getCurrentAttack();
