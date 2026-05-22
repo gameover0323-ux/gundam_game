@@ -1238,7 +1238,7 @@ attackResolution = createAttackResolution({
 qteController = createQteController({
   isOnlineEnabled: () => onlineState.enabled,
   getOnlineMyPlayer: () => onlineState.myPlayer,
-
+isOnlineSpectator,
   getCurrentAttack: () => currentAttack,
   getCurrentAttackContext: () => currentAttackContext,
 
