@@ -13,7 +13,6 @@ import { createAttack } from "./js_battle_system.js";
 
 function ensureUnicornState(state) {
   if (!state) return;
-
   if (typeof state.unicornResonanceStock !== "number") state.unicornResonanceStock = 0;
   if (typeof state.unicornShieldCount !== "number") state.unicornShieldCount = 3;
   if (typeof state.unicornWeaponExMode !== "boolean") state.unicornWeaponExMode = false;
@@ -25,6 +24,127 @@ function isDestroy(state) {
 
 function isAwaken(state) {
   return state?.formId === "awaken";
+}
+
+function getAdapter(context) {
+  return context?.twoVtwoAdapter || null;
+}
+
+function getOwnerPlayer(context) {
+  return context?.ownerPlayer || null;
+}
+
+function getEnemyPlayer(context) {
+  return context?.enemyPlayer || null;
+}
+
+function getRuleEvade(state, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.getEvade && ownerPlayer) {
+    return adapter.getEvade(ownerPlayer, state);
+  }
+
+  return Math.max(0, Number(state?.evade || 0));
+}
+
+function consumeRuleEvade(state, amount, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.consumeEvade && ownerPlayer) {
+    return adapter.consumeEvade(ownerPlayer, state, amount);
+  }
+
+  if (!state || Number(state.evade || 0) < amount) return false;
+  reduceEvade(state, amount);
+  return true;
+}
+
+function zeroOwnRuleEvade(state, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.zeroEvade && ownerPlayer) {
+    return adapter.zeroEvade(ownerPlayer, state);
+  }
+
+  if (state) {
+    state.evade = 0;
+    normalizeEvadeCapState(state);
+  }
+
+  return true;
+}
+
+function zeroEnemyRuleEvade(defender, context = {}) {
+  const adapter = getAdapter(context);
+  const enemyPlayer = getEnemyPlayer(context);
+
+  if (adapter?.zeroEvade && enemyPlayer) {
+    return adapter.zeroEvade(enemyPlayer, defender);
+  }
+
+  if (defender) {
+    defender.evade = 0;
+    normalizeEvadeCapState(defender);
+  }
+
+  return true;
+}
+
+function consumeEnemyRuleEvade(defender, amount, context = {}) {
+  const adapter = getAdapter(context);
+  const enemyPlayer = getEnemyPlayer(context);
+
+  if (adapter?.consumeEvade && enemyPlayer) {
+    return adapter.consumeEvade(enemyPlayer, defender, amount);
+  }
+
+  if (!defender) return false;
+  defender.evade = Math.max(0, Number(defender.evade || 0) - amount);
+  normalizeEvadeCapState(defender);
+  return true;
+}
+
+function addRuleAction(state, amount, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.addActionCount && ownerPlayer) {
+    return adapter.addActionCount(ownerPlayer, state, amount);
+  }
+
+  state.actionCount = Math.max(0, Number(state.actionCount || 0)) + amount;
+  return amount;
+}
+
+function healRuleHp(state, amount, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.heal && ownerPlayer) {
+    return adapter.heal(ownerPlayer, state, amount);
+  }
+
+  state.hp = Math.min(state.maxHp, Number(state.hp || 0) + amount);
+  return amount;
+}
+
+function doubleRuleEvadeRedCap(state, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.applyToUnifiedPartners && ownerPlayer && adapter.isUnifiedOwner?.(ownerPlayer)) {
+    adapter.applyToUnifiedPartners(ownerPlayer, unit => {
+      doubleEvadeRedCap(unit);
+    });
+    return true;
+  }
+
+  doubleEvadeRedCap(state);
+  return true;
 }
 
 function enterDestroy(state, turns = 5) {
@@ -55,6 +175,7 @@ function enterAwaken(state) {
   ensureUnicornState(state);
 
   const turns = Math.max(0, Number(state.unicornResonanceStock || 0));
+
   if (turns <= 0) {
     return false;
   }
@@ -115,6 +236,7 @@ function consumeResonanceForAwaken(state) {
   state.unicornResonanceStock -= 1;
 
   const ntd = getStateEffect(state, "unicorn_ntd");
+
   if (ntd && typeof ntd.turns === "number") {
     ntd.turns += 1;
   }
@@ -124,10 +246,11 @@ function consumeResonanceForAwaken(state) {
     message: "デストロイモードの強化ターン+1"
   };
 }
-function gainResonanceByEvadeCost(state, cost) {
+
+function gainResonanceByEvadeCost(state, cost, context = {}) {
   ensureUnicornState(state);
 
-  if (state.evade < cost) {
+  if (getRuleEvade(state, context) < cost) {
     return {
       handled: true,
       redraw: false,
@@ -135,7 +258,7 @@ function gainResonanceByEvadeCost(state, cost) {
     };
   }
 
-  reduceEvade(state, cost);
+  consumeRuleEvade(state, cost, context);
   state.unicornResonanceStock += 1;
 
   return {
@@ -155,16 +278,11 @@ function isPsychommuAttack(attack) {
     attack.specialAttribute === "psychommu";
 }
 
-function applyBeamMagnumHit(attacker, defender, allowMinus) {
+function applyBeamMagnumHit(attacker, defender, context = {}) {
   if (!defender) return null;
 
-  if (allowMinus) {
-    defender.evade = Number(defender.evade || 0) - 1;
-  } else if (defender.evade > 0) {
-    defender.evade -= 1;
-  }
+  consumeEnemyRuleEvade(defender, 1, context);
 
-  normalizeEvadeCapState(defender);
   return `${defender.name}の回避-1`;
 }
 
@@ -187,7 +305,9 @@ export function getUnicornDerivedState(state) {
     status.push(`NT-D覚醒 残${awaken.turns}ターン`);
   }
 
-  const derived = { status };
+  const derived = {
+    status
+  };
 
   if (isAwaken(state) && state.unicornWeaponExMode) {
     derived.slots = {
@@ -223,7 +343,13 @@ export function canUseUnicornSpecial(state, specialKey, context = {}) {
   ensureUnicornState(state);
 
   const special = state.specials?.[specialKey];
-  if (!special) return { allowed: false, message: "特殊行動が見つかりません" };
+
+  if (!special) {
+    return {
+      allowed: false,
+      message: "特殊行動が見つかりません"
+    };
+  }
 
   if (special.effectType === "unicorn_shield") {
     return {
@@ -232,7 +358,10 @@ export function canUseUnicornSpecial(state, specialKey, context = {}) {
     };
   }
 
-  if (special.effectType === "unicorn_resonance" || special.effectType === "unicorn_awaken_try") {
+  if (
+    special.effectType === "unicorn_resonance" ||
+    special.effectType === "unicorn_awaken_try"
+  ) {
     return {
       allowed: state.unicornResonanceStock > 0,
       message: state.unicornResonanceStock > 0 ? null : "特殊行動2の保持数がありません"
@@ -240,29 +369,49 @@ export function canUseUnicornSpecial(state, specialKey, context = {}) {
   }
 
   if (special.effectType === "unicorn_resolve") {
-    return { allowed: state.evade >= 1, message: state.evade >= 1 ? null : "回避が足りません" };
+    return {
+      allowed: getRuleEvade(state, context) >= 1,
+      message: getRuleEvade(state, context) >= 1 ? null : "回避が足りません"
+    };
   }
 
   if (special.effectType === "unicorn_calm") {
-    return { allowed: state.evade >= 2, message: state.evade >= 2 ? null : "回避が足りません" };
+    return {
+      allowed: getRuleEvade(state, context) >= 2,
+      message: getRuleEvade(state, context) >= 2 ? null : "回避が足りません"
+    };
   }
 
   if (special.effectType === "unicorn_shield_funnel") {
-    return { allowed: state.evade >= 1, message: state.evade >= 1 ? null : "回避が足りません" };
+    return {
+      allowed: getRuleEvade(state, context) >= 1,
+      message: getRuleEvade(state, context) >= 1 ? null : "回避が足りません"
+    };
   }
 
-  return { allowed: true, message: null };
+  return {
+    allowed: true,
+    message: null
+  };
 }
 
 export function executeUnicornSpecial(state, specialKey, context = {}) {
   ensureUnicornState(state);
 
   const special = state.specials?.[specialKey];
-  if (!special) return { handled: false };
+
+  if (!special) {
+    return {
+      handled: false
+    };
+  }
 
   if (special.effectType === "unicorn_shield") {
     if (state.unicornShieldCount <= 0) {
-      return { handled: true, message: "シールド残数がありません" };
+      return {
+        handled: true,
+        message: "シールド残数がありません"
+      };
     }
 
     state.unicornShieldCount -= 1;
@@ -277,13 +426,17 @@ export function executeUnicornSpecial(state, specialKey, context = {}) {
 
   if (special.effectType === "unicorn_resonance") {
     if (state.unicornResonanceStock <= 0) {
-      return { handled: true, message: "特殊行動2の保持数がありません" };
+      return {
+        handled: true,
+        message: "特殊行動2の保持数がありません"
+      };
     }
 
     state.unicornResonanceStock -= 1;
 
     if (Math.random() < 0.5) {
       enterDestroy(state, 5);
+
       return {
         handled: true,
         redraw: true,
@@ -299,11 +452,12 @@ export function executeUnicornSpecial(state, specialKey, context = {}) {
   }
 
   if (special.effectType === "unicorn_resolve") {
-    return gainResonanceByEvadeCost(state, 1);
+    return gainResonanceByEvadeCost(state, 1, context);
   }
 
   if (special.effectType === "unicorn_awaken_try") {
     const result = consumeResonanceForAwaken(state);
+
     return {
       handled: true,
       redraw: true,
@@ -312,7 +466,7 @@ export function executeUnicornSpecial(state, specialKey, context = {}) {
   }
 
   if (special.effectType === "unicorn_calm") {
-    return gainResonanceByEvadeCost(state, 2);
+    return gainResonanceByEvadeCost(state, 2, context);
   }
 
   if (special.effectType === "unicorn_weapon_change") {
@@ -325,11 +479,14 @@ export function executeUnicornSpecial(state, specialKey, context = {}) {
   }
 
   if (special.effectType === "unicorn_shield_funnel") {
-    if (state.evade <= 0) {
-      return { handled: true, message: "回避が足りません" };
+    if (getRuleEvade(state, context) <= 0) {
+      return {
+        handled: true,
+        message: "回避が足りません"
+      };
     }
 
-    reduceEvade(state, 1);
+    consumeRuleEvade(state, 1, context);
 
     return {
       handled: true,
@@ -343,13 +500,12 @@ export function executeUnicornSpecial(state, specialKey, context = {}) {
   }
 
   if (special.effectType === "unicorn_ghost_return") {
-    const evadeBefore = Math.max(0, Number(state.evade || 0));
+    const evadeBefore = getRuleEvade(state, context);
     const stockBefore = Math.max(0, Number(state.unicornResonanceStock || 0));
     const damage = evadeBefore * 5 * stockBefore;
 
-    state.evade = 0;
+    zeroOwnRuleEvade(state, context);
     state.unicornResonanceStock = 0;
-    normalizeEvadeCapState(state);
 
     return {
       handled: true,
@@ -363,7 +519,9 @@ export function executeUnicornSpecial(state, specialKey, context = {}) {
     };
   }
 
-  return { handled: false };
+  return {
+    handled: false
+  };
 }
 
 export function onUnicornAfterSlotResolved(state, slotNumber, payload = {}) {
@@ -381,7 +539,7 @@ export function onUnicornAfterSlotResolved(state, slotNumber, payload = {}) {
   }
 
   if (result?.customEffectId === "unicorn_rush") {
-    const count = Math.max(0, Number(state.evade || 0));
+    const count = Math.max(0, getRuleEvade(state, payload));
 
     return {
       redraw: false,
@@ -394,7 +552,7 @@ export function onUnicornAfterSlotResolved(state, slotNumber, payload = {}) {
   }
 
   if (result?.customEffectId === "unicorn_double_evade") {
-    doubleEvadeRedCap(state);
+    doubleRuleEvadeRedCap(state, payload);
 
     return {
       redraw: true,
@@ -402,23 +560,29 @@ export function onUnicornAfterSlotResolved(state, slotNumber, payload = {}) {
     };
   }
 
-  return { redraw: false, message: null };
+  return {
+    redraw: false,
+    message: null
+  };
 }
 
 export function onUnicornActionResolved(attacker, defender, context = {}) {
   ensureUnicornState(attacker);
 
   const hitCount = Number(context.hitCount || 0);
+
   if (hitCount <= 0) {
-    return { redraw: false, message: null };
+    return {
+      redraw: false,
+      message: null
+    };
   }
 
   const slotNumber = Number(context.slotNumber || 0);
   const slotLabel = context.slotLabel || "";
 
   if (slotLabel.includes("ビームマグナム")) {
-    const allowMinus = isDestroy(attacker) || isAwaken(attacker);
-    const message = applyBeamMagnumHit(attacker, defender, allowMinus);
+    const message = applyBeamMagnumHit(attacker, defender, context);
 
     return {
       redraw: true,
@@ -431,7 +595,7 @@ export function onUnicornActionResolved(attacker, defender, context = {}) {
       source: "波動"
     });
 
-    if (attacker.actionCount < 99) attacker.actionCount += 1;
+    addRuleAction(attacker, 1, context);
 
     return {
       redraw: true,
@@ -455,8 +619,8 @@ export function onUnicornActionResolved(attacker, defender, context = {}) {
 
   if (isAwaken(attacker) && slotNumber === 6) {
     if (defender) {
-      defender.evade = 0;
-      normalizeEvadeCapState(defender);
+      zeroEnemyRuleEvade(defender, context);
+
       setStateEffect(defender, "unicorn_light_damage_half", {
         turns: 5,
         skipNextTick: true
@@ -467,7 +631,7 @@ export function onUnicornActionResolved(attacker, defender, context = {}) {
       source: "光"
     });
 
-    attacker.actionCount += 2;
+    addRuleAction(attacker, 2, context);
 
     return {
       redraw: true,
@@ -477,16 +641,20 @@ export function onUnicornActionResolved(attacker, defender, context = {}) {
     };
   }
 
-  return { redraw: false, message: null };
+  return {
+    redraw: false,
+    message: null
+  };
 }
 
 export function onUnicornTurnEnd(state, context = {}) {
   ensureUnicornState(state);
 
   if (isAwaken(state)) {
-    state.hp = Math.min(state.maxHp, state.hp + 20);
+    healRuleHp(state, 20, context);
 
     const awaken = getStateEffect(state, "unicorn_awaken");
+
     if (awaken && typeof awaken.turns === "number") {
       if (awaken.skipNextTick) {
         awaken.skipNextTick = false;
@@ -498,6 +666,7 @@ export function onUnicornTurnEnd(state, context = {}) {
       if (awaken.turns <= 0) {
         state.unicornResonanceStock = 0;
         returnToDestroy(state);
+
         return {
           redraw: true,
           message: "覚醒終了。デストロイモードへ移行"
@@ -506,15 +675,20 @@ export function onUnicornTurnEnd(state, context = {}) {
     }
 
     return {
-      redraw: true,
+      redraw: true
     };
   }
 
   const ntd = getStateEffect(state, "unicorn_ntd");
+
   if (isDestroy(state) && ntd && typeof ntd.turns === "number") {
     if (ntd.skipNextTick) {
       ntd.skipNextTick = false;
-      return { redraw: false, message: null };
+
+      return {
+        redraw: false,
+        message: null
+      };
     }
 
     ntd.turns -= 1;
@@ -529,7 +703,10 @@ export function onUnicornTurnEnd(state, context = {}) {
     }
   }
 
-  return { redraw: false, message: null };
+  return {
+    redraw: false,
+    message: null
+  };
 }
 
 export function modifyUnicornTakenDamage(defender, attacker, attack, damage) {
@@ -572,6 +749,7 @@ export function onUnicornDispelBoostState(state, source, context = {}) {
   }
 
   const wasDestroy = isDestroy(state) || !!getStateEffect(state, "unicorn_ntd");
+
   if (!wasDestroy) {
     return {
       handled: true,
