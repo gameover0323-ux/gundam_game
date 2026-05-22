@@ -348,7 +348,16 @@ if (customEvade.consumeEvade) {
     `${supportUnit.name}が援護防御：回避1消費、${Math.max(0, finalDamage)}ダメージ`
   );
 
-  const damagedResult = ctx.executeUnitOnDamaged(supportUnit, attacker);
+  const damagedResult = ctx.executeUnitOnDamaged(supportUnit, attacker, {
+  ownerPlayer: defenderPlayer,
+  enemyPlayer: attackerPlayer,
+  defender: supportUnit,
+  attacker,
+  attack,
+  currentAttack,
+  attackIndex: index,
+  supportDefense: true
+});
 
   if (damagedResult.message) {
     ctx.appendBattleNotice(damagedResult.message);
