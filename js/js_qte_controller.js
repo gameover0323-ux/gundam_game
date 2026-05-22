@@ -2,6 +2,10 @@ export function createQteController(ctx) {
   function canOperateQteDefender() {
     if (!ctx.isOnlineEnabled()) return true;
 
+    if (ctx.isOnlineSpectator && ctx.isOnlineSpectator()) {
+      return false;
+    }
+
     const context = ctx.getCurrentAttackContext();
     if (!context) return false;
 
