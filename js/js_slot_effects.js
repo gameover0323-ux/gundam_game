@@ -1,5 +1,4 @@
 import { addEvade } from "./js_unit_runtime.js";
-
 import { createAttack } from "./js_battle_system.js";
 
 function parseSpecial(desc) {
@@ -19,6 +18,29 @@ function parseAttributes(desc) {
   };
 }
 
+function applyEvade({ actor, ownerPlayer, amount, twoVtwoAdapter }) {
+  const value = Number(amount || 0);
+
+  if (twoVtwoAdapter && ownerPlayer) {
+    twoVtwoAdapter.addTeamEvade(ownerPlayer, actor, value);
+    return value;
+  }
+
+  addEvade(actor, value);
+  return value;
+}
+
+function applyHeal({ actor, ownerPlayer, amount, twoVtwoAdapter }) {
+  const value = Number(amount || 0);
+
+  if (twoVtwoAdapter && ownerPlayer) {
+    return twoVtwoAdapter.heal(ownerPlayer, actor, value);
+  }
+
+  actor.hp = Math.min(actor.maxHp, actor.hp + value);
+  return value;
+}
+
 function resolveStructuredEffect({ slot, actor, ownerPlayer, twoVtwoAdapter }) {
   const effect = slot?.effect;
 
@@ -27,13 +49,12 @@ function resolveStructuredEffect({ slot, actor, ownerPlayer, twoVtwoAdapter }) {
   }
 
   if (effect.type === "evade") {
-    const amount = Number(effect.amount || 0);
-
-    if (twoVtwoAdapter && ownerPlayer) {
-      twoVtwoAdapter.addTeamEvade(ownerPlayer, actor, amount);
-    } else {
-      addEvade(actor, amount);
-    }
+    const amount = applyEvade({
+      actor,
+      ownerPlayer,
+      amount: effect.amount,
+      twoVtwoAdapter
+    });
 
     return {
       kind: "evade",
@@ -42,55 +63,52 @@ function resolveStructuredEffect({ slot, actor, ownerPlayer, twoVtwoAdapter }) {
     };
   }
 
-if (effect.type === "heal") {
-    const amount = Number(effect.amount || 0);
-
-    if (twoVtwoAdapter && ownerPlayer) {
-      twoVtwoAdapter.heal(ownerPlayer, actor, amount);
-    } else {
-      actor.hp = Math.min(actor.maxHp, actor.hp + amount);
-    }
+  if (effect.type === "heal") {
+    const amount = applyHeal({
+      actor,
+      ownerPlayer,
+      amount: effect.amount,
+      twoVtwoAdapter
+    });
 
     return {
       kind: "heal",
       attacks: [],
       message: `${actor.name} が ${amount} 回復`
     };
-}
-
-  if (effect.type === "attack") {
-  const damage = Number(effect.damage || 0);
-
-  let count = Number(effect.count || 1);
-  if (typeof effect.randomCountMax === "number") {
-    const min = Number(effect.randomCountMin || 1);
-    const max = Number(effect.randomCountMax);
-    count = Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
-const attacks = createAttack(damage, count, {
+  if (effect.type === "attack") {
+    const damage = Number(effect.damage || 0);
+    let count = Number(effect.count || 1);
+
+    if (typeof effect.randomCountMax === "number") {
+      const min = Number(effect.randomCountMin || 1);
+      const max = Number(effect.randomCountMax);
+      count = Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    const attacks = createAttack(damage, count, {
       type: effect.attackType || "shoot",
       beam: !!effect.beam,
       cannotEvade: !!effect.cannotEvade,
       ignoreReduction: !!effect.ignoreReduction,
       ignoreDefense: !!effect.ignoreDefense,
-psychommu: !!effect.psychommu,
-funnel: !!effect.funnel,
-dragoon: !!effect.dragoon,
-incom: !!effect.incom,
-specialAttribute: effect.specialAttribute || null,
+      psychommu: !!effect.psychommu,
+      funnel: !!effect.funnel,
+      dragoon: !!effect.dragoon,
+      incom: !!effect.incom,
+      specialAttribute: effect.specialAttribute || null,
       addedBeam: !!effect.addedBeam,
       addedCannotEvade: !!effect.addedCannotEvade,
       addedIgnoreReduction: !!effect.addedIgnoreReduction,
-
       special: effect.special || null,
       source: effect.source || slot?.key || null,
       onHit: effect.onHit || null,
-
       moonlightButterfly: !!effect.moonlightButterfly,
       minEvadeRequired: Number(effect.minEvadeRequired || 0)
     });
-    
+
     return {
       kind: "attack",
       attacks,
@@ -99,15 +117,15 @@ specialAttribute: effect.specialAttribute || null,
     };
   }
 
-if (effect.type === "custom") {
-  return {
-    kind: "custom",
-    attacks: [],
-    message: "",
-    customEffectId: effect.effectId || effect.customType || null,
-    scalingOnUse: effect.scalingOnUse || null
-  };
-}
+  if (effect.type === "custom") {
+    return {
+      kind: "custom",
+      attacks: [],
+      message: "",
+      customEffectId: effect.effectId || effect.customType || null,
+      scalingOnUse: effect.scalingOnUse || null
+    };
+  }
 
   return {
     kind: "none",
@@ -123,48 +141,53 @@ function resolveLegacyDesc({ desc, actor, ownerPlayer, twoVtwoAdapter }) {
     message: ""
   };
 
-if (/^回避/.test(desc)) {
+  if (/^回避/.test(desc)) {
     const ev = parseInt(desc.match(/(\d+)/)[1], 10);
 
-    if (twoVtwoAdapter && ownerPlayer) {
-      twoVtwoAdapter.addTeamEvade(ownerPlayer, actor, ev);
-    } else {
-      addEvade(actor, ev);
-    }
+    applyEvade({
+      actor,
+      ownerPlayer,
+      amount: ev,
+      twoVtwoAdapter
+    });
 
     result.kind = "evade";
     result.message = `${actor.name} の回避が ${ev} 増加`;
     return result;
-}
+  }
 
   const attr = parseAttributes(desc);
 
   if (attr.heal) {
     const heal = parseInt(desc.match(/(\d+)/)[1], 10);
 
-    if (twoVtwoAdapter && ownerPlayer) {
-      twoVtwoAdapter.heal(ownerPlayer, actor, heal);
-    } else {
-      actor.hp = Math.min(actor.maxHp, actor.hp + heal);
-    }
+    applyHeal({
+      actor,
+      ownerPlayer,
+      amount: heal,
+      twoVtwoAdapter
+    });
 
     result.kind = "heal";
     result.message = `${actor.name} が ${heal} 回復`;
     return result;
   }
+
   if (attr.evade) {
     const ev = parseInt(desc.match(/(\d+)/)[1], 10);
 
-    if (twoVtwoAdapter && ownerPlayer) {
-      twoVtwoAdapter.addTeamEvade(ownerPlayer, actor, ev);
-    } else {
-      addEvade(actor, ev);
-    }
+    applyEvade({
+      actor,
+      ownerPlayer,
+      amount: ev,
+      twoVtwoAdapter
+    });
 
     result.kind = "evade";
     result.message = `${actor.name} の回避が ${ev} 増加`;
     return result;
   }
+
   const attacks = [];
   const multi = /(\d+)ダメージ[×x](\d+)/g;
   const single = /(\d+)ダメージ(?![×x\d])/g;
