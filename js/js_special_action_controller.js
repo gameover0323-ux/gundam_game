@@ -77,9 +77,16 @@ export function createSpecialActionController(ctx) {
   }
 
   function executeSpecial(ownerPlayer, specialKey) {
-    if (ctx.isOnlineEnabled() && ownerPlayer !== ctx.getOnlineMyPlayer()) {
-      ctx.showPopup("相手側の特殊行動は操作できません");
-      return;
+    if (ctx.isOnlineEnabled()) {
+      if (ctx.isOnlineSpectator && ctx.isOnlineSpectator()) {
+        ctx.showPopup("観戦中は特殊行動を実行できません");
+        return;
+      }
+
+      if (ownerPlayer !== ctx.getOnlineMyPlayer()) {
+        ctx.showPopup("相手側の特殊行動は操作できません");
+        return;
+      }
     }
 
     const result = ctx.executeSpecialRaw(ownerPlayer, specialKey);
@@ -92,12 +99,19 @@ export function createSpecialActionController(ctx) {
   function resolvePendingChoice(selectedValue) {
     const choice = ctx.getPendingChoice();
 
-    if (ctx.isOnlineEnabled() && choice) {
-      const ownerPlayer = choice.ownerPlayer;
-
-      if (ownerPlayer !== ctx.getOnlineMyPlayer()) {
-        ctx.showPopup("選択権のあるプレイヤーのみ操作できます");
+    if (ctx.isOnlineEnabled()) {
+      if (ctx.isOnlineSpectator && ctx.isOnlineSpectator()) {
+        ctx.showPopup("観戦者は選択操作できません");
         return;
+      }
+
+      if (choice) {
+        const ownerPlayer = choice.ownerPlayer;
+
+        if (ownerPlayer !== ctx.getOnlineMyPlayer()) {
+          ctx.showPopup("選択権のあるプレイヤーのみ操作できます");
+          return;
+        }
       }
     }
 
