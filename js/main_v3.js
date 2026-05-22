@@ -1288,7 +1288,7 @@ bossQteAutoResolver = createBossQteAutoResolver({
 specialActionController = createSpecialActionController({
   isOnlineEnabled: () => onlineState.enabled,
   getOnlineMyPlayer: () => onlineState.myPlayer,
-
+  isOnlineSpectator,
   getCurrentPlayer: () => currentPlayer,
   getCurrentAttack: () => currentAttack,
   getCurrentAttackContext: () => currentAttackContext,
