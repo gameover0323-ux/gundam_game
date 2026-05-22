@@ -9,6 +9,7 @@ export function bindMainEvents(ctx) {
     localModeController,
     onlineRoomController,
     playerAccountUi,
+    showRandomSpectateRooms,
 
     showScreen,
     showTitle,
