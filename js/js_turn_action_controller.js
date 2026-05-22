@@ -1,6 +1,11 @@
 export function createTurnActionController(ctx) {
   function canOperateOnlinePlayer() {
     if (!ctx.isOnlineEnabled()) return true;
+
+    if (ctx.isOnlineSpectator && ctx.isOnlineSpectator()) {
+      return false;
+    }
+
     return ctx.getCurrentPlayer() === ctx.getOnlineMyPlayer();
   }
 
