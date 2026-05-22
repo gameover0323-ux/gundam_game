@@ -10,7 +10,8 @@ import {
   remove,
   query,
   orderByChild,
-  endAt
+  endAt,
+  limitToLast
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 const firebaseConfig = {
   apiKey: "AIzaSyAycT0fkOYGT59qutLaBjxOTq9ZILNDTL4",
@@ -82,6 +83,59 @@ export async function cleanupOldRooms(maxAgeMs = 24 * 60 * 60 * 1000) {
   return removals.length;
 }
 
+export async function readSpectatableRooms(limit = 20) {
+  const roomsQuery = query(
+    getRoomsRef(),
+    orderByChild("meta/updatedAt"),
+    limitToLast(limit)
+  );
+
+  const snapshot = await get(roomsQuery);
+  if (!snapshot.exists()) {
+    return [];
+  }
+
+  const rooms = [];
+
+  snapshot.forEach(childSnap => {
+    const roomId = childSnap.key;
+    const roomData = childSnap.val();
+
+    if (!roomData) return;
+
+    const status = roomData.meta?.status || "waiting";
+    const mode = roomData.meta?.mode || "";
+    const playerA = roomData.players?.A || {};
+    const playerB = roomData.players?.B || {};
+
+    const isBattleRoom =
+      mode === "online1v1" &&
+      status !== "finished" &&
+      status !== "peace" &&
+      playerA.joined &&
+      playerB.joined &&
+      playerA.unitId &&
+      playerB.unitId &&
+      playerA.ready &&
+      playerB.ready;
+
+    const spectatorPolicy = roomData.spectatorSettings?.policy || "allow";
+
+    if (!isBattleRoom) return;
+    if (spectatorPolicy === "deny") return;
+
+    rooms.push({
+      roomId,
+      roomData,
+      updatedAt: Number(roomData.meta?.updatedAt || 0)
+    });
+  });
+
+  rooms.sort((a, b) => b.updatedAt - a.updatedAt);
+
+  return rooms;
+}
+
 export function buildInitialRoomData({ mode = "online1v1" } = {}) {
   const now = Date.now();
 
@@ -131,6 +185,14 @@ export function buildInitialRoomData({ mode = "online1v1" } = {}) {
       requestedBy: null,
       status: "none",
       updatedAt: 0
+    },
+    spectatorSettings: {
+      policy: "allow",
+      updatedAt: now
+    },
+    spectators: {},
+    spectatorChat: {
+      latest: null
     },
     battle: null,
     action: {
