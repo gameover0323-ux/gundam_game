@@ -1084,6 +1084,7 @@ onlineSpectatorController = createOnlineSpectatorController({
   readRoom,
   updateRoom,
   listenRoom,
+  readSpectatableRooms,
   getPlayerProfile: () => playerSession.profile,
   applyOnlineRoomData,
   redrawBattleBoards,
