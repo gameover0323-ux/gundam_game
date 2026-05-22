@@ -222,7 +222,15 @@ const defenderTeam = ctx.getTeam(defenderPlayer);
         return;
       }
 
-      defender.evade -= customEvade.consumeEvade || 0;
+if (customEvade.consumeEvade) {
+  const cost = customEvade.consumeEvade || 0;
+
+  if (customEvade.consumeByAdapter && ctx.twoVtwoAdapter && defenderPlayer) {
+    ctx.twoVtwoAdapter.consumeEvade(defenderPlayer, defender, cost);
+  } else {
+    defender.evade -= cost;
+  }
+}
       currentAttack.splice(index, 1);
 
       if (ctxAtk) ctxAtk.evadeCount++;
