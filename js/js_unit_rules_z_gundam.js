@@ -1,9 +1,40 @@
-import {
-  setForm,
-  getStateEffect,
-  setStateEffect,
-  clearStateEffect
-} from "./js_unit_runtime.js";
+import { setForm, getStateEffect, setStateEffect, clearStateEffect } from "./js_unit_runtime.js";
+
+function getAdapter(context) {
+  return context?.twoVtwoAdapter || null;
+}
+
+function getOwnerPlayer(context) {
+  return context?.ownerPlayer || null;
+}
+
+function getEnemyPlayer(context) {
+  return context?.enemyPlayer || null;
+}
+
+function healRuleHp(state, amount, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.heal && ownerPlayer) {
+    return adapter.heal(ownerPlayer, state, amount);
+  }
+
+  state.hp = Math.min(state.maxHp, Number(state.hp || 0) + amount);
+  return amount;
+}
+
+function zeroEnemyRuleEvade(defender, context = {}) {
+  const adapter = getAdapter(context);
+  const enemyPlayer = getEnemyPlayer(context);
+
+  if (adapter?.zeroEvade && enemyPlayer) {
+    return adapter.zeroEvade(enemyPlayer, defender);
+  }
+
+  if (defender) defender.evade = 0;
+  return true;
+}
 
 function clearOverEvadeState(state) {
   state.overEvadeMode = false;
@@ -46,15 +77,12 @@ function refreshOverEvadeStateForCurrentForm(state, options = {}) {
   clearOverEvadeState(state);
 }
 
-
 function activateBiosensor(state) {
   const prevEvade = state.evade;
   const prevEvadeMax = state.evadeMax;
   const prevOverEvadeMode = state.overEvadeMode === true;
-  const prevOverEvadeCap =
-    typeof state.overEvadeCap === "number" ? state.overEvadeCap : prevEvadeMax;
-  const prevOverEvadeBaseMax =
-    typeof state.overEvadeBaseMax === "number" ? state.overEvadeBaseMax : prevEvadeMax;
+  const prevOverEvadeCap = typeof state.overEvadeCap === "number" ? state.overEvadeCap : prevEvadeMax;
+  const prevOverEvadeBaseMax = typeof state.overEvadeBaseMax === "number" ? state.overEvadeBaseMax : prevEvadeMax;
 
   let carryCap;
   let carryBaseMax;
@@ -72,17 +100,15 @@ function activateBiosensor(state) {
     preserveEvade: true
   });
 
-  if (!changed) {
-    return false;
-  }
+  if (!changed) return false;
 
   setStateEffect(state, "z_biosensor", {
-  turns: 5,
-  skipNextTick: true,
-  boost: true,
-  boostType: "biosensor",
-  boostName: "バイオセンサー"
-});
+    turns: 5,
+    skipNextTick: true,
+    boost: true,
+    boostType: "biosensor",
+    boostName: "バイオセンサー"
+  });
 
   state.z_bioSlot3Ex = false;
   state.z_usedBio3ExThisAction = false;
@@ -108,14 +134,12 @@ function endBiosensor(state) {
     preserveEvade: true
   });
 
-  if (!changed) {
-    return false;
-  }
+  if (!changed) return false;
 
   state.z_bioSlot3Ex = false;
   state.z_usedBio3ExThisAction = false;
-
   refreshOverEvadeStateForCurrentForm(state);
+
   return true;
 }
 
@@ -127,7 +151,7 @@ export function getZGundamDerivedState(state) {
     status: []
   };
 
-if (state.formId === "ms") {
+  if (state.formId === "ms") {
     const nextSureHit = getStateEffect(state, "z_bio_next_sure_hit");
 
     if (state.z_exRifle) {
@@ -161,11 +185,7 @@ if (state.formId === "ms") {
     }
 
     if (nextSureHit) {
-      if (nextSureHit.pendingActivation) {
-        result.status.push("次ターン攻撃: 必中待機");
-      } else {
-        result.status.push("このターンの攻撃: 必中");
-      }
+      result.status.push(nextSureHit.pendingActivation ? "次ターン攻撃: 必中待機" : "このターンの攻撃: 必中");
     }
 
     if (nextSureHit && !nextSureHit.pendingActivation) {
@@ -199,18 +219,14 @@ if (state.formId === "ms") {
     }
 
     if (nextSureHit) {
-      if (nextSureHit.pendingActivation) {
-        result.status.push("次ターン攻撃: 必中待機");
-      } else {
-        result.status.push("このターンの攻撃: 必中");
-      }
+      result.status.push(nextSureHit.pendingActivation ? "次ターン攻撃: 必中待機" : "このターンの攻撃: 必中");
     }
 
     if (state.z_bioSlot3Ex) {
       result.slots.slot3 = {
         label: "3EX ハイパービームサーベル両断 150ダメージ",
         desc: "150ダメージ。格闘、ビーム属性。当たった時、バイオセンサー状態を3ターン延長する。",
-          effect: {
+        effect: {
           type: "attack",
           damage: 150,
           count: 1,
@@ -245,10 +261,7 @@ if (state.formId === "ms") {
       effectType: "trait",
       timing: "passive",
       actionType: "auto",
-      desc:
-        "【特性】相手からのダメージを30軽減する。<br>" +
-        "【特性】ビーム属性ダメージを半減する。<br>" +
-        "【特性】そのターンにZガンダム(バイオセンサー)が発動した攻撃を完全回避された時、相手の回避を0にする。"
+      desc: "〖特性〗相手からのダメージを30軽減する。\n〖特性〗ビーム属性ダメージを半減する。\n〖特性〗そのターンにZガンダム(バイオセンサー)が発動した攻撃を完全回避された時、相手の回避を0にする。"
     };
 
     result.specials.special2 = {
@@ -340,6 +353,7 @@ export function executeZGundamSpecial(state, specialKey, context = {}) {
 
 export function onZGundamTurnEnd(state, context = {}) {
   const sureHit = getStateEffect(state, "z_bio_next_sure_hit");
+
   if (sureHit && sureHit.activeForTurn) {
     clearStateEffect(state, "z_bio_next_sure_hit");
   }
@@ -355,13 +369,14 @@ export function onZGundamTurnEnd(state, context = {}) {
 
   if (bioEffect.skipNextTick) {
     bioEffect.skipNextTick = false;
+
     return {
       redraw: true,
       message: null
     };
   }
 
-  bioEffect.turns--;
+  bioEffect.turns -= 1;
 
   if (bioEffect.turns > 0) {
     return {
@@ -386,6 +401,7 @@ export function onZGundamBeforeSlot(state, rolledSlotNumber, context = {}) {
   state.z_usedBio3ExThisAction = false;
 
   const sureHit = getStateEffect(state, "z_bio_next_sure_hit");
+
   if (sureHit && sureHit.pendingActivation) {
     sureHit.pendingActivation = false;
     sureHit.activeForTurn = true;
@@ -410,6 +426,7 @@ export function onZGundamBeforeSlot(state, rolledSlotNumber, context = {}) {
       message: null
     };
   }
+
   if (state.formId === "bio") {
     if (rolledSlotNumber === 3 && state.z_bioSlot3Ex) {
       state.z_bioSlot3Ex = false;
@@ -494,7 +511,8 @@ export function onZGundamActionResolved(attacker, defender, context = {}) {
     }
 
     const isExConfuseAttack =
-      context.slotKey === "slot1" && attacker.z_usedExRifleThisAction;
+      context.slotKey === "slot1" &&
+      attacker.z_usedExRifleThisAction;
 
     if (isExConfuseAttack && context.hitCount > 0) {
       defender.confuseStock = (defender.confuseStock || 0) + context.hitCount;
@@ -523,29 +541,32 @@ export function onZGundamActionResolved(attacker, defender, context = {}) {
 
     if (attacker.z_usedBio3ExThisAction && context.hitCount > 0) {
       const bioEffect = getStateEffect(attacker, "z_biosensor");
+
       if (bioEffect) {
         bioEffect.turns += 3;
         redraw = true;
         messages.push("バイオセンサー状態を3ターン延長");
       }
     }
-if (context.slotNumber === 4 && context.hitCount > 0) {
-  setStateEffect(attacker, "z_bio_next_sure_hit", {
-    turns: 1,
-    pendingActivation: true,
-    activeForTurn: false
-  });
 
-  const bioEffect = getStateEffect(attacker, "z_biosensor");
-  if (bioEffect) {
-    bioEffect.turns += 1;
-  }
+    if (context.slotNumber === 4 && context.hitCount > 0) {
+      setStateEffect(attacker, "z_bio_next_sure_hit", {
+        turns: 1,
+        pendingActivation: true,
+        activeForTurn: false
+      });
 
-  redraw = true;
-  messages.push("次ターン中の攻撃が必中");
-  messages.push("バイオセンサー状態+1ターン");
-}
-  
+      const bioEffect = getStateEffect(attacker, "z_biosensor");
+
+      if (bioEffect) {
+        bioEffect.turns += 1;
+      }
+
+      redraw = true;
+      messages.push("次ターン中の攻撃が必中");
+      messages.push("バイオセンサー状態+1ターン");
+    }
+
     if (context.slotNumber === 5 && context.hitCount > 0) {
       defender.confuseStock = (defender.confuseStock || 0) + context.hitCount;
       redraw = true;
@@ -553,7 +574,7 @@ if (context.slotNumber === 4 && context.hitCount > 0) {
     }
 
     if (context.slotNumber === 6 && context.hitCount > 0) {
-      attacker.hp = Math.min(attacker.maxHp, attacker.hp + 50);
+      healRuleHp(attacker, 50, context);
       redraw = true;
       messages.push("50回復");
     }
@@ -563,14 +584,14 @@ if (context.slotNumber === 4 && context.hitCount > 0) {
       ["slot3", "slot4", "slot5", "slot6"].includes(context.slotKey);
 
     if (wasAttackAction && context.allEvaded) {
-      defender.evade = 0;
+      zeroEnemyRuleEvade(defender, context);
       redraw = true;
       messages.push("完全回避されたため相手の回避を0にした");
     }
 
     return {
       redraw,
-      message: messages.length > 0 ? messages.join("<br>") : null
+      message: messages.length > 0 ? messages.join("\n") : null
     };
   }
 
