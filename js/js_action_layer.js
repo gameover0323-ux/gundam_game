@@ -816,14 +816,34 @@ if (
     const currentAttack = ctx.getCurrentAttack();
     const currentAttackContext = ctx.getCurrentAttackContext();
 
-    const unitResult = executeUnitSpecial(actor, specialKey, {
-  ownerPlayer,
-  enemyPlayer: ctx.getOpponentPlayer(ownerPlayer),
-  enemyState: ctx.getPlayerState(ctx.getOpponentPlayer(ownerPlayer)),
-  currentAttackContext,
-  currentAttack,
-  twoVtwoAdapter: ctx.twoVtwoAdapter || null
-});
+    let unitResult;
+
+if (ctx.twoVtwoAdapter && ctx.twoVtwoAdapter.isUnifiedOwner(ownerPlayer)) {
+  const totalEvade = ctx.twoVtwoAdapter.getEvade(ownerPlayer, actor);
+  const backup = actor.evade;
+
+  actor.evade = totalEvade;
+
+  unitResult = executeUnitSpecial(actor, specialKey, {
+    ownerPlayer,
+    enemyPlayer: ctx.getOpponentPlayer(ownerPlayer),
+    enemyState: ctx.getPlayerState(ctx.getOpponentPlayer(ownerPlayer)),
+    currentAttackContext,
+    currentAttack,
+    twoVtwoAdapter: ctx.twoVtwoAdapter || null
+  });
+
+  actor.evade = backup;
+} else {
+  unitResult = executeUnitSpecial(actor, specialKey, {
+    ownerPlayer,
+    enemyPlayer: ctx.getOpponentPlayer(ownerPlayer),
+    enemyState: ctx.getPlayerState(ctx.getOpponentPlayer(ownerPlayer)),
+    currentAttackContext,
+    currentAttack,
+    twoVtwoAdapter: ctx.twoVtwoAdapter || null
+  });
+}
 
     if (unitResult.handled) {
       if (unitResult.requestChoice) {
