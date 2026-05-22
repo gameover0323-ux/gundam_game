@@ -1,3 +1,66 @@
+function getAdapter(context) {
+  return context?.twoVtwoAdapter || null;
+}
+
+function getOwnerPlayer(context) {
+  return context?.ownerPlayer || null;
+}
+
+function getEnemyPlayer(context) {
+  return context?.enemyPlayer || null;
+}
+
+function getRuleEvade(state, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.getEvade && ownerPlayer) {
+    return adapter.getEvade(ownerPlayer, state);
+  }
+
+  return Math.max(0, Number(state?.evade || 0));
+}
+
+function consumeRuleEvade(state, amount, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.consumeEvade && ownerPlayer) {
+    return adapter.consumeEvade(ownerPlayer, state, amount);
+  }
+
+  if (!state || Number(state.evade || 0) < amount) return false;
+  state.evade = Math.max(0, Number(state.evade || 0) - amount);
+  return true;
+}
+
+function addRuleEvade(state, amount, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.addTeamEvade && ownerPlayer) {
+    return adapter.addTeamEvade(ownerPlayer, state, amount);
+  }
+
+  state.evade = Math.max(0, Number(state.evade || 0)) + amount;
+  return amount;
+}
+
+function damageEnemyRuleHp(attacker, amount, context = {}) {
+  const adapter = getAdapter(context);
+  const enemyPlayer = getEnemyPlayer(context);
+
+  if (adapter?.damageHp && enemyPlayer) {
+    return adapter.damageHp(enemyPlayer, attacker, amount);
+  }
+
+  if (attacker) {
+    attacker.hp = Math.max(0, Number(attacker.hp || 0) - amount);
+  }
+
+  return amount;
+}
+
 export function getGundamMcDerivedState(state) {
   const result = {
     name: null,
@@ -8,33 +71,34 @@ export function getGundamMcDerivedState(state) {
 
   if (state.dualMode) {
     result.slots.slot4 = {
-  label: "4EX ビームサーベル 40ダメージ×2回",
-  desc: "40ダメージ×2回 軽減不可。格闘",
-  ex: true,
-  effect: {
-    type: "attack",
-    attackType: "melee",
-    damage: 40,
-    count: 2,
-    ignoreReduction: true
-  }
-};
+      label: "4EX ビームサーベル 40ダメージ×2回",
+      desc: "40ダメージ×2回 軽減不可。格闘",
+      ex: true,
+      effect: {
+        type: "attack",
+        attackType: "melee",
+        damage: 40,
+        count: 2,
+        ignoreReduction: true
+      }
+    };
+
     result.status.push("二刀流");
   }
 
   if (state.hp <= 50) {
     result.slots.slot5 = {
-  label: "EX ラストシューティング",
-  desc: "150ダメージ。射撃、ビーム属性",
-  ex: true,
-  effect: {
-    type: "attack",
-    attackType: "shoot",
-    damage: 150,
-    count: 1,
-    beam: true
-  }
-};
+      label: "EX ラストシューティング",
+      desc: "150ダメージ。射撃、ビーム属性",
+      ex: true,
+      effect: {
+        type: "attack",
+        attackType: "shoot",
+        damage: 150,
+        count: 1,
+        beam: true
+      }
+    };
   }
 
   if (state.ntGuessSlotKey) {
@@ -73,7 +137,7 @@ export function executeGundamMcSpecial(state, specialKey, context = {}) {
   }
 
   if (special.effectType === "choice_extra_weapon") {
-    if (state.evade < 2) {
+    if (getRuleEvade(state, context) < 2) {
       return {
         handled: true,
         redraw: false,
@@ -89,6 +153,7 @@ export function executeGundamMcSpecial(state, specialKey, context = {}) {
         choiceType: "slot_select",
         source: "extra_weapon",
         ownerPlayer: context.ownerPlayer,
+        enemyPlayer: context.enemyPlayer,
         title: `PLAYER ${context.ownerPlayer} 追加武装選択`,
         slotKeys: ["slot7", "slot8"]
       }
@@ -100,6 +165,7 @@ export function executeGundamMcSpecial(state, specialKey, context = {}) {
     message: null
   };
 }
+
 export function onGundamMcTurnEnd(state, context = {}) {
   state.ntTimer++;
 
@@ -139,7 +205,7 @@ export function onGundamMcEnemyBeforeSlot(state, rolledSlotNumber, context = {})
     context.enemyRolledSlotKey &&
     state.ntGuessSlotKey === context.enemyRolledSlotKey
   ) {
-    state.evade += 3;
+    addRuleEvade(state, 3, context);
     state.ntGuessSlotKey = null;
 
     return {
@@ -156,10 +222,9 @@ export function onGundamMcEnemyBeforeSlot(state, rolledSlotNumber, context = {})
   };
 }
 
-export function onGundamMcDamaged(defender, attacker) {
+export function onGundamMcDamaged(defender, attacker, context = {}) {
   if (defender.hp <= 20 && defender.lastDamageTaken >= 30) {
-    attacker.hp -= 150;
-    if (attacker.hp < 0) attacker.hp = 0;
+    damageEnemyRuleHp(attacker, 150, context);
 
     return {
       redraw: true,
@@ -198,7 +263,7 @@ export function modifyGundamMcTakenDamage(defender, attacker, attack, damage) {
 
 export function onGundamMcResolveChoice(state, pendingChoice, selectedValue, context = {}) {
   if (pendingChoice.source === "extra_weapon") {
-    if (state.evade < 2) {
+    if (!consumeRuleEvade(state, 2, context)) {
       return {
         handled: true,
         redraw: true,
@@ -206,8 +271,14 @@ export function onGundamMcResolveChoice(state, pendingChoice, selectedValue, con
       };
     }
 
- state.evade = Math.max(0, state.evade - 2);
-return { handled: true, redraw: true, message: null, startSlotAction: { slotKey: selectedValue } };
+    return {
+      handled: true,
+      redraw: true,
+      message: null,
+      startSlotAction: {
+        slotKey: selectedValue
+      }
+    };
   }
 
   if (pendingChoice.source === "nt_prediction") {
@@ -225,4 +296,4 @@ return { handled: true, redraw: true, message: null, startSlotAction: { slotKey:
     redraw: false,
     message: null
   };
-      }
+}
