@@ -1220,7 +1220,7 @@ attackResolution = createAttackResolution({
   getCurrentAttack: () => currentAttack,
   getCurrentAttackContext: () => currentAttackContext,
   getCurrentAttackContexts: () => currentAttackContexts,
-
+twoVtwoAdapter,
   setCurrentAttack: (v) => currentAttack = v,
   setCurrentAttackContext: (v) => currentAttackContext = v,
   setCurrentAttackContexts: (v) => currentAttackContexts = v,
