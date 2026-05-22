@@ -139,7 +139,17 @@ export function create2v2Adapter(ctx) {
     if (!ctx.consumeUnifiedEvade) return false;
     return ctx.consumeUnifiedEvade(team, cost);
   }
+function zeroEvade(ownerPlayer, actor) {
+  const team = getOwnerTeam(ownerPlayer);
 
+  if (!team || team.mode !== "unified") {
+    if (actor) actor.evade = 0;
+    return true;
+  }
+
+  if (!ctx.zeroUnifiedEvade) return false;
+  return ctx.zeroUnifiedEvade(team);
+}
   function getEvade(ownerPlayer, actor) {
     const team = getOwnerTeam(ownerPlayer);
 
@@ -258,6 +268,7 @@ function ensureUnifiedActionState(team) {
     consumeEvade,
     getEvade,
     addActionCount,
+    zeroEvade,
     applyToUnifiedPartners
   };
 }
