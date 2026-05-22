@@ -973,7 +973,7 @@ onlineBattleUi = createOnlineBattleUi({
   isOnlineEnabled: () => onlineState.enabled,
   getOnlineRoomId: () => onlineState.roomId,
   getOnlineMyPlayer: () => onlineState.myPlayer,
-
+isOnlineSpectator,
   getOnlineBattleStarted: () => onlineBattleStarted,
   getOnlineBattleFinished: () => onlineBattleFinished,
   setOnlineBattleFinished: (value) => {
