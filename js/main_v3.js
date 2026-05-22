@@ -285,6 +285,10 @@ function spectateOnlineRoom() {
   return onlineSpectatorController.spectateOnlineRoom();
 }
 
+function showRandomSpectateRooms() {
+  return onlineSpectatorController.showRandomSpectateRooms();
+}
+
 function buildOnlineBattleSnapshot() {
   return onlineSpectatorController.buildOnlineBattleSnapshot();
 }
@@ -1086,6 +1090,7 @@ onlineSpectatorController = createOnlineSpectatorController({
   listenRoom,
   readSpectatableRooms,
   getPlayerProfile: () => playerSession.profile,
+  getUnitNameById,
   applyOnlineRoomData,
   redrawBattleBoards,
   renderAttackChoices,
@@ -1941,7 +1946,8 @@ bindMainEvents({
     battleMode = value;
   },
   spectateOnlineRoom,
-startOnline1v1Btn,
+  showRandomSpectateRooms,
+  startOnline1v1Btn,
   startOnline2v2Btn,
   createOnlineRoomBtn,
   joinOnlineRoomBtn,
