@@ -53,6 +53,7 @@ import {
   listenRoom,
   buildInitialRoomData,
   cleanupOldRooms,
+  readSpectatableRooms,
   writeRandomMatchWaiting,
   updateRandomMatchWaiting,
   removeRandomMatchWaiting,
