@@ -1,9 +1,4 @@
-import {
-  setForm,
-  getStateEffect,
-  setStateEffect,
-  clearStateEffect
-} from "./js_unit_runtime.js";
+import { setForm, getStateEffect, setStateEffect, clearStateEffect } from "./js_unit_runtime.js";
 
 function ensureShiningState(state) {
   if (typeof state.shiningMeditationCount !== "number") state.shiningMeditationCount = 0;
@@ -12,6 +7,117 @@ function ensureShiningState(state) {
   if (typeof state.shiningMikiUsedThisTurn !== "number") state.shiningMikiUsedThisTurn = 0;
   if (typeof state.shiningWaterDropPending !== "boolean") state.shiningWaterDropPending = false;
   if (typeof state.shiningResolvingFollowup !== "boolean") state.shiningResolvingFollowup = false;
+}
+
+function getAdapter(context) {
+  return context?.twoVtwoAdapter || null;
+}
+
+function getOwnerPlayer(context) {
+  return context?.ownerPlayer || null;
+}
+
+function getRuleEvade(state, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.getEvade && ownerPlayer) {
+    return adapter.getEvade(ownerPlayer, state);
+  }
+
+  return Math.max(0, Number(state?.evade || 0));
+}
+
+function consumeRuleEvade(state, amount, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.consumeEvade && ownerPlayer) {
+    return adapter.consumeEvade(ownerPlayer, state, amount);
+  }
+
+  if (!state || Number(state.evade || 0) < amount) return false;
+  state.evade = Math.max(0, Number(state.evade || 0) - amount);
+  return true;
+}
+
+function getRuleActionCount(state, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.getActionCount && ownerPlayer) {
+    return adapter.getActionCount(ownerPlayer, state);
+  }
+
+  return Math.max(0, Number(state?.actionCount || 0));
+}
+
+function consumeRuleAction(state, amount, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.consumeAction && ownerPlayer) {
+    return adapter.consumeAction(ownerPlayer, state, amount);
+  }
+
+  if (!state || Number(state.actionCount || 0) < amount) return false;
+  state.actionCount = Math.max(0, Number(state.actionCount || 0) - amount);
+  return true;
+}
+
+function addRuleAction(state, amount, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.addActionCount && ownerPlayer) {
+    return adapter.addActionCount(ownerPlayer, state, amount);
+  }
+
+  state.actionCount = Math.max(0, Number(state.actionCount || 0)) + amount;
+  return amount;
+}
+
+function healRuleHp(state, amount, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.heal && ownerPlayer) {
+    return adapter.heal(ownerPlayer, state, amount);
+  }
+
+  state.hp = Math.min(state.maxHp, Number(state.hp || 0) + amount);
+  return amount;
+}
+
+function getRuleHp(state, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.getUnifiedHp && adapter?.isUnifiedOwner?.(ownerPlayer)) {
+    return adapter.getUnifiedHp(adapter.getOwnerTeam(ownerPlayer));
+  }
+
+  return Math.max(0, Number(state?.hp || 0));
+}
+
+function consumeRuleHp(state, amount, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.consumeHp && ownerPlayer) {
+    return adapter.consumeHp(ownerPlayer, state, amount);
+  }
+
+  if (!state) return false;
+  state.hp = Math.max(1, Number(state.hp || 0) - amount);
+  return true;
+}
+
+function halveRuleHpCeil(state, context = {}) {
+  const currentHp = getRuleHp(state, context);
+  const nextHp = Math.ceil(currentHp / 2);
+  const cost = Math.max(0, currentHp - nextHp);
+  return consumeRuleHp(state, cost, context);
 }
 
 function getSuperEffect(state) {
@@ -46,7 +152,12 @@ function clearShiningOverEvadeState(state) {
 }
 
 function clampShiningEvade(state) {
-  if (typeof state.evade === "number" && typeof state.evadeMax === "number" && state.evade > state.evadeMax && !state.overEvadeMode) {
+  if (
+    typeof state.evade === "number" &&
+    typeof state.evadeMax === "number" &&
+    state.evade > state.evadeMax &&
+    !state.overEvadeMode
+  ) {
     state.evade = state.evadeMax;
   }
 
@@ -56,17 +167,14 @@ function clampShiningEvade(state) {
 }
 
 function setBaseForm(state, previousCap = 3) {
-  const prevEvade =
-    typeof state.evade === "number" ? state.evade : 0;
+  const prevEvade = typeof state.evade === "number" ? state.evade : 0;
 
   const changed = setForm(state, "base", {
     preserveHp: true,
     preserveEvade: true
   });
 
-  if (!changed) {
-    return false;
-  }
+  if (!changed) return false;
 
   if (prevEvade > state.evadeMax) {
     state.evade = Math.min(prevEvade, previousCap);
@@ -91,20 +199,18 @@ function enterMode(state, formId, effectId, turns) {
     preserveEvade: true
   });
 
-  if (!changed) {
-    return false;
-  }
+  if (!changed) return false;
 
   clearShiningOverEvadeState(state);
   clampShiningEvade(state);
 
   setStateEffect(state, effectId, {
-  turns,
-  skipNextTick: true,
-  boost: true,
-  boostType: effectId === "shining_meikyo" ? "meikyo" : "super_mode",
-  boostName: effectId === "shining_meikyo" ? "明鏡止水の心" : "スーパーモード"
-});
+    turns,
+    skipNextTick: true,
+    boost: true,
+    boostType: effectId === "shining_meikyo" ? "meikyo" : "super_mode",
+    boostName: effectId === "shining_meikyo" ? "明鏡止水の心" : "スーパーモード"
+  });
 
   return true;
 }
@@ -112,27 +218,7 @@ function enterMode(state, formId, effectId, turns) {
 function extendActiveMode(state, amount) {
   const effect = getActiveModeEffect(state);
   if (!effect) return false;
-
   effect.turns += amount;
-  return true;
-}
-
-function consumeActiveModeTurns(state, amount) {
-  const effectId = getActiveModeEffectId(state);
-  if (!effectId) return false;
-
-  const effect = getStateEffect(state, effectId);
-  if (!effect) return false;
-
-  const previousCap = getCurrentModeEvadeCap(state);
-
-  effect.turns -= amount;
-
-  if (effect.turns <= 0) {
-    clearStateEffect(state, effectId);
-    setBaseForm(state, previousCap);
-  }
-
   return true;
 }
 
@@ -156,7 +242,7 @@ function tickModeEffect(state, effectId, previousCap) {
 }
 
 function buildModeStatus(text, color) {
-  return `<span style="color:${color};font-weight:bold;">${text}</span>`;
+  return `${text}`;
 }
 
 export function getShiningDerivedState(state) {
@@ -245,6 +331,7 @@ export function canUseShiningSpecial(state, specialKey, context = {}) {
   ensureShiningState(state);
 
   const special = state.specials[specialKey];
+
   if (!special) {
     return {
       allowed: false,
@@ -253,9 +340,7 @@ export function canUseShiningSpecial(state, specialKey, context = {}) {
   }
 
   if (special.effectType === "miki_action") {
-    const allowed =
-      state.evade >= 1 &&
-      state.shiningMikiUsedThisTurn < 2;
+    const allowed = getRuleEvade(state, context) >= 1 && state.shiningMikiUsedThisTurn < 2;
 
     return {
       allowed,
@@ -264,10 +349,7 @@ export function canUseShiningSpecial(state, specialKey, context = {}) {
   }
 
   if (special.effectType === "spirit_focus") {
-    const allowed =
-      state.evade >= 3 &&
-      typeof state.actionCount === "number" &&
-      state.actionCount >= 1;
+    const allowed = getRuleEvade(state, context) >= 3 && getRuleActionCount(state, context) >= 1;
 
     return {
       allowed,
@@ -276,9 +358,7 @@ export function canUseShiningSpecial(state, specialKey, context = {}) {
   }
 
   if (special.effectType === "water_drop") {
-    const allowed =
-      state.evade >= 5 &&
-      !state.shiningWaterDropPending;
+    const allowed = getRuleEvade(state, context) >= 5 && !state.shiningWaterDropPending;
 
     return {
       allowed,
@@ -296,6 +376,7 @@ export function executeShiningSpecial(state, specialKey, context = {}) {
   ensureShiningState(state);
 
   const special = state.specials[specialKey];
+
   if (!special) {
     return {
       handled: true,
@@ -305,27 +386,40 @@ export function executeShiningSpecial(state, specialKey, context = {}) {
   }
 
   if (special.effectType === "miki_action") {
-  state.evade = Math.max(0, state.evade - 1);
-  state.shiningMikiUsedThisTurn += 1;
+    if (!consumeRuleEvade(state, 1, context)) {
+      return {
+        handled: true,
+        redraw: true,
+        message: "回避が足りない"
+      };
+    }
 
-  if (typeof state.actionCount !== "number") {
-    state.actionCount = 0;
-  }
+    state.shiningMikiUsedThisTurn += 1;
+    addRuleAction(state, 1, context);
 
-  state.actionCount += 1;
-
-  return { handled: true, redraw: true, message: null };
+    return {
+      handled: true,
+      redraw: true,
+      message: null
+    };
   }
 
   if (special.effectType === "spirit_focus") {
-    state.evade = Math.max(0, state.evade - 3);
-
-    if (typeof state.actionCount !== "number") {
-      state.actionCount = 0;
+    if (!consumeRuleEvade(state, 3, context)) {
+      return {
+        handled: true,
+        redraw: true,
+        message: "回避が足りない"
+      };
     }
 
-    state.actionCount = Math.max(0, state.actionCount - 1);
-    
+    if (!consumeRuleAction(state, 1, context)) {
+      return {
+        handled: true,
+        redraw: true,
+        message: "行動権が足りない"
+      };
+    }
 
     return {
       handled: true,
@@ -343,10 +437,16 @@ export function executeShiningSpecial(state, specialKey, context = {}) {
   }
 
   if (special.effectType === "water_drop") {
-    state.evade = Math.max(0, state.evade - 5);
-    state.hp = Math.ceil(state.hp / 2);
+    if (!consumeRuleEvade(state, 5, context)) {
+      return {
+        handled: true,
+        redraw: true,
+        message: "回避が足りない"
+      };
+    }
+
+    halveRuleHpCeil(state, context);
     state.shiningWaterDropPending = true;
-    
 
     return {
       handled: true,
@@ -405,6 +505,7 @@ export function onShiningAfterSlotResolved(state, slotNumber, context = {}) {
   ensureShiningState(state);
 
   const resolveResult = context.resolveResult || null;
+
   if (!resolveResult || resolveResult.kind !== "custom") {
     return {
       redraw: false,
@@ -425,6 +526,7 @@ export function onShiningAfterSlotResolved(state, slotNumber, context = {}) {
       }
 
       const changed = enterMode(state, "super", "shining_super", 5);
+
       return {
         redraw: changed,
         message: null
@@ -444,9 +546,8 @@ export function onShiningAfterSlotResolved(state, slotNumber, context = {}) {
 
   if (state.formId === "super") {
     if (resolveResult.customEffectId === "shining_meditation") {
-      state.hp = Math.min(state.maxHp, state.hp + 60);
+      healRuleHp(state, 60, context);
       extendActiveMode(state, 2);
-
       state.shiningMeditationCount += 1;
 
       const messages = ["60回復", "スーパーモード+2ターン"];
@@ -458,12 +559,12 @@ export function onShiningAfterSlotResolved(state, slotNumber, context = {}) {
 
       return {
         redraw: true,
-        message: messages.join("<br>")
+        message: messages.join("\n")
       };
     }
 
     if (resolveResult.customEffectId === "shining_meikyo_heart") {
-      state.hp = Math.min(state.maxHp, state.hp + 80);
+      healRuleHp(state, 80, context);
       state.shiningMeikyoUnlocked = true;
       state.shiningMeditationExReady = false;
 
@@ -471,19 +572,19 @@ export function onShiningAfterSlotResolved(state, slotNumber, context = {}) {
 
       return {
         redraw: true,
-        message: changed ? "80回復<br>明鏡止水発動" : "明鏡止水移行失敗"
+        message: changed ? "80回復\n明鏡止水発動" : "明鏡止水移行失敗"
       };
     }
   }
 
   if (state.formId === "meikyo") {
     if (resolveResult.customEffectId === "shining_meikyo_heal") {
-      state.hp = Math.min(state.maxHp, state.hp + 80);
+      healRuleHp(state, 80, context);
       extendActiveMode(state, 1);
 
       return {
         redraw: true,
-        message: "80回復<br>明鏡止水Sモード+1ターン"
+        message: "80回復\n明鏡止水Sモード+1ターン"
       };
     }
   }
@@ -518,7 +619,7 @@ export function onShiningActionResolved(attacker, defender, context = {}) {
 
     return {
       redraw,
-      message: messages.length > 0 ? messages.join("<br>") : null
+      message: messages.length > 0 ? messages.join("\n") : null
     };
   }
 
@@ -537,13 +638,14 @@ export function onShiningActionResolved(attacker, defender, context = {}) {
     if (
       context.slotNumber === 4 &&
       context.hitCount > 0 &&
-      attacker.evade > 0
+      getRuleEvade(attacker, context) > 0
     ) {
       const choices = [
         { label: "追撃しない", value: "cancel" }
       ];
 
-      for (let i = 1; i <= attacker.evade; i++) {
+      const evade = getRuleEvade(attacker, context);
+      for (let i = 1; i <= evade; i++) {
         choices.push({
           label: `${i}消費`,
           value: String(i)
@@ -552,7 +654,7 @@ export function onShiningActionResolved(attacker, defender, context = {}) {
 
       return {
         redraw: true,
-        message: messages.length > 0 ? messages.join("<br>") : null,
+        message: messages.length > 0 ? messages.join("\n") : null,
         requestChoice: {
           choiceType: "generic",
           source: "shining_meikyo_followup",
@@ -566,7 +668,7 @@ export function onShiningActionResolved(attacker, defender, context = {}) {
 
     return {
       redraw,
-      message: messages.length > 0 ? messages.join("<br>") : null
+      message: messages.length > 0 ? messages.join("\n") : null
     };
   }
 
@@ -575,6 +677,7 @@ export function onShiningActionResolved(attacker, defender, context = {}) {
     message: null
   };
 }
+
 export function onShiningDamaged(defender, attacker) {
   return {
     redraw: false,
@@ -613,6 +716,7 @@ export function onShiningResolveChoice(state, pendingChoice, selectedValue, cont
     }
 
     const spend = Number(selectedValue || 0);
+
     if (!Number.isFinite(spend) || spend <= 0) {
       return {
         handled: true,
@@ -621,7 +725,7 @@ export function onShiningResolveChoice(state, pendingChoice, selectedValue, cont
       };
     }
 
-    if (state.evade < spend) {
+    if (getRuleEvade(state, context) < spend) {
       return {
         handled: true,
         redraw: true,
@@ -629,7 +733,7 @@ export function onShiningResolveChoice(state, pendingChoice, selectedValue, cont
       };
     }
 
-    state.evade = Math.max(0, state.evade - spend);
+    consumeRuleEvade(state, spend, context);
     state.shiningResolvingFollowup = true;
 
     return {
