@@ -189,7 +189,7 @@ export function createOnlineRoomController(ctx) {
 
       if (roomData.meta?.status === "selecting") {
         if (status) {
-          status.textContent = "部屋IDマッチ成立。ランダムマッチ同等ルートへ移動します。";
+          status.textContent = "部屋IDマッチ成立。マッチルートへ移動します。";
         }
 
         hideRoomIdMatchPanel();
