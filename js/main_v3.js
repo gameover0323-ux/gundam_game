@@ -1815,6 +1815,7 @@ gameSetup = createGameSetup({
   debugUnits: debugUnitList,
   canUseDebugUnit,
   unitButtons,
+  onSelectUnit: (unit) => selectOnlineUnit(unit),
   selectGuide,
   selectedUnitsPreview,
   onSelectUnit: selectOnlineUnit,
