@@ -833,7 +833,9 @@ function getOnlineTitleText(playerData) {
 function canOperateOnlinePlayer() {
   return turnActionController.canOperateOnlinePlayer();
 }
-
+function selectOnlineUnit(unit) {
+  return onlineRoomController.selectOnlineUnit(unit);
+}
 function getOnlineProfilePatch(playerKey) {
   return onlineRoomController.getOnlineProfilePatch(playerKey);
 }
@@ -1815,6 +1817,7 @@ gameSetup = createGameSetup({
   unitButtons,
   selectGuide,
   selectedUnitsPreview,
+  onSelectUnit: selectOnlineUnit,
 confirmSelectedUnitBtn,
 backFromSelectBtn,
 getPendingSelectedUnit: () => pendingSelectedUnit,
