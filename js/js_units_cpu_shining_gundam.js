@@ -13,7 +13,6 @@ Object.values(cpu_shining_gundam.forms || {}).forEach(form => {
       effectType: "cpu_shining_traits",
       timing: "auto",
       actionType: "auto",
-      desc: "回避を消費して追加行動する。HP条件で明鏡止水スーパーモードを狙う。"
-    }
+      desc: "回避を消費して追加行動する。HPが減ると明鏡止水スーパーモードを狙い、強化状態を維持しながら攻めてくる。"    }
   ];
 });
