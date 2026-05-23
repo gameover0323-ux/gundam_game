@@ -13,7 +13,7 @@ Object.values(cpu_z_gundam.forms || {}).forEach(form => {
       effectType: "cpu_z_traits",
       timing: "auto",
       actionType: "auto",
-      desc: "10分の1で変形する。バイオセンサー中は被ダメージを軽減し、攻撃を完全回避された時に相手の回避を0にする。"
+  desc: "戦闘中にZガンダム形態とウェイブライダー形態を切り替えることがある。バイオセンサー発動中は防御性能が上がり、攻撃を完全回避されると相手の回避を0にする。"
     }
   ];
 });
