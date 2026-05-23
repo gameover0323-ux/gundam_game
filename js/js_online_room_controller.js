@@ -1,4 +1,6 @@
 export function createOnlineRoomController(ctx) {
+  let roomIdMatchActiveRoomId = null;
+
   function getOnlineProfilePatch(playerKey) {
     const profile = ctx.getPlayerProfile();
 
@@ -24,6 +26,7 @@ export function createOnlineRoomController(ctx) {
       await ctx.cleanupOldRooms();
 
       const roomId = ctx.createRoomId();
+      roomIdMatchActiveRoomId = roomId;
 
       ctx.setOnlineState({
         enabled: true,
@@ -63,7 +66,9 @@ export function createOnlineRoomController(ctx) {
         initialRoomData.players.B = {};
       }
 
-      initialRoomData.players.B.roomReady = false;
+      Object.assign(initialRoomData.players.B, {
+        roomReady: false
+      });
 
       initialRoomData.chat = {
         A: { text: "", updatedAt: 0 },
@@ -143,6 +148,8 @@ export function createOnlineRoomController(ctx) {
       return;
     }
 
+    roomIdMatchActiveRoomId = roomId;
+
     const snapshot = await ctx.readRoom(roomId);
 
     if (!snapshot.exists()) {
@@ -201,61 +208,9 @@ export function createOnlineRoomController(ctx) {
     });
   }
 
-  async function spectateOnlineRoom() {
-    await ctx.cleanupOldRooms();
-
-    const onlineRoomIdInput = ctx.getOnlineRoomIdInput();
-    const onlineRoomStatus = ctx.getOnlineRoomStatus();
-    const roomId = onlineRoomIdInput?.value.trim();
-
-    if (!roomId) {
-      ctx.showPopup("観戦する部屋IDを入力してください");
-      return;
-    }
-
-    const snapshot = await ctx.readRoom(roomId);
-
-    if (!snapshot.exists()) {
-      ctx.showPopup("部屋が見つかりません");
-      return;
-    }
-
-    const roomData = snapshot.val();
-
-    if (!roomData?.players?.A?.unitId || !roomData?.players?.B?.unitId) {
-      ctx.showPopup("まだ戦闘開始前の部屋です");
-      return;
-    }
-
-    ctx.setOnlineState({
-      enabled: true,
-      roomId,
-      myPlayer: "SPECTATOR",
-      isHost: false,
-      isSpectator: true
-    });
-
-    ctx.setBattleMode("online1v1");
-    ctx.setOnlineSelectEntered(true);
-    ctx.setOnlineBattleStarted(true);
-
-    if (onlineRoomStatus) {
-      onlineRoomStatus.textContent = `観戦中です。部屋ID：${roomId}`;
-    }
-
-    ctx.listenRoom(roomId, latestRoomData => {
-      if (!latestRoomData) return;
-
-      ctx.applyOnlineRoomData(latestRoomData);
-
-      if (latestRoomData.battleSnapshot) {
-        ctx.applyOnlineBattleSnapshot(latestRoomData.battleSnapshot);
-      }
-    });
-  }
-
   function hideRoomIdMatchPanel() {
     const panel = document.getElementById("roomIdMatchPanel");
+
     if (panel) {
       panel.style.display = "none";
     }
@@ -266,6 +221,17 @@ export function createOnlineRoomController(ctx) {
     const parent = onlineRoomStatus?.parentNode || ctx.getScreens?.()?.onlineRoom;
 
     if (!parent) return;
+
+    const mySide = ctx.getOnlineMyPlayer();
+
+    if (mySide !== "A" && mySide !== "B") return;
+
+    const enemySide = mySide === "A" ? "B" : "A";
+
+    const myData = roomData.players?.[mySide] || {};
+    const enemyData = roomData.players?.[enemySide] || {};
+    const myChat = roomData.chat?.[mySide]?.text || "";
+    const enemyChat = roomData.chat?.[enemySide]?.text || "";
 
     let panel = document.getElementById("roomIdMatchPanel");
 
@@ -279,45 +245,46 @@ export function createOnlineRoomController(ctx) {
       parent.appendChild(panel);
     }
 
-    const mySide = ctx.getOnlineMyPlayer();
-    const enemySide = mySide === "A" ? "B" : "A";
-
-    if (mySide !== "A" && mySide !== "B") return;
-
-    const myData = roomData.players?.[mySide] || {};
-    const enemyData = roomData.players?.[enemySide] || {};
-    const myChat = roomData.chat?.[mySide]?.text || "";
-    const enemyChat = roomData.chat?.[enemySide]?.text || "";
-
     panel.style.display = "";
     panel.innerHTML = `
       <h3>部屋IDマッチ成立</h3>
-      <div>あなた：${myData.profileName || "ゲスト"} ${myData.roomReady ? "【準備OK】" : ""}</div>
-      <div>相手：${enemyData.profileName || "ゲスト"} ${enemyData.roomReady ? "【準備OK】" : ""}</div>
+      <div>あなた：${escapeHtml(myData.profileName || "ゲスト")} ${myData.roomReady ? "【準備OK】" : ""}</div>
+      <div>相手：${escapeHtml(enemyData.profileName || "ゲスト")} ${enemyData.roomReady ? "【準備OK】" : ""}</div>
       <div style="border-top:1px solid #fff;border-bottom:1px solid #fff;padding:6px;margin:8px 0;">
-        <div>[あなた] ${myChat}</div>
-        <div>[相手] ${enemyChat}</div>
+        <div>[あなた] ${escapeHtml(myChat)}</div>
+        <div>[相手] ${escapeHtml(enemyChat)}</div>
       </div>
       <input id="roomIdMatchChatInput" maxlength="50" placeholder="生存確認チャット 50文字まで">
-      <button id="roomIdMatchChatSendBtn">送信</button>
+      <button id="roomIdMatchChatSendBtn" type="button">送信</button>
       <div style="margin-top:8px;">
-        <button id="roomIdMatchReadyBtn">${myData.roomReady ? "準備OK済み" : "準備OK"}</button>
+        <button id="roomIdMatchReadyBtn" type="button">${myData.roomReady ? "準備OK済み" : "準備OK"}</button>
       </div>
     `;
 
     const chatButton = document.getElementById("roomIdMatchChatSendBtn");
     const readyButton = document.getElementById("roomIdMatchReadyBtn");
 
-    chatButton?.addEventListener("click", sendRoomIdMatchChat);
-    readyButton?.addEventListener("click", readyRoomIdMatch);
+    if (chatButton) {
+      chatButton.onclick = sendRoomIdMatchChat;
+    }
 
-    if (myData.roomReady && readyButton) {
-      readyButton.disabled = true;
+    if (readyButton) {
+      readyButton.onclick = readyRoomIdMatch;
+      readyButton.disabled = !!myData.roomReady;
     }
   }
 
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
   async function sendRoomIdMatchChat() {
-    const roomId = ctx.getOnlineRoomId();
+    const roomId = roomIdMatchActiveRoomId;
     const mySide = ctx.getOnlineMyPlayer();
 
     if (!roomId || (mySide !== "A" && mySide !== "B")) return;
@@ -338,7 +305,7 @@ export function createOnlineRoomController(ctx) {
   }
 
   async function readyRoomIdMatch() {
-    const roomId = ctx.getOnlineRoomId();
+    const roomId = roomIdMatchActiveRoomId;
     const mySide = ctx.getOnlineMyPlayer();
 
     if (!roomId || (mySide !== "A" && mySide !== "B")) return;
@@ -404,7 +371,10 @@ export function createOnlineRoomController(ctx) {
     }
 
     ctx.updateSelectUi();
-    ctx.applyOnlineAction(roomData.action);
+
+    if (!ctx.isOnlineSpectator()) {
+      ctx.applyOnlineAction(roomData.action);
+    }
 
     if (
       !ctx.isOnlineSpectator() &&
@@ -470,7 +440,6 @@ export function createOnlineRoomController(ctx) {
     getOnlineProfilePatch,
     createOnlineRoom,
     joinOnlineRoom,
-    spectateOnlineRoom,
     bootOnlineFromUrl,
     applyOnlineRoomData,
     enterOnlineSelect,
