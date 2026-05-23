@@ -21,45 +21,168 @@ function ensureCpuJeganState(state) {
   if (!state) return;
 
   if (typeof state.jeganCpuLog !== "string") state.jeganCpuLog = "";
-
   if (typeof state.jeganForcedActionReady !== "boolean") state.jeganForcedActionReady = false;
   if (typeof state.jeganTurnCount !== "number") state.jeganTurnCount = 0;
-
   if (typeof state.jeganStarkTurns !== "number") state.jeganStarkTurns = 0;
   if (typeof state.jeganEscortTurns !== "number") state.jeganEscortTurns = 0;
-
   if (typeof state.jeganSlot6Mode !== "string") state.jeganSlot6Mode = "stark";
-
   if (typeof state.jeganStarkRightUsed !== "boolean") state.jeganStarkRightUsed = false;
   if (typeof state.jeganEscortRightUsed !== "boolean") state.jeganEscortRightUsed = false;
-
   if (typeof state.jeganEwacBroken !== "boolean") state.jeganEwacBroken = false;
   if (typeof state.jeganEwacEscapeUsed !== "boolean") state.jeganEwacEscapeUsed = false;
-
   if (typeof state.jeganLimiterTurns !== "number") state.jeganLimiterTurns = 0;
   if (typeof state.jeganLimiterRestTurns !== "number") state.jeganLimiterRestTurns = 0;
   if (typeof state.jeganStarkLimiterActive !== "boolean") state.jeganStarkLimiterActive = false;
-
   if (typeof state.jeganShieldHalfCount !== "number") state.jeganShieldHalfCount = 3;
   if (typeof state.jeganShieldActive !== "boolean") state.jeganShieldActive = false;
-
   if (typeof state.jeganBarrierTurns !== "number") state.jeganBarrierTurns = 0;
-
   if (typeof state.jeganEwacSupportFireCount !== "number") state.jeganEwacSupportFireCount = 0;
   if (typeof state.jeganEwacSupportFireUsedThisTurn !== "boolean") state.jeganEwacSupportFireUsedThisTurn = false;
-
   if (typeof state.jeganEwacGrenadeBonus !== "number") state.jeganEwacGrenadeBonus = 0;
 
   if (!state.stateEffects) state.stateEffects = {};
   if (!Array.isArray(state.pendingReservedActions)) state.pendingReservedActions = [];
 }
 
+function getAdapter(context) {
+  return context?.twoVtwoAdapter || null;
+}
+
+function getOwnerPlayer(context) {
+  return context?.ownerPlayer || null;
+}
+
 function addLog(messages, text) {
   if (text) messages.push(text);
 }
 
-function payHpKeepAlive(state, amount) {
+function getRuleEvade(state, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.getEvade && ownerPlayer) {
+    return adapter.getEvade(ownerPlayer, state);
+  }
+
+  return Math.max(0, Number(state?.evade || 0));
+}
+
+function consumeRuleEvade(state, amount, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.consumeEvade && ownerPlayer) {
+    return adapter.consumeEvade(ownerPlayer, state, amount);
+  }
+
+  if (!state || Number(state.evade || 0) < amount) return false;
+  state.evade = Math.max(0, Number(state.evade || 0) - amount);
+  return true;
+}
+
+function addRuleEvade(state, amount, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.addTeamEvade && ownerPlayer) {
+    return adapter.addTeamEvade(ownerPlayer, state, amount);
+  }
+
+  state.evade = Math.max(0, Number(state.evade || 0)) + amount;
+  return amount;
+}
+
+function setRuleEvadeExact(state, amount, context = {}) {
+  const value = Math.max(0, Number(amount || 0));
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.zeroEvade && adapter?.getOwnerTeam && ownerPlayer && adapter.isUnifiedOwner?.(ownerPlayer)) {
+    const team = adapter.getOwnerTeam(ownerPlayer);
+    adapter.zeroEvade(ownerPlayer, state);
+
+    if (team?.unit1 === state) {
+      team.unit1.evade = value;
+    } else if (team?.unit2 === state) {
+      team.unit2.evade = value;
+    } else if (team?.unit1) {
+      team.unit1.evade = value;
+    }
+
+    return true;
+  }
+
+  if (state) state.evade = value;
+  return true;
+}
+
+function getRuleActionCount(state, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.getActionCount && ownerPlayer) {
+    return adapter.getActionCount(ownerPlayer, state);
+  }
+
+  return Math.max(0, Number(state?.actionCount || 0));
+}
+
+function consumeRuleAction(state, amount, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.consumeAction && ownerPlayer) {
+    return adapter.consumeAction(ownerPlayer, state, amount);
+  }
+
+  if (!state || Number(state.actionCount || 0) < amount) return false;
+  state.actionCount = Math.max(0, Number(state.actionCount || 0) - amount);
+  return true;
+}
+
+function addRuleAction(state, amount, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.addActionCount && ownerPlayer) {
+    return adapter.addActionCount(ownerPlayer, state, amount);
+  }
+
+  state.actionCount = Math.max(0, Number(state.actionCount || 0)) + amount;
+  return amount;
+}
+
+function setRuleActionAtLeast(state, amount, context = {}) {
+  const current = getRuleActionCount(state, context);
+  if (current >= amount) return 0;
+  return addRuleAction(state, amount - current, context);
+}
+
+function consumeRuleHpKeepAlive(state, amount, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.consumeHp && adapter?.getUnifiedHp && adapter?.getOwnerTeam && ownerPlayer && adapter.isUnifiedOwner?.(ownerPlayer)) {
+    const team = adapter.getOwnerTeam(ownerPlayer);
+    if (adapter.getUnifiedHp(team) <= amount) return false;
+    return adapter.consumeHp(ownerPlayer, state, amount);
+  }
+
+  if (!state || Number(state.hp || 0) <= amount) return false;
   state.hp = Math.max(1, Number(state.hp || 0) - amount);
+  return true;
+}
+
+function healRuleHp(state, amount, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.heal && ownerPlayer) {
+    return adapter.heal(ownerPlayer, state, amount);
+  }
+
+  state.hp = Math.min(Number(state.maxHp || 0), Number(state.hp || 0) + amount);
+  return amount;
 }
 
 function hasPendingEwacSupportFire(state) {
@@ -106,24 +229,22 @@ function reserveEwacSupportFire(state, context, messages) {
   addLog(messages, "CPUジェガンD型：捕捉・援護射撃を予約");
 }
 
-function cpuEquipEwac(state, messages) {
+function cpuEquipEwac(state, messages, context) {
   if (state.jeganEwacBroken) return;
-  if (Number(state.actionCount || 0) < 1) return;
+  if (!consumeRuleAction(state, 1, context)) return;
 
-  state.actionCount -= 1;
   setForm(state, "ewac", { preserveHp: true, preserveEvade: true });
   addLog(messages, "CPUジェガンD型：EWACを装備");
 }
 
-function cpuBaseLimiter(state, messages) {
-  if (Number(state.hp || 0) <= 120) return;
+function cpuBaseLimiter(state, messages, context) {
   if (state.jeganLimiterTurns > 0) return;
   if (state.jeganLimiterRestTurns > 0) return;
+  if (!consumeRuleHpKeepAlive(state, 120, context)) return;
 
-  payHpKeepAlive(state, 120);
   state.jeganLimiterTurns = 3;
   state.baseActionCount = 2;
-  state.actionCount = Math.max(Number(state.actionCount || 0), 2);
+  setRuleActionAtLeast(state, 2, context);
 
   addLog(messages, "CPUジェガンD型：リミッター解除");
 }
@@ -138,34 +259,32 @@ function cpuSwitchSlot6(state, messages) {
   );
 }
 
-function cpuStarkAccel(state, messages) {
-  while (Number(state.evade || 0) >= 4 && chance(0.5)) {
-    state.evade -= 4;
-    state.actionCount = Number(state.actionCount || 0) + 1;
+function cpuStarkAccel(state, messages, context) {
+  while (getRuleEvade(state, context) >= 4 && chance(0.5)) {
+    consumeRuleEvade(state, 4, context);
+    addRuleAction(state, 1, context);
     addLog(messages, "CPUスタークジェガン：加速 回避-4 行動権+1");
   }
 }
 
-function cpuStarkLimiter(state, messages) {
-  if (Number(state.hp || 0) <= 120) return;
+function cpuStarkLimiter(state, messages, context) {
   if (state.jeganStarkLimiterActive) return;
 
   const maxHp = Math.max(1, Number(state.maxHp || 450));
   const hpRate = Math.max(0, Math.min(1, Number(state.hp || 0) / maxHp));
 
   if (!chance(hpRate)) return;
-
-  payHpKeepAlive(state, 120);
+  if (!consumeRuleHpKeepAlive(state, 120, context)) return;
 
   const currentRedCap = state.overEvadeMode && typeof state.overEvadeCap === "number"
     ? state.overEvadeCap
     : Number(state.evadeMax || 0);
 
   const nextEvadeMax = Math.max(1, currentRedCap) * 2;
-  const nextEvade = Math.max(0, Number(state.evade || 0)) * 2;
+  const nextEvade = getRuleEvade(state, context) * 2;
 
-  state.actionCount = Number(state.actionCount || 0) + 1;
-  state.evade = nextEvade;
+  addRuleAction(state, 1, context);
+  setRuleEvadeExact(state, nextEvade, context);
 
   state.overEvadeMode = true;
   state.overEvadeCap = nextEvadeMax;
@@ -176,30 +295,28 @@ function cpuStarkLimiter(state, messages) {
   addLog(messages, `CPUスタークジェガン：リミッター解除 赤上限${nextEvadeMax} 所持回避${nextEvade}`);
 }
 
-function cpuStarkDisturb(state, messages) {
-  if (Number(state.evade || 0) > 1) return;
-  if (Number(state.actionCount || 0) < 1) return;
+function cpuStarkDisturb(state, messages, context) {
+  if (getRuleEvade(state, context) > 1) return;
+  if (!consumeRuleAction(state, 1, context)) return;
 
-  state.actionCount -= 1;
-  state.evade = Number(state.evade || 0) + 3;
-
+  addRuleEvade(state, 3, context);
   addLog(messages, "CPUスタークジェガン：撹乱 回避+3");
 }
 
-function cpuEscortAssault(state, messages) {
-  if (Number(state.evade || 0) < 2) return;
+function cpuEscortAssault(state, messages, context) {
+  if (getRuleEvade(state, context) < 2) return;
   if (!chance(0.5)) return;
 
-  state.evade -= 2;
-  state.actionCount = Number(state.actionCount || 0) + 1;
+  consumeRuleEvade(state, 2, context);
+  addRuleAction(state, 1, context);
 
   addLog(messages, "CPUエスコートジェガン：強襲 回避-2 行動権+1");
 }
 
-function cpuEwacHeal(state, messages) {
+function cpuEwacHeal(state, messages, context) {
   if (!chance(0.05)) return;
 
-  state.hp = Math.min(Number(state.maxHp || 450), Number(state.hp || 0) + 100);
+  healRuleHp(state, 100, context);
   addLog(messages, "CPU EWAC：索敵予測相当 HP100回復");
 }
 
@@ -268,7 +385,26 @@ function cpuEwacEscapeIfNeeded(state, incomingDamage, messages) {
 
 export function getCpuJeganDerivedState(state) {
   ensureCpuJeganState(state);
-  return getJeganDerivedState(state);
+
+  const derived = getJeganDerivedState(state);
+
+  return {
+    ...derived,
+    status: [
+      ...(derived.status || []),
+      "CPU特性：装備を使い分ける"
+    ],
+    specials: {
+      ...(derived.specials || {}),
+      special1: {
+        name: "CPU特性",
+        effectType: "cpu_jegan_traits",
+        timing: "auto",
+        actionType: "auto",
+        desc: "状況に応じてEWAC・スターク・エスコート装備を使い分ける。リミッター解除や援護射撃、シールド、防御バリアで粘り強く戦う。"
+      }
+    }
+  };
 }
 
 export function onCpuJeganBeforeSlot(state, rolledSlotNumber, context = {}) {
@@ -287,26 +423,24 @@ export function onCpuJeganBeforeSlot(state, rolledSlotNumber, context = {}) {
   }
 
   if (state.formId === "base") {
-    if (!state.jeganEwacBroken && chance(0.2)) cpuEquipEwac(state, messages);
-
-    if (state.formId === "base" && chance(0.5)) cpuBaseLimiter(state, messages);
-
+    if (!state.jeganEwacBroken && chance(0.2)) cpuEquipEwac(state, messages, context);
+    if (state.formId === "base" && chance(0.5)) cpuBaseLimiter(state, messages, context);
     if (state.formId === "base" && chance(0.5)) cpuSwitchSlot6(state, messages);
   }
 
   if (state.formId === "stark") {
-    cpuStarkAccel(state, messages);
-    cpuStarkLimiter(state, messages);
-    cpuStarkDisturb(state, messages);
+    cpuStarkAccel(state, messages, context);
+    cpuStarkLimiter(state, messages, context);
+    cpuStarkDisturb(state, messages, context);
   }
 
   if (state.formId === "ewac") {
     if (chance(0.5)) reserveEwacSupportFire(state, context, messages);
-    cpuEwacHeal(state, messages);
+    cpuEwacHeal(state, messages, context);
   }
 
   if (state.formId === "escort") {
-    cpuEscortAssault(state, messages);
+    cpuEscortAssault(state, messages, context);
   }
 
   return {
