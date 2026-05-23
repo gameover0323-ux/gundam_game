@@ -12,6 +12,6 @@ cpu_gundam_mc.forms.base.specials = [
     effectType: "cpu_gundam_traits",
     timing: "auto",
     actionType: "auto",
-    desc: "3ターンに1回、追加武装を同時発動する。HP200未満で低HP補正、HP50以下でラストシューティング補正。"
+  desc: "一定ターンごとに追加武装で追撃する。HPが減ると回復行動を行い、瀕死時にはラストシューティングで反撃する。"
   }
 ];
