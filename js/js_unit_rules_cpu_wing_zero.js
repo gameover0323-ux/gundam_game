@@ -1,28 +1,111 @@
 import {
-  setForm,
   getStateEffect,
   setStateEffect,
   clearStateEffect,
-  addEvade,
-  reduceEvade,
-  doubleEvadeRedCap,
-  normalizeEvadeCapState
+  setForm,
+  doubleEvadeRedCap
 } from "./js_unit_runtime.js";
+
+import {
+  getWingZeroDerivedState,
+  executeWingZeroSpecial,
+  onWingZeroBeforeSlot,
+  onWingZeroEnemyBeforeSlot,
+  onWingZeroAfterSlotResolved,
+  onWingZeroActionResolved,
+  onWingZeroDamaged,
+  onWingZeroTurnEnd,
+  modifyWingZeroTakenDamage,
+  modifyWingZeroEvadeAttempt,
+  onWingZeroResolveChoice
+} from "./js_unit_rules_wing_zero.js";
+
 function ensureCpuWingZeroState(state) {
   if (typeof state.cpuWingZeroSlot6Ex !== "boolean") state.cpuWingZeroSlot6Ex = Math.random() < 0.5;
-  if (typeof state.cpuWingZeroFullEvadeTurns !== "number") state.cpuWingZeroFullEvadeTurns = 0;
   if (typeof state.cpuWingZeroBerserkUsed !== "boolean") state.cpuWingZeroBerserkUsed = false;
   if (typeof state.cpuWingZeroSystemActivatedOnce !== "boolean") state.cpuWingZeroSystemActivatedOnce = false;
   if (typeof state.cpuWingZeroHitClearPending !== "boolean") state.cpuWingZeroHitClearPending = false;
   if (typeof state.cpuWingZeroExtraUsedThisSlot !== "boolean") state.cpuWingZeroExtraUsedThisSlot = false;
 }
 
+function getAdapter(context) {
+  return context?.twoVtwoAdapter || null;
+}
+
+function getOwnerPlayer(context) {
+  return context?.ownerPlayer || null;
+}
+
+function getEnemyPlayer(context) {
+  return context?.enemyPlayer || null;
+}
+
+function getRuleEvade(state, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.getEvade && ownerPlayer) {
+    return adapter.getEvade(ownerPlayer, state);
+  }
+
+  return Math.max(0, Number(state?.evade || 0));
+}
+
+function consumeRuleEvade(state, amount, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.consumeEvade && ownerPlayer) {
+    return adapter.consumeEvade(ownerPlayer, state, amount);
+  }
+
+  if (!state || Number(state.evade || 0) < amount) return false;
+  state.evade = Math.max(0, Number(state.evade || 0) - amount);
+  return true;
+}
+
+function zeroEnemyRuleEvade(defender, context = {}) {
+  const adapter = getAdapter(context);
+  const enemyPlayer = getEnemyPlayer(context);
+
+  if (adapter?.zeroEvade && enemyPlayer) {
+    return adapter.zeroEvade(enemyPlayer, defender);
+  }
+
+  if (defender) defender.evade = 0;
+  return true;
+}
+
+function healRuleHp(state, amount, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.heal && ownerPlayer) {
+    return adapter.heal(ownerPlayer, state, amount);
+  }
+
+  state.hp = Math.min(state.maxHp, Number(state.hp || 0) + amount);
+  return amount;
+}
+
+function zeroOwnRuleEvade(state, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.zeroEvade && ownerPlayer) {
+    return adapter.zeroEvade(ownerPlayer, state);
+  }
+
+  if (state) state.evade = 0;
+  return true;
+}
+
 function getEvadeSystem(state) {
-  return getStateEffect(state, "cpu_wing_zero_evade_system");
+  return getStateEffect(state, "wing_zero_evade");
 }
 
 function getHitSystem(state) {
-  return getStateEffect(state, "cpu_wing_zero_hit_system");
+  return getStateEffect(state, "wing_zero_hit");
 }
 
 function hasBothSystems(state) {
@@ -31,35 +114,62 @@ function hasBothSystems(state) {
 
 function activateEvadeSystem(state) {
   state.cpuWingZeroSystemActivatedOnce = true;
-  setStateEffect(state, "cpu_wing_zero_evade_system", {
-    turns: 3,
+
+  const current = getStateEffect(state, "wing_zero_evade");
+  const currentTurns = current && typeof current.turns === "number" ? current.turns : 0;
+
+  setStateEffect(state, "wing_zero_evade", {
+    turns: currentTurns + 3,
     skipNextTick: true,
     boost: true,
     boostType: "zero_system_evade",
     boostName: "ゼロシステム(回避)"
   });
+
   return "ウイングゼロ：ゼロシステム発動(回避補正)";
 }
 
 function activateHitSystem(state) {
   state.cpuWingZeroSystemActivatedOnce = true;
   state.cpuWingZeroHitClearPending = true;
-  setStateEffect(state, "cpu_wing_zero_hit_system", {
-    turns: 3,
+
+  const current = getStateEffect(state, "wing_zero_hit");
+  const currentTurns = current && typeof current.turns === "number" ? current.turns : 0;
+
+  setStateEffect(state, "wing_zero_hit", {
+    turns: currentTurns + 3,
     skipNextTick: true,
     boost: true,
     boostType: "zero_system_hit",
     boostName: "ゼロシステム(命中)"
   });
+
   return "ウイングゼロ：ゼロシステム発動(命中補正)";
 }
 
-function activateBerserk(state) {
+function addRuleEvadeAtLeast(state, amount, context = {}) {
+  const current = getRuleEvade(state, context);
+  if (current >= amount) return 0;
+
+  const add = amount - current;
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.addTeamEvade && ownerPlayer) {
+    return adapter.addTeamEvade(ownerPlayer, state, add);
+  }
+
+  state.evade = Math.max(0, Number(state.evade || 0)) + add;
+  return add;
+}
+
+function activateBerserk(state, context = {}) {
   state.cpuWingZeroBerserkUsed = true;
   state.cpuWingZeroSystemActivatedOnce = true;
-  state.evade = Math.max(state.evade, 3);
 
-  setStateEffect(state, "cpu_wing_zero_evade_system", {
+  addRuleEvadeAtLeast(state, 3, context);
+
+  setStateEffect(state, "wing_zero_evade", {
     turns: 3,
     skipNextTick: true,
     boost: true,
@@ -67,7 +177,7 @@ function activateBerserk(state) {
     boostName: "ゼロシステム(回避)"
   });
 
-  setStateEffect(state, "cpu_wing_zero_hit_system", {
+  setStateEffect(state, "wing_zero_hit", {
     turns: 3,
     skipNextTick: true,
     boost: true,
@@ -77,28 +187,35 @@ function activateBerserk(state) {
 
   return "ウイングゼロ特性：HP100以下、ゼロシステム暴走。6/6EX同時発動、回避3";
 }
-function tickEffect(state, effectId) {
-  const effect = getStateEffect(state, effectId);
-  if (!effect) return false;
-  if (effect.skipNextTick) {
-    effect.skipNextTick = false;
-    return true;
-  }
-  effect.turns -= 1;
-  if (effect.turns <= 0) clearStateEffect(state, effectId);
-  return true;
-}
 
 function transformToNeoBird(state) {
-  if (state.formId === "neo_bird") return false;
-  return setForm(state, "neo_bird", { preserveHp: true, preserveEvade: true });
+  if (state.formId === "neo") return false;
+
+  return setForm(state, "neo", {
+    preserveHp: true,
+    preserveEvade: true
+  });
 }
 
-function returnToMsWithDoubleEvade(state) {
-  const changed = setForm(state, "base", { preserveHp: true, preserveEvade: true });
+function returnToMsWithDoubleEvade(state, context = {}) {
+  const changed = setForm(state, "ms", {
+    preserveHp: true,
+    preserveEvade: true
+  });
+
   if (changed) {
-    doubleEvadeRedCap(state);
+    const adapter = getAdapter(context);
+    const ownerPlayer = getOwnerPlayer(context);
+
+    if (adapter?.applyToUnifiedPartners && ownerPlayer && adapter.isUnifiedOwner?.(ownerPlayer)) {
+      adapter.applyToUnifiedPartners(ownerPlayer, unit => {
+        doubleEvadeRedCap(unit);
+      });
+    } else {
+      doubleEvadeRedCap(state);
+    }
   }
+
   return changed;
 }
 
@@ -112,7 +229,27 @@ function buildAttack(damage, count, extra = {}) {
 export function getCpuWingZeroDerivedState(state) {
   ensureCpuWingZeroState(state);
 
-  const result = { name: null, slots: {}, specials: {}, status: [] };
+  const derived = getWingZeroDerivedState(state);
+
+  const result = {
+    ...derived,
+    status: [
+      ...(derived.status || [])
+    ],
+    slots: {
+      ...(derived.slots || {})
+    },
+    specials: {
+      ...(derived.specials || {}),
+      special1: {
+        name: "CPU特性",
+        effectType: "cpu_wing_zero_traits",
+        timing: "auto",
+        actionType: "auto",
+        desc: "ゼロシステム切替、ツインバスター追撃、10%軽減、10%変形、HP100以下暴走。"
+      }
+    }
+  };
 
   const evadeSystem = getEvadeSystem(state);
   const hitSystem = getHitSystem(state);
@@ -120,15 +257,17 @@ export function getCpuWingZeroDerivedState(state) {
   if (evadeSystem) result.status.push(`ゼロシステム回避 残${evadeSystem.turns}ターン`);
   if (hitSystem) result.status.push(`ゼロシステム命中 残${hitSystem.turns}ターン`);
   if (hasBothSystems(state)) result.status.push("両解放：被ダメージ2倍");
-  if (state.cpuWingZeroFullEvadeTurns > 0) result.status.push(`全攻撃回避 残${state.cpuWingZeroFullEvadeTurns}ターン`);
 
   if (hitSystem) {
     Object.keys(state.slots || {}).forEach((slotKey) => {
       const baseSlot = state.baseSlots?.[slotKey];
       if (!baseSlot?.effect || baseSlot.effect.type !== "attack") return;
+
       result.slots[slotKey] = {
+        ...(result.slots[slotKey] || {}),
         effect: {
-          ...baseSlot.effect,
+          ...(baseSlot.effect || {}),
+          ...(result.slots[slotKey]?.effect || {}),
           cannotEvade: true,
           addedCannotEvade: true
         }
@@ -136,20 +275,31 @@ export function getCpuWingZeroDerivedState(state) {
     });
   }
 
-  if (state.formId === "base" && state.cpuWingZeroSlot6Ex) {
+  if (state.formId === "ms" && state.cpuWingZeroSlot6Ex) {
     result.slots.slot6 = {
       label: "6EX ゼロシステム発動(命中補正)",
       desc: "3ターンの間強化。1ターン目の自分フェイズ初めに相手回避0。効果中自身の攻撃が必中。回避3消費で同じスロット行動をもう一度繰り出す。",
-      effect: { type: "custom", effectId: "cpu_wing_zero_hit_system" },
+      effect: {
+        type: "custom",
+        effectId: "cpu_wing_zero_hit_system"
+      },
       ex: true
     };
   }
 
-  if (state.formId === "neo_bird" && state.cpuWingZeroSlot6Ex) {
+  if (state.formId === "neo" && state.cpuWingZeroSlot6Ex) {
     result.slots.slot6 = {
       label: "6EX 変形ビームソード 40ダメージ",
       desc: "40ダメージ。ヒット時のみMS形態へ移行。現在の所持回避数をMS形態の回避上限を超えて倍にして引き継ぐ。",
-      effect: { type: "attack", damage: 40, count: 1, attackType: "melee", beam: true },
+      effect: {
+        type: "attack",
+        damage: 40,
+        count: 1,
+        attackType: "melee",
+        beam: true,
+        cannotEvade: !!hitSystem,
+        addedCannotEvade: !!hitSystem
+      },
       ex: true
     };
   }
@@ -157,61 +307,94 @@ export function getCpuWingZeroDerivedState(state) {
   return result;
 }
 
+export function executeCpuWingZeroSpecial(state, specialKey, context = {}) {
+  return executeWingZeroSpecial(state, specialKey, context);
+}
+
 export function onCpuWingZeroBeforeSlot(state, rolledSlotNumber, context = {}) {
   ensureCpuWingZeroState(state);
   state.cpuWingZeroExtraUsedThisSlot = false;
 
+  const baseResult = onWingZeroBeforeSlot(state, rolledSlotNumber, context) || {
+    redraw: false,
+    message: null
+  };
+
+  const messages = [];
+  if (baseResult.message) messages.push(baseResult.message);
+
   if (getHitSystem(state) && state.cpuWingZeroHitClearPending && context.enemyState) {
-   context.enemyState.evade = 0;
-context.enemyState.evadeRedCap = context.enemyState.evadeGoldCap || context.enemyState.evadeMax;
-normalizeEvadeCapState(context.enemyState);
+    zeroEnemyRuleEvade(context.enemyState, context);
     state.cpuWingZeroHitClearPending = false;
-    return { redraw: true, message: "ウイングゼロ：ゼロシステム命中補正。相手回避0" };
+    messages.push("ウイングゼロ：ゼロシステム命中補正。相手回避0");
   }
 
-  return { redraw: false, message: null };
+  return {
+    ...baseResult,
+    redraw: baseResult.redraw || messages.length > 0,
+    message: messages.join("\n") || null
+  };
+}
+
+export function onCpuWingZeroEnemyBeforeSlot(state, rolledSlotNumber, context = {}) {
+  ensureCpuWingZeroState(state);
+  return onWingZeroEnemyBeforeSlot(state, rolledSlotNumber, context);
 }
 
 export function getCpuWingZeroExtraWeaponResult(state, context = {}) {
   ensureCpuWingZeroState(state);
 
- 
-  const total = { appendAttacks: [], appendMessages: [], redraw: true };
+  const total = {
+    appendAttacks: [],
+    appendMessages: [],
+    redraw: true
+  };
+
+  const selfEvade = getRuleEvade(state, context);
+  const enemyEvade = context.twoVtwoAdapter?.getEvade && context.enemyPlayer
+    ? context.twoVtwoAdapter.getEvade(context.enemyPlayer, context.enemyState)
+    : Number(context.enemyState?.evade || 0);
 
   if (
-    state.formId === "base" &&
+    state.formId === "ms" &&
     context.slotNumber === 5 &&
-    state.evade >= 3 &&
+    selfEvade > 0 &&
+    enemyEvade <= 0 &&
     context.enemyState &&
-    Number(context.enemyState.evade || 0) <= 0 &&
-    Number(context.enemyState.hp || 0) < state.hp / 4 &&
+    Number(context.enemyState.hp || 0) < Number(state.hp || 0) / 4 &&
     Math.random() < 0.5
   ) {
-    const spent = state.evade;
-    state.evade = 0;
+    const spent = selfEvade;
+    zeroOwnRuleEvade(state, context);
+
     const bonusDamage = Math.floor(spent / 2);
+
     if (bonusDamage > 0) {
       total.appendAttacks.push(...buildAttack(bonusDamage, 1, {
         attackType: "shoot",
         beam: true,
         ignoreReduction: true
       }));
+
       total.appendMessages.push(`ウイングゼロ特性：回避${spent}消費、HP1残し追撃 ${bonusDamage}ダメージ`);
     }
   }
 
+  const currentEvade = getRuleEvade(state, context);
+
   if (
     getHitSystem(state) &&
     !state.cpuWingZeroExtraUsedThisSlot &&
-    state.evade >= 3 &&
+    currentEvade >= 3 &&
     state.evadeMax > 0 &&
-    Math.random() < state.evade / state.evadeMax &&
+    Math.random() < currentEvade / state.evadeMax &&
     context.slot
   ) {
-    reduceEvade(state, 3);
-      state.cpuWingZeroExtraUsedThisSlot = true;
+    consumeRuleEvade(state, 3, context);
+    state.cpuWingZeroExtraUsedThisSlot = true;
 
     const effect = context.slot.effect || {};
+
     if (effect.type === "attack") {
       total.appendAttacks.push(...buildAttack(effect.damage, effect.count || 1, {
         attackType: effect.attackType,
@@ -220,6 +403,7 @@ export function getCpuWingZeroExtraWeaponResult(state, context = {}) {
         cannotEvade: true,
         addedCannotEvade: true
       }));
+
       total.appendMessages.push("ウイングゼロ：回避3消費、同じスロット行動を再攻撃");
     }
   }
@@ -234,48 +418,50 @@ export function onCpuWingZeroAfterSlotResolved(state, slotNumber, context = {}) 
   const result = context.resolveResult;
   const effectId = result?.customEffectId;
 
-  if (effectId === "cpu_wing_zero_full_evade_3") {
-    state.cpuWingZeroFullEvadeTurns = Math.max(state.cpuWingZeroFullEvadeTurns, 1);
-    addEvade(state, 3);
-    return { redraw: true, message: "ウイングゼロ：次ターン全攻撃回避、回避+3" };
-  }
-
-  if (effectId === "cpu_wing_zero_full_evade_2") {
-    state.cpuWingZeroFullEvadeTurns = Math.max(state.cpuWingZeroFullEvadeTurns, 1);
-   addEvade(state, 2);
-    return { redraw: true, message: "ウイングゼロ：次ターン全攻撃回避、回避+2" };
-  }
-
-  if (effectId === "cpu_wing_zero_evade_system") {
-    return { redraw: true, message: activateEvadeSystem(state) };
+  if (effectId === "wing_zero_system_activate") {
+    return {
+      redraw: true,
+      message: activateEvadeSystem(state)
+    };
   }
 
   if (effectId === "cpu_wing_zero_hit_system") {
-    return { redraw: true, message: activateHitSystem(state) };
+    return {
+      redraw: true,
+      message: activateHitSystem(state)
+    };
   }
 
-  if (state.formId === "neo_bird" && slotNumber === 6 && result?.kind === "attack" && !state.cpuWingZeroSlot6Ex) {
-    state.hp = Math.min(state.maxHp, state.hp + 80);
-    return { redraw: true, message: "ウイングゼロ：突撃 80回復" };
+  if (state.formId === "neo" && slotNumber === 6 && result?.kind === "attack" && !state.cpuWingZeroSlot6Ex) {
+    healRuleHp(state, 80, context);
+
+    return {
+      redraw: true,
+      message: "ウイングゼロ：突撃 80回復"
+    };
   }
 
-  return { redraw: false, message: null };
+  return onWingZeroAfterSlotResolved(state, slotNumber, context);
 }
 
 export function onCpuWingZeroActionResolved(attacker, defender, context = {}) {
   ensureCpuWingZeroState(attacker);
 
   if (
-    attacker.formId === "neo_bird" &&
+    attacker.formId === "neo" &&
     context.slotNumber === 6 &&
     attacker.cpuWingZeroSlot6Ex &&
     context.hitCount > 0
   ) {
-    returnToMsWithDoubleEvade(attacker);
-    return { redraw: true, message: "ウイングゼロ：変形ビームソード命中。MS形態へ移行、回避倍化" };
+    returnToMsWithDoubleEvade(attacker, context);
+
+    return {
+      redraw: true,
+      message: "ウイングゼロ：変形ビームソード命中。MS形態へ移行、回避倍化"
+    };
   }
 
-  return { redraw: false, message: null };
+  return onWingZeroActionResolved(attacker, defender, context);
 }
 
 export function onCpuWingZeroTurnEnd(state, context = {}) {
@@ -287,15 +473,15 @@ export function onCpuWingZeroTurnEnd(state, context = {}) {
   state.cpuWingZeroSlot6Ex = Math.random() < 0.5;
   redraw = true;
 
-  if (state.cpuWingZeroFullEvadeTurns > 0) {
-    state.cpuWingZeroFullEvadeTurns -= 1;
-    redraw = true;
-  }
+  const baseResult = onWingZeroTurnEnd(state, context) || {
+    redraw: false,
+    message: null
+  };
 
-  redraw = tickEffect(state, "cpu_wing_zero_evade_system") || redraw;
-  redraw = tickEffect(state, "cpu_wing_zero_hit_system") || redraw;
+  if (baseResult.message) messages.push(baseResult.message);
+  redraw = baseResult.redraw || redraw;
 
-  if (state.formId === "base" && Math.random() < 0.1) {
+  if (state.formId === "ms" && Math.random() < 0.1) {
     if (transformToNeoBird(state)) {
       redraw = true;
       messages.push("ウイングゼロ特性：ネオバード形態へ変形");
@@ -303,58 +489,47 @@ export function onCpuWingZeroTurnEnd(state, context = {}) {
   }
 
   if (
-    state.formId === "base" &&
+    state.formId === "ms" &&
     !state.cpuWingZeroBerserkUsed &&
     !state.cpuWingZeroSystemActivatedOnce &&
-    state.hp <= 100
+    Number(state.hp || 0) <= 100
   ) {
-    messages.push(activateBerserk(state));
+    messages.push(activateBerserk(state, context));
     redraw = true;
   }
 
-  return { redraw, message: messages.length > 0 ? messages.join("\n") : null };
+  return {
+    redraw,
+    message: messages.length > 0 ? messages.join("\n") : null
+  };
 }
 
 export function modifyCpuWingZeroEvadeAttempt(defender, attacker, attack, context = {}) {
   ensureCpuWingZeroState(defender);
 
-  if (defender.cpuWingZeroFullEvadeTurns > 0 && !attack.cannotEvade) {
-    return {
-      handled: true,
-      ok: true,
-      consumeEvade: 0,
-      message: "ウイングゼロ：全攻撃回避"
-    };
+  const baseResult = modifyWingZeroEvadeAttempt(defender, attacker, attack, context);
+
+  if (baseResult?.handled) {
+    return baseResult;
   }
 
-  if (getEvadeSystem(defender)) {
-    if (defender.evade <= 0) {
-      return {
-        handled: true,
-        ok: false,
-        reason: "noEvade",
-        message: "回避が足りない"
-      };
-    }
-
-    return {
-      handled: true,
-      ok: true,
-      consumeEvade: 1,
-      message: attack.cannotEvade
-        ? "ウイングゼロ：回避1消費、必中攻撃を回避"
-        : "ウイングゼロ：ゼロシステム回避、回避1消費"
-    };
-  }
-
-  return { handled: false };
+  return {
+    handled: false
+  };
 }
 
 export function modifyCpuWingZeroTakenDamage(defender, attacker, attack, damage) {
   ensureCpuWingZeroState(defender);
 
-  let nextDamage = damage;
+  const baseResult = modifyWingZeroTakenDamage(defender, attacker, attack, damage) || {
+    damage,
+    message: null
+  };
+
+  let nextDamage = baseResult.damage;
   const messages = [];
+
+  if (baseResult.message) messages.push(baseResult.message);
 
   if (Math.random() < 0.1) {
     nextDamage = Math.floor(nextDamage * 0.8);
@@ -375,17 +550,30 @@ export function modifyCpuWingZeroTakenDamage(defender, attacker, attack, damage)
   };
 }
 
-export function onCpuWingZeroDamaged(defender, attacker) {
+export function onCpuWingZeroDamaged(defender, attacker, context = {}) {
   ensureCpuWingZeroState(defender);
 
+  const baseResult = onWingZeroDamaged(defender, attacker, context) || {
+    redraw: false,
+    message: null
+  };
+
   if (
-    defender.formId === "base" &&
+    defender.formId === "ms" &&
     !defender.cpuWingZeroBerserkUsed &&
     !defender.cpuWingZeroSystemActivatedOnce &&
-    defender.hp <= 100
+    Number(defender.hp || 0) <= 100
   ) {
-    return { redraw: true, message: activateBerserk(defender) };
+    return {
+      redraw: true,
+      message: [baseResult.message, activateBerserk(defender, context)].filter(Boolean).join("\n")
+    };
   }
 
-  return { redraw: false, message: null };
+  return baseResult;
+}
+
+export function onCpuWingZeroResolveChoice(state, pendingChoice, selectedValue, context = {}) {
+  ensureCpuWingZeroState(state);
+  return onWingZeroResolveChoice(state, pendingChoice, selectedValue, context);
 }
