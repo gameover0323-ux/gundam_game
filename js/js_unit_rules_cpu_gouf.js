@@ -8,14 +8,39 @@ function ensureCpuGoufState(state) {
   if (typeof state.cpuGoufSureHitNextAttack !== "boolean") state.cpuGoufSureHitNextAttack = false;
 }
 
-function resolveExtraSlot(state, slotKey) {
+function getAdapter(context) {
+  return context?.twoVtwoAdapter || null;
+}
+
+function getEnemyPlayer(context) {
+  return context?.enemyPlayer || null;
+}
+
+function zeroEnemyRuleEvade(defender, context = {}) {
+  const adapter = getAdapter(context);
+  const enemyPlayer = getEnemyPlayer(context);
+
+  if (adapter?.zeroEvade && enemyPlayer) {
+    return adapter.zeroEvade(enemyPlayer, defender);
+  }
+
+  if (defender) defender.evade = 0;
+  return true;
+}
+
+function resolveExtraSlot(state, slotKey, context = {}) {
   const slot = getSlotByKey(state, slotKey);
   const appendAttacks = [];
   const appendMessages = [];
 
   if (!slot) return { appendAttacks, appendMessages };
 
-  const result = resolveSlotEffect({ slot, actor: state });
+  const result = resolveSlotEffect({
+    slot,
+    actor: state,
+    context
+  });
+
   const slotNumber = Number(String(slotKey).replace(/^slot/, ""));
 
   appendMessages.push(`グフ特性：追加行動 ${slotNumber}.${slot.label}`);
@@ -34,7 +59,7 @@ export function getCpuGoufDerivedState(state) {
 
   const status = [
     "難易度☆☆",
-    "特性：相手が非攻撃行動なら次ターン連続行動"
+    "特性：相手が攻撃しなかった次のターン、連続行動しやすい"
   ];
 
   if (state.cpuGoufSureHitNextAttack) {
@@ -50,7 +75,7 @@ export function getCpuGoufDerivedState(state) {
         effectType: "cpu_gouf_traits",
         timing: "auto",
         actionType: "auto",
-        desc: "相手が攻撃行動をしてこなかった時の次のターン、2回～3回連続でスロット行動をする。"
+        desc: "相手が攻撃行動をしなかった次のターン、追加でスロット行動を行う。ヒートロッドが命中すると相手の回避を崩し、次の攻撃を必中にすることがある。"
       }
     }
   };
@@ -106,7 +131,7 @@ export function onCpuGoufActionResolved(attacker, defender, context = {}) {
   let redraw = false;
 
   if (context.slotNumber === 1 && context.hitCount > 0 && defender) {
-    defender.evade = 0;
+    zeroEnemyRuleEvade(defender, context);
     messages.push("ヒートロッド：被弾により相手の所持回避消滅");
     redraw = true;
   }
@@ -138,7 +163,7 @@ export function getCpuGoufExtraWeaponResult(state, context = {}) {
     state.cpuGoufExtraSlotCount -= 1;
 
     const slotKey = getRandomSlotKey(state);
-    const extra = resolveExtraSlot(state, slotKey);
+    const extra = resolveExtraSlot(state, slotKey, context);
 
     total.appendAttacks.push(...extra.appendAttacks);
     total.appendMessages.push(...extra.appendMessages);
