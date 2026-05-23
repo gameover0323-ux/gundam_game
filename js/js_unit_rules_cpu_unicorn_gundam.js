@@ -15,7 +15,6 @@ import {
   getUnicornDerivedState,
   executeUnicornSpecial,
   onUnicornAfterSlotResolved,
-  onUnicornDamaged,
   modifyUnicornTakenDamage,
   onUnicornDispelBoostState
 } from "./js_unit_rules_unicorn_gundam.js";
@@ -536,7 +535,11 @@ export function modifyCpuUnicornEvadeAttempt(defender, attacker, attack, context
 
 export function onCpuUnicornDamaged(defender, attacker, context = {}) {
   ensureCpuUnicornState(defender);
-  return onUnicornDamaged(defender, attacker, context);
+
+  return {
+    redraw: false,
+    message: null
+  };
 }
 
 export function onCpuUnicornDispelBoostState(state, source, context = {}) {
