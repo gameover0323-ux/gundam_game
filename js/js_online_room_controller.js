@@ -175,41 +175,35 @@ export function createOnlineRoomController(ctx) {
   }
 
   async function selectOnlineUnit(unit) {
-    if (!ctx.isOnlineEnabled || !ctx.isOnlineEnabled()) return false;
-    if (ctx.getBattleMode() !== "online1v1") return false;
-    if (!unit?.id) return true;
+  if (!ctx.isOnlineEnabled || !ctx.isOnlineEnabled()) return false;
+  if (!unit) return true;
 
-    const roomId = ctx.getOnlineRoomId();
-    const myPlayer = ctx.getOnlineMyPlayer();
+  const roomId = ctx.getOnlineRoomId();
+  const myPlayer = ctx.getOnlineMyPlayer();
 
-    if (!roomId || (myPlayer !== "A" && myPlayer !== "B")) {
-      ctx.showPopup("オンライン部屋情報が取得できません");
-      return true;
-    }
-
-    if (myPlayer === "A") {
-      ctx.setSelectedUnitA(unit);
-    } else {
-      ctx.setSelectedUnitB(unit);
-    }
-
-    await ctx.updateRoom(roomId, {
-      [`players/${myPlayer}/unitId`]: unit.id,
-      [`players/${myPlayer}/ready`]: true,
-      [`players/${myPlayer}/lastSeen`]: Date.now(),
-      "meta/status": "selecting",
-      "meta/updatedAt": Date.now()
-    });
-
-    ctx.updateSelectUi();
-
-    const status = ctx.getOnlineRoomStatus();
-    if (status) {
-      status.textContent = `${unit.name} を選択しました。相手の選択待ちです。`;
-    }
-
+  if (!roomId || (myPlayer !== "A" && myPlayer !== "B")) {
+    ctx.showPopup("オンライン部屋情報が取得できません");
     return true;
   }
+
+  if (myPlayer === "A") {
+    ctx.setSelectedUnitA(unit);
+  } else {
+    ctx.setSelectedUnitB(unit);
+  }
+
+  ctx.updateSelectUi();
+
+  await ctx.updateRoom(roomId, {
+    [`players/${myPlayer}/unitId`]: unit.id || unit.name,
+    [`players/${myPlayer}/ready`]: true,
+    [`players/${myPlayer}/lastSeen`]: Date.now(),
+    "meta/status": "selecting",
+    "meta/updatedAt": Date.now()
+  });
+
+  return true;
+}
 
   function applyOnlineRoomData(roomData) {
     if (!ctx.isOnlineEnabled() || !roomData) return;
@@ -295,13 +289,13 @@ export function createOnlineRoomController(ctx) {
   }
 
   return {
-    getOnlineProfilePatch,
-    createOnlineRoom,
-    joinOnlineRoom,
-    bootOnlineFromUrl,
-    selectOnlineUnit,
-    applyOnlineRoomData,
-    enterOnlineSelect,
-    initOnline1v1Battle
-  };
+  getOnlineProfilePatch,
+  createOnlineRoom,
+  joinOnlineRoom,
+  bootOnlineFromUrl,
+  selectOnlineUnit,
+  applyOnlineRoomData,
+  enterOnlineSelect,
+  initOnline1v1Battle
+};
 }
