@@ -12,7 +12,7 @@ export function getCpuMobileGinnDerivedState(state) {
   return {
     status: [
       "難易度☆☆☆",
-      "特性：攻撃ヒット数×5ダメージの無属性追撃"
+      "特性：攻撃の手数が多いほど追撃が強くなる"
     ],
     specials: {
       special1: {
@@ -20,7 +20,7 @@ export function getCpuMobileGinnDerivedState(state) {
         effectType: "cpu_mobile_ginn_traits",
         timing: "auto",
         actionType: "auto",
-        desc: "1ターンの総合ヒット数×5ダメージの単発追撃ダメージを無属性で追加する。"
+        desc: "攻撃のヒット数に応じて、追加の無属性追撃を行う。多段攻撃ほど追撃ダメージが伸びる。"
       }
     },
     slots: {}
