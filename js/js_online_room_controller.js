@@ -100,56 +100,57 @@ export function createOnlineRoomController(ctx) {
   }
 
   async function joinOnlineRoom() {
-  await ctx.cleanupOldRooms();
+    await ctx.cleanupOldRooms();
 
-  const onlineRoomIdInput = ctx.getOnlineRoomIdInput();
-  const onlineRoomStatus = ctx.getOnlineRoomStatus();
-  const roomId = onlineRoomIdInput?.value.trim();
+    const onlineRoomIdInput = ctx.getOnlineRoomIdInput();
+    const onlineRoomStatus = ctx.getOnlineRoomStatus();
+    const roomId = onlineRoomIdInput?.value.trim();
 
-  if (!roomId) {
-    ctx.showPopup("部屋IDを入力してください");
-    return;
+    if (!roomId) {
+      ctx.showPopup("部屋IDを入力してください");
+      return;
+    }
+
+    const snapshot = await ctx.readRoom(roomId);
+
+    if (!snapshot.exists()) {
+      ctx.showPopup("部屋が見つかりません");
+      return;
+    }
+
+    ctx.setOnlineState({
+      enabled: true,
+      roomId,
+      myPlayer: "B",
+      isHost: false
+    });
+
+    ctx.setOnlineSelectEntered(false);
+    ctx.setOnlineBattleStarted(false);
+
+    await ctx.updateRoom(roomId, {
+      "players/B/joined": true,
+      "players/B/ready": false,
+      "players/B/unitId": null,
+      "players/B/left": false,
+      "players/B/lastSeen": Date.now(),
+      ...getOnlineProfilePatch("B"),
+      "meta/status": "selecting",
+      "meta/updatedAt": Date.now()
+    });
+
+    if (onlineRoomStatus) {
+      onlineRoomStatus.textContent = "部屋に参加しました。機体選択へ移動します。";
+    }
+
+    ctx.enterOnlineSelect();
+
+    ctx.listenRoom(roomId, roomData => {
+      if (!roomData) return;
+      ctx.applyOnlineRoomData(roomData);
+    });
   }
 
-  const snapshot = await ctx.readRoom(roomId);
-
-  if (!snapshot.exists()) {
-    ctx.showPopup("部屋が見つかりません");
-    return;
-  }
-
-  ctx.setOnlineState({
-    enabled: true,
-    roomId,
-    myPlayer: "B",
-    isHost: false
-  });
-
-  ctx.setOnlineSelectEntered(false);
-  ctx.setOnlineBattleStarted(false);
-
-  await ctx.updateRoom(roomId, {
-    "players/B/joined": true,
-    "players/B/ready": false,
-    "players/B/unitId": null,
-    "players/B/left": false,
-    "players/B/lastSeen": Date.now(),
-    ...getOnlineProfilePatch("B"),
-    "meta/status": "selecting",
-    "meta/updatedAt": Date.now()
-  });
-
-  if (onlineRoomStatus) {
-    onlineRoomStatus.textContent = "部屋に参加しました。機体選択へ移動します。";
-  }
-
-  ctx.enterOnlineSelect();
-
-  ctx.listenRoom(roomId, roomData => {
-    if (!roomData) return;
-    ctx.applyOnlineRoomData(roomData);
-  });
-  }
   function bootOnlineFromUrl() {
     const params = new URLSearchParams(location.search);
     const mode = params.get("mode");
@@ -209,36 +210,7 @@ export function createOnlineRoomController(ctx) {
 
     return true;
   }
-async function selectOnlineUnit(unit) {
-  if (!ctx.isOnlineEnabled || !ctx.isOnlineEnabled()) return false;
-  if (ctx.getBattleMode() !== "online1v1") return false;
-  if (!unit?.id) return true;
 
-  const roomId = ctx.getOnlineRoomId();
-  const myPlayer = ctx.getOnlineMyPlayer();
-
-  if (!roomId || (myPlayer !== "A" && myPlayer !== "B")) {
-    ctx.showPopup("オンライン部屋情報が取得できません");
-    return true;
-  }
-
-  if (myPlayer === "A") {
-    ctx.setSelectedUnitA(unit);
-  } else {
-    ctx.setSelectedUnitB(unit);
-  }
-
-  await ctx.updateRoom(roomId, {
-    [`players/${myPlayer}/unitId`]: unit.id,
-    [`players/${myPlayer}/ready`]: true,
-    [`players/${myPlayer}/lastSeen`]: Date.now(),
-    "meta/status": "selecting",
-    "meta/updatedAt": Date.now()
-  });
-
-  ctx.updateSelectUi();
-  return true;
-}
   function applyOnlineRoomData(roomData) {
     if (!ctx.isOnlineEnabled() || !roomData) return;
 
