@@ -106,7 +106,7 @@ export function createOnlineRoomController(ctx) {
           }
 
           hideRoomIdMatchPanel();
-          ctx.enterOnlineSelect();
+          enterOnlineSelect();
           ctx.applyOnlineRoomData(roomData);
           return;
         }
@@ -194,7 +194,7 @@ export function createOnlineRoomController(ctx) {
         }
 
         hideRoomIdMatchPanel();
-        ctx.enterOnlineSelect();
+        enterOnlineSelect();
         ctx.applyOnlineRoomData(roomData);
         return;
       }
