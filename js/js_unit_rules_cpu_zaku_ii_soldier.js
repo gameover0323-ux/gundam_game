@@ -15,7 +15,7 @@ function ensureCpuZakuIiSoldierState(state) {
 function restoreCpuZakuIiSoldierBoost(state) {
   ensureCpuZakuIiSoldierState(state);
 
-  if (!state.cpuZakuIiSoldierBoosted) return;
+  if (!state.cpuZakuIiSoldierBoosted) return false;
 
   const slotKey = state.cpuZakuIiSoldierBoostSlotKey;
   const slot = slotKey ? state.slots?.[slotKey] : null;
@@ -27,6 +27,8 @@ function restoreCpuZakuIiSoldierBoost(state) {
   state.cpuZakuIiSoldierBoosted = false;
   state.cpuZakuIiSoldierOriginalDamage = 0;
   state.cpuZakuIiSoldierBoostSlotKey = "";
+
+  return true;
 }
 
 export function getCpuZakuIiSoldierDerivedState(state) {
@@ -35,7 +37,7 @@ export function getCpuZakuIiSoldierDerivedState(state) {
   return {
     status: [
       "難易度☆",
-      "特性：10%の確率で与ダメージ2倍"
+      "特性：攻撃時、まれに与ダメージが大きく上がる"
     ],
     specials: {
       special1: {
@@ -43,7 +45,7 @@ export function getCpuZakuIiSoldierDerivedState(state) {
         effectType: "cpu_zaku_ii_soldier_traits",
         timing: "auto",
         actionType: "auto",
-        desc: "10%の確率で与えるダメージが2倍になる。"
+        desc: "攻撃時、まれに与えるダメージが大きく上がる。"
       }
     },
     slots: {}
@@ -71,25 +73,28 @@ export function onCpuZakuIiSoldierBeforeSlot(state, slotNumber, context = {}) {
 
   return {
     redraw: true,
-    message: "ザクⅡ特性：与ダメージ2倍"
+    message: "ザクⅡ特性：与ダメージ上昇"
   };
 }
 
 export function onCpuZakuIiSoldierActionResolved(state) {
   ensureCpuZakuIiSoldierState(state);
 
-  if (!state.cpuZakuIiSoldierBoosted) {
-    return { redraw: false, message: null };
-  }
+  const restored = restoreCpuZakuIiSoldierBoost(state);
 
-  restoreCpuZakuIiSoldierBoost(state);
-
-  return { redraw: true, message: null };
+  return {
+    redraw: restored,
+    message: null
+  };
 }
 
 export function onCpuZakuIiSoldierAfterSlotResolved(state) {
   ensureCpuZakuIiSoldierState(state);
-  restoreCpuZakuIiSoldierBoost(state);
 
-  return { redraw: true, message: null };
+  const restored = restoreCpuZakuIiSoldierBoost(state);
+
+  return {
+    redraw: restored,
+    message: null
+  };
 }
