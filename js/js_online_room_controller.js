@@ -82,7 +82,7 @@ export function createOnlineRoomController(ctx) {
         }
 
         if (playerBJoined) {
-          ctx.enterOnlineSelect();
+          enterOnlineSelect();
         }
 
         ctx.applyOnlineRoomData(roomData);
@@ -143,7 +143,7 @@ export function createOnlineRoomController(ctx) {
       onlineRoomStatus.textContent = "部屋に参加しました。機体選択へ移動します。";
     }
 
-    ctx.enterOnlineSelect();
+    enterOnlineSelect();
 
     ctx.listenRoom(roomId, roomData => {
       if (!roomData) return;
