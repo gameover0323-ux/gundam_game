@@ -102,12 +102,11 @@ export function createOnlineRoomController(ctx) {
 
         if (roomData.meta?.status === "selecting") {
           if (status) {
-            status.textContent = `部屋IDマッチ成立。機体選択へ移動します。部屋ID：${roomId}`;
+            status.textContent = `部屋IDマッチ成立。マッチルートへ移動します。部屋ID：${roomId}`;
           }
 
           hideRoomIdMatchPanel();
-          enterOnlineSelect();
-          ctx.applyOnlineRoomData(roomData);
+          enterRoomIdMatchedRoom(roomId);
           return;
         }
 
@@ -190,12 +189,11 @@ export function createOnlineRoomController(ctx) {
 
       if (roomData.meta?.status === "selecting") {
         if (status) {
-          status.textContent = "部屋IDマッチ成立。機体選択へ移動します。";
+          status.textContent = "部屋IDマッチ成立。ランダムマッチ同等ルートへ移動します。";
         }
 
         hideRoomIdMatchPanel();
-        enterOnlineSelect();
-        ctx.applyOnlineRoomData(roomData);
+        enterRoomIdMatchedRoom(roomId);
         return;
       }
 
@@ -205,6 +203,15 @@ export function createOnlineRoomController(ctx) {
 
       renderRoomIdMatchPanel(roomData);
       ctx.applyOnlineRoomData(roomData);
+    });
+  }
+
+  function enterRoomIdMatchedRoom(roomId) {
+    if (!roomId) return;
+
+    ctx.enterRandomMatchedRoom({
+      roomId,
+      playerSide: ctx.getOnlineMyPlayer()
     });
   }
 
