@@ -1,27 +1,65 @@
 export function create2v2Core(ctx) {
   function isTeamBattleMode() {
     const battleMode = ctx.getBattleMode();
+    return battleMode === "2v2" || battleMode === "challenge2v2" || battleMode === "vscpu2v2";
+  }
 
-    return battleMode === "2v2" ||
-      battleMode === "challenge2v2" ||
-      battleMode === "vscpu2v2";
+  function isUnitDefeated(unit) {
+    return !unit || Number(unit.hp || 0) <= 0 || unit.isDefeated === true;
+  }
+
+  function markDefeatedIfNeeded(unit) {
+    if (!unit) return;
+    if (Number(unit.hp || 0) <= 0) {
+      unit.hp = 0;
+      unit.isDefeated = true;
+    }
+  }
+
+  function getAliveUnitKey(team, preferKey = "unit1") {
+    if (!team) return null;
+
+    markDefeatedIfNeeded(team.unit1);
+    markDefeatedIfNeeded(team.unit2);
+
+    if (preferKey === "unit2" && !isUnitDefeated(team.unit2)) return "unit2";
+    if (preferKey === "unit1" && !isUnitDefeated(team.unit1)) return "unit1";
+
+    if (!isUnitDefeated(team.unit1)) return "unit1";
+    if (!isUnitDefeated(team.unit2)) return "unit2";
+
+    return null;
+  }
+
+  function normalizeTeamFocus(team) {
+    if (!team) return;
+
+    const aliveActiveKey = getAliveUnitKey(team, team.activeUnitKey);
+    if (aliveActiveKey) {
+      team.activeUnitKey = aliveActiveKey;
+    }
+
+    const aliveFocusKey = getAliveUnitKey(team, team.focusUnitKey);
+    if (aliveFocusKey) {
+      team.focusUnitKey = aliveFocusKey;
+    }
   }
 
   function getTeam(playerKey) {
-    return playerKey === "A" ? ctx.getTeamA() : ctx.getTeamB();
+    const team = playerKey === "A" ? ctx.getTeamA() : ctx.getTeamB();
+    normalizeTeamFocus(team);
+    return team;
   }
 
   function getActiveUnitState(playerKey) {
     const team = getTeam(playerKey);
     if (!team) return null;
-
     return team[team.activeUnitKey] || null;
   }
 
   function getFocusUnitState(playerKey) {
     const team = getTeam(playerKey);
     if (!team) return null;
-
     return team[team.focusUnitKey] || null;
   }
 
@@ -29,7 +67,7 @@ export function create2v2Core(ctx) {
     const team = getTeam(playerKey);
     if (!team) return;
     if (unitKey !== "unit1" && unitKey !== "unit2") return;
-    if (!team[unitKey]) return;
+    if (isUnitDefeated(team[unitKey])) return;
 
     team.activeUnitKey = unitKey;
   }
@@ -38,7 +76,6 @@ export function create2v2Core(ctx) {
     if (isTeamBattleMode()) {
       return getFocusUnitState(playerKey);
     }
-
     return ctx.getPlayerStateRaw(playerKey);
   }
 
@@ -47,7 +84,6 @@ export function create2v2Core(ctx) {
     if (playerKey !== ctx.getCurrentPlayer()) return false;
     if (ctx.hasPendingChoice()) return false;
     if (ctx.hasCurrentAttack()) return false;
-
     return true;
   }
 
@@ -55,11 +91,16 @@ export function create2v2Core(ctx) {
     const team = getTeam(playerKey);
     if (!team) return;
     if (unitKey !== "unit1" && unitKey !== "unit2") return;
-    if (!team[unitKey]) return;
+    if (isUnitDefeated(team[unitKey])) {
+      ctx.appendBattleNotice("撃墜された機体にはフォーカスできません");
+      ctx.redrawBattleBoards();
+      return;
+    }
 
     team.focusUnitKey = unitKey;
   }
-function floorHp(value) {
+
+  function floorHp(value) {
     return Math.max(0, Math.floor(Number(value || 0)));
   }
 
@@ -83,6 +124,12 @@ function floorHp(value) {
 
   function enterUnifiedMode(team) {
     if (!team || !team.unit1 || !team.unit2) return;
+    normalizeTeamFocus(team);
+
+    if (isUnitDefeated(team.unit1) || isUnitDefeated(team.unit2)) {
+      ctx.showPopup("撃墜済みの機体がいるため統合型へ移行できません");
+      return;
+    }
 
     team.unified = {
       baseHpA: floorHp(team.unit1.hp),
@@ -93,7 +140,8 @@ function floorHp(value) {
     };
 
     team.mode = "unified";
-    team.focusUnitKey = "unit1";
+    team.focusUnitKey = getAliveUnitKey(team, "unit1") || "unit1";
+    team.activeUnitKey = getAliveUnitKey(team, team.activeUnitKey) || "unit1";
   }
 
   function exitUnifiedMode(team) {
@@ -136,6 +184,9 @@ function floorHp(value) {
     team.unit1.hp = floorHp(finalA);
     team.unit2.hp = floorHp(finalB);
 
+    markDefeatedIfNeeded(team.unit1);
+    markDefeatedIfNeeded(team.unit2);
+
     team.unified = {
       baseHpA: 0,
       baseHpB: 0,
@@ -145,8 +196,9 @@ function floorHp(value) {
     };
 
     team.mode = "split";
-    team.focusUnitKey = "unit1";
+    normalizeTeamFocus(team);
   }
+
   function toggleTeamMode(playerKey) {
     const team = getTeam(playerKey);
     if (!team) return;
@@ -160,10 +212,12 @@ function floorHp(value) {
       ctx.showPopup("QTE中は型を変更できません");
       return;
     }
-if (ctx.getCurrentPlayer && ctx.getCurrentPlayer() !== playerKey) {
+
+    if (ctx.getCurrentPlayer && ctx.getCurrentPlayer() !== playerKey) {
       ctx.showPopup("型変更は自分ターン中のみ可能");
       return;
-}
+    }
+
     if (team.mode === "unified") {
       exitUnifiedMode(team);
       ctx.appendBattleNotice(`${playerKey}チーム：分散型へ移行`);
@@ -179,12 +233,9 @@ if (ctx.getCurrentPlayer && ctx.getCurrentPlayer() !== playerKey) {
     return {
       unit1: ctx.createBattleState(unit1),
       unit2: ctx.createBattleState(unit2),
-
       mode: "split",
-
       activeUnitKey: "unit1",
       focusUnitKey: "unit1",
-
       unified: {
         baseHpA: 0,
         baseHpB: 0,
