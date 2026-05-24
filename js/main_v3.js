@@ -858,6 +858,35 @@ function enterOnlineSelect() {
 function initOnline1v1Battle(unitA, unitB) {
   return onlineRoomController.initOnline1v1Battle(unitA, unitB);
 }
+function init1v1(unitA, unitB) {
+  return battleInitController.init1v1(unitA, unitB);
+}
+
+function init2v2(unitsA, unitsB) {
+  return battleInitController.init2v2(unitsA, unitsB);
+}
+
+function initChallenge1v1(unitA, bossUnit) {
+  return battleInitController.initChallenge1v1(unitA, bossUnit);
+}
+
+function initChallenge2v2(unitsA, bossUnits) {
+  return battleInitController.initChallenge2v2(unitsA, bossUnits);
+}function init1v1(unitA, unitB) {
+  return battleInitController.init1v1(unitA, unitB);
+}
+
+function init2v2(unitsA, unitsB) {
+  return battleInitController.init2v2(unitsA, unitsB);
+}
+
+function initChallenge1v1(unitA, bossUnit) {
+  return battleInitController.initChallenge1v1(unitA, bossUnit);
+}
+
+function initChallenge2v2(unitsA, bossUnits) {
+  return battleInitController.initChallenge2v2(unitsA, bossUnits);
+}
 battleOutcomeController = createBattleOutcomeController({
   isTeamBattleMode,
   getTeam,
@@ -1829,7 +1858,10 @@ gameSetup = createGameSetup({
   setPendingSelectedUnit: (unit) => { pendingSelectedUnit = unit; },
   getExtraUnlockedUnits: () => extraUnlockedUnits,
   setExtraUnlockedUnits: (units) => { extraUnlockedUnits = units; },
-
+init1v1,
+init2v2,
+initChallenge1v1,
+initChallenge2v2,
   showTitle: () => {
     showTitle();
   },
