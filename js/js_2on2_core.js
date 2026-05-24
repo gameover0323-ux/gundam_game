@@ -16,6 +16,22 @@ export function create2v2Core(ctx) {
     }
   }
 
+  function ensureTeamActionMode(team) {
+    if (!team) return;
+
+    if (typeof team.actionModeLock !== "string") {
+      team.actionModeLock = "";
+    }
+
+    if (typeof team.unifiedBaseActionCount !== "number") {
+      team.unifiedBaseActionCount = 1;
+    }
+
+    if (typeof team.unifiedActionCount !== "number") {
+      team.unifiedActionCount = team.unifiedBaseActionCount;
+    }
+  }
+
   function getAliveUnitKey(team, preferKey = "unit1") {
     if (!team) return null;
 
@@ -33,6 +49,8 @@ export function create2v2Core(ctx) {
 
   function normalizeTeamFocus(team) {
     if (!team) return;
+
+    ensureTeamActionMode(team);
 
     const aliveActiveKey = getAliveUnitKey(team, team.activeUnitKey);
     if (aliveActiveKey) {
@@ -76,6 +94,7 @@ export function create2v2Core(ctx) {
     if (isTeamBattleMode()) {
       return getFocusUnitState(playerKey);
     }
+
     return ctx.getPlayerStateRaw(playerKey);
   }
 
@@ -91,6 +110,7 @@ export function create2v2Core(ctx) {
     const team = getTeam(playerKey);
     if (!team) return;
     if (unitKey !== "unit1" && unitKey !== "unit2") return;
+
     if (isUnitDefeated(team[unitKey])) {
       ctx.appendBattleNotice("撃墜された機体にはフォーカスできません");
       ctx.redrawBattleBoards();
@@ -123,13 +143,16 @@ export function create2v2Core(ctx) {
   }
 
   function enterUnifiedMode(team) {
-    if (!team || !team.unit1 || !team.unit2) return;
+    if (!team || !team.unit1 || !team.unit2) return false;
+
     normalizeTeamFocus(team);
 
     if (isUnitDefeated(team.unit1) || isUnitDefeated(team.unit2)) {
       ctx.showPopup("撃墜済みの機体がいるため統合型へ移行できません");
-      return;
+      return false;
     }
+
+    ensureTeamActionMode(team);
 
     team.unified = {
       baseHpA: floorHp(team.unit1.hp),
@@ -142,10 +165,12 @@ export function create2v2Core(ctx) {
     team.mode = "unified";
     team.focusUnitKey = getAliveUnitKey(team, "unit1") || "unit1";
     team.activeUnitKey = getAliveUnitKey(team, team.activeUnitKey) || "unit1";
+
+    return true;
   }
 
   function exitUnifiedMode(team) {
-    if (!team || !team.unit1 || !team.unit2) return;
+    if (!team || !team.unit1 || !team.unit2) return false;
 
     const unified = team.unified || {
       baseHpA: floorHp(team.unit1.hp),
@@ -197,44 +222,70 @@ export function create2v2Core(ctx) {
 
     team.mode = "split";
     normalizeTeamFocus(team);
+
+    return true;
   }
 
   function toggleTeamMode(playerKey) {
     const team = getTeam(playerKey);
-    if (!team) return;
+    if (!team) return false;
+
+    ensureTeamActionMode(team);
 
     if (!isTeamBattleMode()) {
       ctx.showPopup("2on2専用操作です");
-      return;
+      return false;
     }
 
     if (ctx.hasPendingChoice() || ctx.hasCurrentAttack()) {
       ctx.showPopup("QTE中は型を変更できません");
-      return;
+      return false;
     }
 
     if (ctx.getCurrentPlayer && ctx.getCurrentPlayer() !== playerKey) {
       ctx.showPopup("型変更は自分ターン中のみ可能");
-      return;
+      return false;
     }
 
     if (team.mode === "unified") {
-      exitUnifiedMode(team);
-      ctx.appendBattleNotice(`${playerKey}チーム：分散型へ移行`);
+      if (team.actionModeLock === "unified") {
+        ctx.showPopup("このターンは統合行動権を使用しているため分散型へ変更できません");
+        ctx.redrawBattleBoards();
+        return false;
+      }
+
+      const changed = exitUnifiedMode(team);
+
+      if (changed) {
+        ctx.appendBattleNotice(`${playerKey}チーム：分散型へ移行`);
+      }
     } else {
-      enterUnifiedMode(team);
-      ctx.appendBattleNotice(`${playerKey}チーム：統合型へ移行`);
+      if (team.actionModeLock === "split") {
+        ctx.showPopup("このターンは個別行動権を使用しているため統合型へ変更できません");
+        ctx.redrawBattleBoards();
+        return false;
+      }
+
+      const changed = enterUnifiedMode(team);
+
+      if (changed) {
+        ctx.appendBattleNotice(`${playerKey}チーム：統合型へ移行`);
+      }
     }
+
+    normalizeTeamFocus(team);
 
     ctx.redrawBattleBoards();
 
-if (ctx.renderAttackChoices) {
-  ctx.renderAttackChoices();
-}
+    if (ctx.updateBattleCenterUi) {
+      ctx.updateBattleCenterUi();
+    }
 
-if (ctx.renderCurrentPlayerPanel) {
-  ctx.renderCurrentPlayerPanel();
-}
+    if (ctx.renderAttackLogText) {
+      ctx.renderAttackLogText("型変更完了");
+    }
+
+    return true;
   }
 
   function createTeam(unit1, unit2) {
@@ -244,6 +295,9 @@ if (ctx.renderCurrentPlayerPanel) {
       mode: "split",
       activeUnitKey: "unit1",
       focusUnitKey: "unit1",
+      actionModeLock: "",
+      unifiedBaseActionCount: 1,
+      unifiedActionCount: 1,
       unified: {
         baseHpA: 0,
         baseHpB: 0,
