@@ -8,14 +8,13 @@ export function create2v2Actions(ctx) {
   }
 
   function isUnitDefeated(unit) {
-    return !unit || Number(unit.hp || 0) <= 0;
+    return !unit || Number(unit.hp || 0) <= 0 || unit.isDefeated === true;
   }
 
   function getTeamAllSlotOrder(team) {
-    if (!team) return [];
     const order = [];
-    if (team.unit1) order.push("unit1");
-    if (team.unit2) order.push("unit2");
+    if (team?.unit1) order.push("unit1");
+    if (team?.unit2) order.push("unit2");
     return order;
   }
 
@@ -35,76 +34,9 @@ export function create2v2Actions(ctx) {
 
   function getActionActor(team) {
     if (!team) return null;
-
-    const active = team[team.activeUnitKey];
-    if (!isUnitDefeated(active)) return active;
     if (!isUnitDefeated(team.unit1)) return team.unit1;
     if (!isUnitDefeated(team.unit2)) return team.unit2;
-
     return null;
-  }
-
-  function canConsumeTeamAction(ownerPlayer, team, actor, amount = 1) {
-    if (team?.mode === "unified" && ctx.twoVtwoAdapter) {
-      return ctx.twoVtwoAdapter.canConsumeAction(ownerPlayer, actor, amount);
-    }
-    return ctx.canConsumeAction(actor, amount);
-  }
-
-  function consumeTeamAction(ownerPlayer, team, actor, amount = 1) {
-    if (team?.mode === "unified" && ctx.twoVtwoAdapter) {
-      return ctx.twoVtwoAdapter.consumeAction(ownerPlayer, actor, amount);
-    }
-    ctx.consumeActionCount(actor, amount);
-    return true;
-  }
-
-  function pushAttackGroup({
-    currentPlayer,
-    enemyPlayer,
-    unitKey,
-    unit,
-    slotKey,
-    slotNumber,
-    slot,
-    actionLabel,
-    attacks
-  }) {
-    if (!Array.isArray(attacks) || attacks.length === 0) {
-      return false;
-    }
-
-    const groupId = `${currentPlayer}_${unitKey}_${Date.now()}_${Math.random()}`;
-    const currentAttackContexts = ctx.getCurrentAttackContexts();
-    const currentAttack = ctx.getCurrentAttack();
-
-    const context = {
-      groupId,
-      ownerPlayer: currentPlayer,
-      ownerUnitKey: unitKey,
-      attacker: unit,
-      enemyPlayer,
-      slotKey,
-      slotNumber,
-      slotLabel: slot.label,
-      slotDesc: slot.desc,
-      actionLabel,
-      totalCount: attacks.length,
-      hitCount: 0,
-      evadeCount: 0
-    };
-
-    currentAttackContexts.push(context);
-
-    attacks.forEach((attack) => {
-      currentAttack.push({
-        ...attack,
-        groupId,
-        sourceLabel: actionLabel
-      });
-    });
-
-    return true;
   }
 
   function processTeamUnitSlot(team, unitKey, enemyPlayer, forcedSlotKey = null, options = {}) {
@@ -116,19 +48,18 @@ export function create2v2Actions(ctx) {
     if (isUnitDefeated(unit)) {
       unit.hp = 0;
       unit.isDefeated = true;
-      const defeatedLabel = `${unit.name} [撃墜]`;
-      pushActionSummary(options, unitKey, defeatedLabel);
-      ctx.appendBattleNotice(`${getUnitIndexLabel(unitKey)}：${defeatedLabel}のため行動不能`);
+      pushActionSummary(options, unitKey, `${unit.name} [撃墜]`);
       return false;
     }
 
     ctx.ensureActionState(unit);
 
     if (!options.skipActionCost) {
-      if (!canConsumeTeamAction(currentPlayer, team, unit, 1)) {
+      if (!ctx.canConsumeAction(unit, 1)) {
         pushActionSummary(options, unitKey, `${unit.name} 行動権不足`);
         return false;
       }
+      ctx.consumeActionCount(unit, 1);
     }
 
     const rollableSlotKeys = ctx.getRollableSlotKeys(unit);
@@ -149,10 +80,6 @@ export function create2v2Actions(ctx) {
 
     unit.lastSlotKey = slotKey;
 
-    if (!options.skipActionCost) {
-      consumeTeamAction(currentPlayer, team, unit, 1);
-    }
-
     const actionLabel = `${unit.name} ${slotNumber}.${slot.label}`;
     pushActionSummary(options, unitKey, actionLabel);
 
@@ -169,13 +96,8 @@ export function create2v2Actions(ctx) {
 
     const beforeResult = ctx.executeUnitBeforeSlot(unit, slotNumber, hookContext);
 
-    if (beforeResult.message) {
-      ctx.appendBattleNotice(beforeResult.message);
-    }
-
-    if (beforeResult.redraw) {
-      ctx.redrawBattleBoards();
-    }
+    if (beforeResult.message) ctx.appendBattleNotice(beforeResult.message);
+    if (beforeResult.redraw) ctx.redrawBattleBoards();
 
     if (beforeResult.cancelSlot) {
       ctx.appendBattleNotice(beforeResult.message || `${actionLabel}\n行動不能`);
@@ -192,13 +114,8 @@ export function create2v2Actions(ctx) {
         twoVtwoAdapter: ctx.twoVtwoAdapter || null
       });
 
-      if (enemyBeforeResult.message) {
-        ctx.appendBattleNotice(enemyBeforeResult.message);
-      }
-
-      if (enemyBeforeResult.redraw) {
-        ctx.redrawBattleBoards();
-      }
+      if (enemyBeforeResult.message) ctx.appendBattleNotice(enemyBeforeResult.message);
+      if (enemyBeforeResult.redraw) ctx.redrawBattleBoards();
     }
 
     const result = ctx.resolveSlotEffect({
@@ -226,18 +143,11 @@ export function create2v2Actions(ctx) {
       twoVtwoAdapter: ctx.twoVtwoAdapter || null
     });
 
-    if (afterResult?.message) {
-      ctx.appendBattleNotice(afterResult.message);
-    }
-
-    if (extraResult?.message) {
-      ctx.appendBattleNotice(extraResult.message);
-    }
+    if (afterResult?.message) ctx.appendBattleNotice(afterResult.message);
+    if (extraResult?.message) ctx.appendBattleNotice(extraResult.message);
 
     if (Array.isArray(extraResult?.appendMessages)) {
-      extraResult.appendMessages
-        .filter(Boolean)
-        .forEach((message) => ctx.appendBattleNotice(message));
+      extraResult.appendMessages.filter(Boolean).forEach((message) => ctx.appendBattleNotice(message));
     }
 
     if (afterResult?.redraw || extraResult?.redraw) {
@@ -251,17 +161,34 @@ export function create2v2Actions(ctx) {
     ];
 
     if (attacks.length > 0) {
-      pushAttackGroup({
-        currentPlayer,
+      const groupId = `${currentPlayer}_${unitKey}_${Date.now()}_${Math.random()}`;
+      const currentAttackContexts = ctx.getCurrentAttackContexts();
+      const currentAttack = ctx.getCurrentAttack();
+
+      currentAttackContexts.push({
+        groupId,
+        ownerPlayer: currentPlayer,
+        ownerUnitKey: unitKey,
+        attacker: unit,
         enemyPlayer,
-        unitKey,
-        unit,
         slotKey,
         slotNumber,
-        slot,
+        slotLabel: slot.label,
+        slotDesc: slot.desc,
         actionLabel,
-        attacks
+        totalCount: attacks.length,
+        hitCount: 0,
+        evadeCount: 0
       });
+
+      attacks.forEach((attack) => {
+        currentAttack.push({
+          ...attack,
+          groupId,
+          sourceLabel: actionLabel
+        });
+      });
+
       return true;
     }
 
@@ -314,12 +241,6 @@ export function create2v2Actions(ctx) {
     const team = ctx.getTeam(currentPlayer);
     if (!team) return;
 
-    ctx.setCurrentAttack([]);
-    ctx.setCurrentAttackContext(null);
-    ctx.setCurrentAttackContexts([]);
-    ctx.clearBattleNotice();
-    ctx.clearCurrentAction();
-
     const enemyPlayer = ctx.getOpponentPlayer(currentPlayer);
     const actionSummaries = [];
     const order = getTeamAllSlotOrder(team);
@@ -330,15 +251,32 @@ export function create2v2Actions(ctx) {
       return;
     }
 
+    ctx.setCurrentAttack([]);
+    ctx.setCurrentAttackContext(null);
+    ctx.setCurrentAttackContexts([]);
+    ctx.clearBattleNotice();
+    ctx.clearCurrentAction();
+
     if (team.mode === "unified") {
       const actor = getActionActor(team);
 
-      if (!actor || !ctx.twoVtwoAdapter || !ctx.twoVtwoAdapter.canConsumeAction(currentPlayer, actor, 1)) {
-        ctx.showPopup("統合行動権が足りません");
+      if (!actor || !ctx.twoVtwoAdapter) {
+        ctx.showPopup("統合行動権を参照できません");
+        ctx.redrawBattleBoards();
         return;
       }
 
-      ctx.twoVtwoAdapter.consumeAction(currentPlayer, actor, 1);
+      if (!ctx.twoVtwoAdapter.canConsumeAction(currentPlayer, actor, 1)) {
+        ctx.showPopup("統合行動権が足りません");
+        ctx.redrawBattleBoards();
+        return;
+      }
+
+      if (!ctx.twoVtwoAdapter.consumeAction(currentPlayer, actor, 1)) {
+        ctx.showPopup("統合行動権が足りません");
+        ctx.redrawBattleBoards();
+        return;
+      }
 
       order.forEach((unitKey) => {
         processTeamUnitSlot(team, unitKey, enemyPlayer, null, {
@@ -374,6 +312,12 @@ export function create2v2Actions(ctx) {
     const team = ctx.getTeam(currentPlayer);
     if (!team) return;
 
+    if (team.mode === "unified") {
+      ctx.showPopup("統合型では単独スロット行動は使用できません");
+      ctx.redrawBattleBoards();
+      return;
+    }
+
     ctx.setCurrentAttack([]);
     ctx.setCurrentAttackContext(null);
     ctx.setCurrentAttackContexts([]);
@@ -400,24 +344,39 @@ export function create2v2Actions(ctx) {
     const team = ctx.getTeam(ownerPlayer);
     if (!team) return false;
 
+    if (team.mode !== "unified") {
+      ctx.showPopup("統合型専用のスロット指定行動です");
+      return false;
+    }
+
+    const actor = getActionActor(team);
+
+    if (!actor || !ctx.twoVtwoAdapter) {
+      ctx.showPopup("統合行動権を参照できません");
+      ctx.redrawBattleBoards();
+      return false;
+    }
+
+    if (!ctx.twoVtwoAdapter.canConsumeAction(ownerPlayer, actor, 1)) {
+      ctx.showPopup("統合行動権が足りません");
+      ctx.redrawBattleBoards();
+      return false;
+    }
+
+    if (!ctx.twoVtwoAdapter.consumeAction(ownerPlayer, actor, 1)) {
+      ctx.showPopup("統合行動権が足りません");
+      ctx.redrawBattleBoards();
+      return false;
+    }
+
     const enemyPlayer = ctx.getOpponentPlayer(ownerPlayer);
+    const actionSummaries = [];
 
     ctx.setCurrentAttack([]);
     ctx.setCurrentAttackContext(null);
     ctx.setCurrentAttackContexts([]);
     ctx.clearBattleNotice();
     ctx.clearCurrentAction();
-
-    const actor = getActionActor(team);
-
-    if (!actor || !ctx.twoVtwoAdapter || !ctx.twoVtwoAdapter.canConsumeAction(ownerPlayer, actor, 1)) {
-      ctx.showPopup("統合行動権が足りません");
-      return false;
-    }
-
-    ctx.twoVtwoAdapter.consumeAction(ownerPlayer, actor, 1);
-
-    const actionSummaries = [];
 
     getTeamAllSlotOrder(team).forEach((unitKey) => {
       processTeamUnitSlot(team, unitKey, enemyPlayer, slotKey, {
