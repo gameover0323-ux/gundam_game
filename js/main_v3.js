@@ -281,6 +281,9 @@ function listenRandomMatchAnnouncementsOnceReady() {
 function startRandomMatch() {
   return randomMatchController.startRandomMatch();
 }
+function enterRandomMatchedRoom(params) {
+  return randomMatchController.enterRandomMatchedRoom(params);
+}
 function spectateOnlineRoom() {
   return onlineSpectatorController.spectateOnlineRoom();
 }
@@ -1563,7 +1566,9 @@ applyOnlineBattleSnapshot,
   updateDebugButtonVisibility,
   showScreen,
   loadUnitButtons,
-  showPopup
+  showPopup,
+
+  enterRandomMatchedRoom
 });
 resetController = createResetController({
   isOnlineEnabled: () => onlineState.enabled,
