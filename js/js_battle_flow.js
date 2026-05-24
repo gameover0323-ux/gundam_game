@@ -256,21 +256,25 @@ if (Number(attacker.pendingActionPenalty || 0) > 0) {
       ctx.setCurrentTurn(ctx.getCurrentTurn() + 1);
     }
 
-    if (ctx.isTeamBattleMode()) {
-      const nextTeam = ctx.getTeam(ctx.getCurrentPlayer());
-      if (nextTeam) {
-        nextTeam.activeUnitKey = nextTeam.focusUnitKey || "unit1";
-        resetActionCount(nextTeam.unit1);
-if (nextTeam.unit2) resetActionCount(nextTeam.unit2);
+if (ctx.isTeamBattleMode()) {
+  const nextTeam = ctx.getTeam(ctx.getCurrentPlayer());
+  if (nextTeam) {
+    nextTeam.activeUnitKey = nextTeam.focusUnitKey || "unit1";
 
-if (
-  nextTeam.mode === "unified" &&
-  ctx.twoVtwoAdapter &&
-  typeof ctx.twoVtwoAdapter.resetUnifiedActionCount === "function"
-) {
-  ctx.twoVtwoAdapter.resetUnifiedActionCount(nextTeam);
-}
+    resetActionCount(nextTeam.unit1);
+    if (nextTeam.unit2) resetActionCount(nextTeam.unit2);
 
+    if (
+      ctx.twoVtwoAdapter &&
+      typeof ctx.twoVtwoAdapter.resetUnifiedActionCount === "function"
+    ) {
+      ctx.twoVtwoAdapter.resetUnifiedActionCount(nextTeam);
+    }
+
+    if (nextTeam.mode === "unified") {
+      if (nextTeam.unit1) nextTeam.unit1.actionCount = 0;
+      if (nextTeam.unit2) nextTeam.unit2.actionCount = 0;
+    }
         if (ctx.getBattleMode && ctx.getBattleMode() === "vscpu2v2" && ctx.getCurrentPlayer() === "B") {
   const cpuTeam = ctx.getTeam("B");
   if (cpuTeam) {
