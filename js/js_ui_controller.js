@@ -3,7 +3,6 @@ export function createUiController(ctx) {
     Object.values(ctx.screens).forEach(screen => {
       screen.classList.remove("active");
     });
-
     ctx.screens[screenId].classList.add("active");
   }
 
@@ -13,9 +12,7 @@ export function createUiController(ctx) {
 
     if (ctx.getBattleNotice()) {
       attackLog.innerHTML += `
-        <div style="color:#ff6666;font-weight:bold;margin-bottom:4px;">
-          ${ctx.getBattleNotice()}
-        </div>
+        <div style="color:#ff6666;font-weight:bold;">${ctx.getBattleNotice()}</div>
       `;
       ctx.clearBattleNotice();
     }
@@ -28,64 +25,78 @@ export function createUiController(ctx) {
 
     if (ctx.getCurrentActionLabel()) {
       attackLog.innerHTML += `
-        <div style="margin-bottom:4px;">${ctx.getCurrentActionLabel()}</div>
+        <div>${ctx.getCurrentActionLabel()}</div>
       `;
     }
 
-    attackLog.innerHTML += `<div>${message}</div>`;
+    attackLog.innerHTML += `
+      <div>${message}</div>
+    `;
   }
 
   function renderPendingChoice() {
-  const pendingChoice = ctx.getPendingChoice();
-  if (!pendingChoice) return;
+    const pendingChoice = ctx.getPendingChoice();
+    if (!pendingChoice) return;
 
-  const choices =
-    Array.isArray(pendingChoice.choices) && pendingChoice.choices.length > 0
-      ? pendingChoice.choices
-      : (pendingChoice.slotKeys || []).map((slotKey) => ({
-          label: String(ctx.getSlotNumberFromKey(slotKey)),
-          value: slotKey
-        }));
+    const choices =
+      Array.isArray(pendingChoice.choices) && pendingChoice.choices.length > 0
+        ? pendingChoice.choices
+        : (pendingChoice.slotKeys || []).map((slotKey) => ({
+            label: String(ctx.getSlotNumberFromKey(slotKey)),
+            value: slotKey
+          }));
 
-  ctx.renderPendingChoiceUI({
-    title: pendingChoice.title,
-    choices,
-    choiceType: pendingChoice.choiceType,
-    currentValue: pendingChoice.currentValue,
-    digits: pendingChoice.digits,
-    onChoose: (value) => ctx.resolvePendingChoice(value)
-  });
+    ctx.renderPendingChoiceUI({
+      title: pendingChoice.title,
+      choices,
+      choiceType: pendingChoice.choiceType,
+      currentValue: pendingChoice.currentValue,
+      digits: pendingChoice.digits,
+      onChoose: (value) => ctx.resolvePendingChoice(value)
+    });
   }
+
+  function getCurrentTeamMode() {
+    if (!ctx.isTeamBattleMode || !ctx.isTeamBattleMode()) return null;
+
+    const team = ctx.getTeam ? ctx.getTeam(ctx.getCurrentPlayer()) : null;
+    return team?.mode || null;
+  }
+
   function updateBattleCenterUi() {
     const actionCounterValue = document.getElementById("actionCounterValue");
     const toggleTestModeBtn = document.getElementById("toggleTestModeBtn");
     const singleTeamActionButtons = document.getElementById("singleTeamActionButtons");
 
-    if (singleTeamActionButtons) {
-      singleTeamActionButtons.style.display = ctx.isTeamBattleMode() ? "block" : "none";
+    const currentPlayer = ctx.getCurrentPlayer();
+    const actor = ctx.getPlayerState(currentPlayer);
+
+    if (actor) {
+      ctx.ensureActionState(actor);
     }
 
-    const currentPlayer = ctx.getCurrentPlayer();
-const actor = ctx.getPlayerState(currentPlayer);
+    const isTeam = ctx.isTeamBattleMode && ctx.isTeamBattleMode();
+    const currentTeamMode = getCurrentTeamMode();
 
-if (actor) {
-  ctx.ensureActionState(actor);
-}
+    if (singleTeamActionButtons) {
+      singleTeamActionButtons.style.display =
+        isTeam && currentTeamMode !== "unified" ? "block" : "none";
+    }
 
-if (actionCounterValue) {
-  if (
-    ctx.isTeamBattleMode &&
-    ctx.isTeamBattleMode() &&
-    ctx.twoVtwoAdapter &&
-    ctx.twoVtwoAdapter.getActionCount
-  ) {
-    actionCounterValue.textContent = actor
-      ? String(ctx.twoVtwoAdapter.getActionCount(currentPlayer, actor))
-      : "1";
-  } else {
-    actionCounterValue.textContent = actor ? String(actor.actionCount) : "1";
-  }
-}
+    if (actionCounterValue) {
+      if (
+        isTeam &&
+        currentTeamMode === "unified" &&
+        ctx.twoVtwoAdapter &&
+        ctx.twoVtwoAdapter.getActionCount
+      ) {
+        actionCounterValue.textContent = actor
+          ? String(ctx.twoVtwoAdapter.getActionCount(currentPlayer, actor))
+          : "1";
+      } else {
+        actionCounterValue.textContent = actor ? String(actor.actionCount) : "1";
+      }
+    }
 
     if (toggleTestModeBtn) {
       toggleTestModeBtn.textContent = `テストモード: ${ctx.getIsTestMode() ? "ON" : "OFF"}`;
