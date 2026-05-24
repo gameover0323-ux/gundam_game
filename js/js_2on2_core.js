@@ -227,6 +227,14 @@ export function create2v2Core(ctx) {
     }
 
     ctx.redrawBattleBoards();
+
+if (ctx.renderAttackChoices) {
+  ctx.renderAttackChoices();
+}
+
+if (ctx.renderCurrentPlayerPanel) {
+  ctx.renderCurrentPlayerPanel();
+}
   }
 
   function createTeam(unit1, unit2) {
