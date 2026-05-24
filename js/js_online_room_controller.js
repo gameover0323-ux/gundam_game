@@ -118,7 +118,7 @@ roomIdMatchActiveRoomId = roomId;
       ctx.showPopup("部屋が見つかりません");
       return;
     }
-
+roomIdMatchActiveRoomId = roomId;
     ctx.setOnlineState({
       enabled: true,
       roomId,
@@ -179,7 +179,9 @@ roomIdMatchActiveRoomId = roomId;
   if (!ctx.isOnlineEnabled || !ctx.isOnlineEnabled()) return false;
   if (!unit) return true;
 
-const roomId = ctx.getOnlineRoomId ? ctx.getOnlineRoomId() : roomIdMatchActiveRoomId;
+const roomId = ctx.getOnlineRoomId
+  ? (ctx.getOnlineRoomId() || roomIdMatchActiveRoomId)
+  : roomIdMatchActiveRoomId;
 const myPlayer = ctx.getOnlineMyPlayer();
   if (!roomId || (myPlayer !== "A" && myPlayer !== "B")) {
     ctx.showPopup("オンライン部屋情報が取得できません");
