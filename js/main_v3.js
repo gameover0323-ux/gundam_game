@@ -1847,9 +1847,8 @@ gameSetup = createGameSetup({
     showTitle();
   },
 
-  onSelectUnit: selectOnlineUnit,
-  
 
+  
   getBattleMode: () => battleMode,
   
 
