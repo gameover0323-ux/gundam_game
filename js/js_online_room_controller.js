@@ -18,17 +18,18 @@ export function createOnlineRoomController(ctx) {
     roomIdMatchActiveRoomId = roomId;
     cleanupRoomIdMatchListener();
 
-    if (typeof ctx.enterRandomMatchedRoom !== "function") {
-      ctx.showPopup("オンライン入室処理が取得できません");
-      return;
+    const onlineRoomStatus = ctx.getOnlineRoomStatus();
+    if (onlineRoomStatus) {
+      onlineRoomStatus.textContent = `オンラインマッチ成立。あなたはPLAYER ${playerSide}です。`;
     }
 
-    ctx.enterRandomMatchedRoom({
-      roomId,
-      playerSide
+    roomIdMatchUnsubscribe = ctx.listenRoom(roomId, roomData => {
+      if (!roomData) return;
+
+      ctx.enterOnlineSelect();
+      ctx.applyOnlineRoomData(roomData);
     });
   }
-
   function getOnlineProfilePatch(playerKey) {
     const profile = ctx.getPlayerProfile();
 
