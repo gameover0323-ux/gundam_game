@@ -1466,6 +1466,7 @@ applyOnlineBattleSnapshot,
   getOnlineInviteUrl: () => onlineInviteUrl,
 
   isOnlineEnabled: () => onlineState.enabled,
+  getOnlineRoomId: () => onlineState.roomId,
   getOnlineMyPlayer: () => onlineState.myPlayer,
 
   setOnlineState: (patch) => {
@@ -1815,41 +1816,21 @@ gameSetup = createGameSetup({
   debugUnits: debugUnitList,
   canUseDebugUnit,
   unitButtons,
-  onSelectUnit: (unit) => selectOnlineUnit(unit),
   selectGuide,
   selectedUnitsPreview,
-  onSelectUnit: selectOnlineUnit,
-confirmSelectedUnitBtn,
-backFromSelectBtn,
-getPendingSelectedUnit: () => pendingSelectedUnit,
-setPendingSelectedUnit: (unit) => { pendingSelectedUnit = unit; },
-getExtraUnlockedUnits: () => extraUnlockedUnits,
-setExtraUnlockedUnits: (units) => { extraUnlockedUnits = units; },
+  confirmSelectedUnitBtn,
+  backFromSelectBtn,
+  getPendingSelectedUnit: () => pendingSelectedUnit,
+  setPendingSelectedUnit: (unit) => { pendingSelectedUnit = unit; },
+  getExtraUnlockedUnits: () => extraUnlockedUnits,
+  setExtraUnlockedUnits: (units) => { extraUnlockedUnits = units; },
 
-showTitle: () => {
-  showTitle();
-},
-  onSelectUnit: (unit) => {
-    if (!onlineState.enabled) return false;
-
-    const playerKey = onlineState.myPlayer;
-    if (playerKey !== "A" && playerKey !== "B") return false;
-
-    updateRoom(onlineState.roomId, {
-      [`players/${playerKey}/unitId`]: unit.id,
-      [`players/${playerKey}/ready`]: true,
-      "meta/updatedAt": Date.now()
-    });
-
-    if (playerKey === "A") {
-      selectedUnitA = unit;
-    } else {
-      selectedUnitB = unit;
-    }
-
-    updateSelectUi();
-    return true;
+  showTitle: () => {
+    showTitle();
   },
+
+  onSelectUnit: selectOnlineUnit,
+  
 
   getBattleMode: () => battleMode,
   
