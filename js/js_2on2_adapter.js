@@ -11,6 +11,45 @@ function getUnitKeyInTeam(team, state) {
   return null;
 }
 
+function ensureUnifiedActionState(team) {
+  if (!team) return;
+
+  if (typeof team.unifiedBaseActionCount !== "number") {
+    team.unifiedBaseActionCount = 1;
+  }
+
+  if (typeof team.unifiedActionCount !== "number") {
+    team.unifiedActionCount = team.unifiedBaseActionCount;
+  }
+
+  if (typeof team.actionModeLock !== "string") {
+    team.actionModeLock = "";
+  }
+}
+
+function lockActionMode(team, mode) {
+  if (!team) return;
+  if (mode !== "unified" && mode !== "split") return;
+
+  ensureUnifiedActionState(team);
+  team.actionModeLock = mode;
+
+  if (mode === "unified") {
+    team.mode = "unified";
+
+    if (team.unit1) team.unit1.actionCount = 0;
+    if (team.unit2) team.unit2.actionCount = 0;
+  }
+}
+
+function canUseActionMode(team, mode) {
+  if (!team) return false;
+  ensureUnifiedActionState(team);
+
+  if (!team.actionModeLock) return true;
+  return team.actionModeLock === mode;
+}
+
 function getUnifiedData(team) {
   if (!team) return null;
 
@@ -28,16 +67,16 @@ function getUnifiedData(team) {
 }
 
 export function create2v2Adapter(ctx) {
-  function isUnifiedOwner(ownerPlayer) {
-    if (!ctx.isTeamBattleMode || !ctx.isTeamBattleMode()) return false;
-
-    const team = ctx.getTeam(ownerPlayer);
-    return !!team && team.mode === "unified";
-  }
-
   function getOwnerTeam(ownerPlayer) {
     if (!ctx.getTeam) return null;
     return ctx.getTeam(ownerPlayer);
+  }
+
+  function isUnifiedOwner(ownerPlayer) {
+    if (!ctx.isTeamBattleMode || !ctx.isTeamBattleMode()) return false;
+
+    const team = getOwnerTeam(ownerPlayer);
+    return !!team && team.mode === "unified";
   }
 
   function getUnifiedHp(team) {
@@ -56,11 +95,7 @@ export function create2v2Adapter(ctx) {
 
   function getUnifiedMaxHp(team) {
     if (!team) return 0;
-
-    return (
-      clampNumber(team.unit1?.maxHp) +
-      clampNumber(team.unit2?.maxHp)
-    );
+    return clampNumber(team.unit1?.maxHp) + clampNumber(team.unit2?.maxHp);
   }
 
   function heal(ownerPlayer, actor, amount) {
@@ -106,21 +141,23 @@ export function create2v2Adapter(ctx) {
     unified.totalDamage = clampNumber(unified.totalDamage) + cost;
     return true;
   }
-function damageHp(ownerPlayer, actor, amount) {
-  const damage = clampNumber(amount);
-  if (damage <= 0 || !actor) return 0;
 
-  const team = getOwnerTeam(ownerPlayer);
+  function damageHp(ownerPlayer, actor, amount) {
+    const damage = clampNumber(amount);
+    if (damage <= 0 || !actor) return 0;
 
-  if (!team || team.mode !== "unified") {
-    actor.hp = Math.max(0, Number(actor.hp || 0) - damage);
+    const team = getOwnerTeam(ownerPlayer);
+
+    if (!team || team.mode !== "unified") {
+      actor.hp = Math.max(0, Number(actor.hp || 0) - damage);
+      return damage;
+    }
+
+    const unified = getUnifiedData(team);
+    unified.totalDamage = clampNumber(unified.totalDamage) + damage;
     return damage;
   }
 
-  const unified = getUnifiedData(team);
-  unified.totalDamage = clampNumber(unified.totalDamage) + damage;
-  return damage;
-}
   function addTeamEvade(ownerPlayer, actor, amount) {
     const add = clampNumber(amount);
     if (add <= 0 || !actor) return 0;
@@ -153,17 +190,19 @@ function damageHp(ownerPlayer, actor, amount) {
     if (!ctx.consumeUnifiedEvade) return false;
     return ctx.consumeUnifiedEvade(team, cost);
   }
-function zeroEvade(ownerPlayer, actor) {
-  const team = getOwnerTeam(ownerPlayer);
 
-  if (!team || team.mode !== "unified") {
-    if (actor) actor.evade = 0;
-    return true;
+  function zeroEvade(ownerPlayer, actor) {
+    const team = getOwnerTeam(ownerPlayer);
+
+    if (!team || team.mode !== "unified") {
+      if (actor) actor.evade = 0;
+      return true;
+    }
+
+    if (!ctx.zeroUnifiedEvade) return false;
+    return ctx.zeroUnifiedEvade(team);
   }
 
-  if (!ctx.zeroUnifiedEvade) return false;
-  return ctx.zeroUnifiedEvade(team);
-}
   function getEvade(ownerPlayer, actor) {
     const team = getOwnerTeam(ownerPlayer);
 
@@ -175,51 +214,11 @@ function zeroEvade(ownerPlayer, actor) {
     return ctx.getUnifiedEvade(team);
   }
 
-
-  function addActionCount(ownerPlayer, actor, amount) {
-    const add = clampNumber(amount);
-    if (add <= 0 || !actor) return 0;
-
-    const team = getOwnerTeam(ownerPlayer);
-
-    if (!team || team.mode !== "unified") {
-      actor.actionCount = clampNumber(actor.actionCount) + add;
-      return add;
-    }
-
-    ensureUnifiedActionState(team);
-    team.unifiedActionCount = clampNumber(team.unifiedActionCount) + add;
-
-    return add;
-  }
-  function applyToUnifiedPartners(ownerPlayer, callback) {
-    const team = getOwnerTeam(ownerPlayer);
-
-    if (!team || team.mode !== "unified") {
-      return false;
-    }
-
-    if (team.unit1) callback(team.unit1, "unit1");
-    if (team.unit2) callback(team.unit2, "unit2");
-
-    return true;
-  }
-function ensureUnifiedActionState(team) {
-    if (!team) return;
-
-    if (typeof team.unifiedBaseActionCount !== "number") {
-      team.unifiedBaseActionCount = 1;
-    }
-
-    if (typeof team.unifiedActionCount !== "number") {
-      team.unifiedActionCount = team.unifiedBaseActionCount;
-    }
-  }
-
   function resetUnifiedActionCount(team) {
     if (!team) return;
     ensureUnifiedActionState(team);
     team.unifiedActionCount = team.unifiedBaseActionCount;
+    team.actionModeLock = "";
   }
 
   function getActionCount(ownerPlayer, actor) {
@@ -233,13 +232,38 @@ function ensureUnifiedActionState(team) {
     return clampNumber(team.unifiedActionCount);
   }
 
+  function addActionCount(ownerPlayer, actor, amount) {
+    const add = clampNumber(amount);
+    if (add <= 0 || !actor) return 0;
+
+    const team = getOwnerTeam(ownerPlayer);
+
+    if (!team || team.mode !== "unified") {
+      if (team && !canUseActionMode(team, "split")) return 0;
+      if (team) lockActionMode(team, "split");
+
+      actor.actionCount = clampNumber(actor.actionCount) + add;
+      return add;
+    }
+
+    if (!canUseActionMode(team, "unified")) return 0;
+
+    lockActionMode(team, "unified");
+    team.unifiedActionCount = clampNumber(team.unifiedActionCount) + add;
+
+    return add;
+  }
+
   function canConsumeAction(ownerPlayer, actor, amount = 1) {
     const cost = clampNumber(amount);
     const team = getOwnerTeam(ownerPlayer);
 
     if (!team || team.mode !== "unified") {
+      if (team && !canUseActionMode(team, "split")) return false;
       return !!actor && clampNumber(actor.actionCount) >= cost;
     }
+
+    if (!canUseActionMode(team, "unified")) return false;
 
     ensureUnifiedActionState(team);
     return clampNumber(team.unifiedActionCount) >= cost;
@@ -253,9 +277,15 @@ function ensureUnifiedActionState(team) {
 
     if (!team || team.mode !== "unified") {
       if (!actor || clampNumber(actor.actionCount) < cost) return false;
+      if (team && !canUseActionMode(team, "split")) return false;
+
+      if (team) lockActionMode(team, "split");
+
       actor.actionCount = clampNumber(actor.actionCount) - cost;
       return true;
     }
+
+    if (!canUseActionMode(team, "unified")) return false;
 
     ensureUnifiedActionState(team);
 
@@ -263,27 +293,43 @@ function ensureUnifiedActionState(team) {
       return false;
     }
 
+    lockActionMode(team, "unified");
     team.unifiedActionCount = clampNumber(team.unifiedActionCount) - cost;
+
     return true;
   }
+
+  function applyToUnifiedPartners(ownerPlayer, callback) {
+    const team = getOwnerTeam(ownerPlayer);
+
+    if (!team || team.mode !== "unified") {
+      return false;
+    }
+
+    if (team.unit1) callback(team.unit1, "unit1");
+    if (team.unit2) callback(team.unit2, "unit2");
+
+    return true;
+  }
+
   return {
     ensureUnifiedActionState,
     resetUnifiedActionCount,
     getActionCount,
     canConsumeAction,
     consumeAction,
+    addActionCount,
     isUnifiedOwner,
     getOwnerTeam,
     getUnifiedHp,
     getUnifiedMaxHp,
     heal,
     consumeHp,
-damageHp,
-addTeamEvade,
+    damageHp,
+    addTeamEvade,
     consumeEvade,
-zeroEvade,
-getEvade,
-addActionCount,
+    zeroEvade,
+    getEvade,
     applyToUnifiedPartners
   };
 }
