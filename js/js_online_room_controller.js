@@ -23,10 +23,15 @@ export function createOnlineRoomController(ctx) {
       onlineRoomStatus.textContent = `オンラインマッチ成立。あなたはPLAYER ${playerSide}です。`;
     }
 
+    ctx.enterOnlineSelect();
+
+    ctx.readRoom(roomId).then(snapshot => {
+      if (!snapshot.exists()) return;
+      ctx.applyOnlineRoomData(snapshot.val());
+    });
+
     roomIdMatchUnsubscribe = ctx.listenRoom(roomId, roomData => {
       if (!roomData) return;
-
-      ctx.enterOnlineSelect();
       ctx.applyOnlineRoomData(roomData);
     });
   }
