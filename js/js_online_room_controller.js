@@ -1,4 +1,34 @@
 export function createOnlineRoomController(ctx) {
+  let roomIdMatchActiveRoomId = null;
+  let roomIdMatchUnsubscribe = null;
+  let roomIdMatchEntering = false;
+
+  function cleanupRoomIdMatchListener() {
+    if (typeof roomIdMatchUnsubscribe === "function") {
+      roomIdMatchUnsubscribe();
+    }
+    roomIdMatchUnsubscribe = null;
+  }
+
+  function enterRoomIdMatchedRoom(roomId, playerSide) {
+    if (!roomId || (playerSide !== "A" && playerSide !== "B")) return;
+    if (roomIdMatchEntering && roomIdMatchActiveRoomId === roomId) return;
+
+    roomIdMatchEntering = true;
+    roomIdMatchActiveRoomId = roomId;
+    cleanupRoomIdMatchListener();
+
+    if (typeof ctx.enterRandomMatchedRoom !== "function") {
+      ctx.showPopup("オンライン入室処理が取得できません");
+      return;
+    }
+
+    ctx.enterRandomMatchedRoom({
+      roomId,
+      playerSide
+    });
+  }
+
   function getOnlineProfilePatch(playerKey) {
     const profile = ctx.getPlayerProfile();
 
@@ -22,8 +52,12 @@ export function createOnlineRoomController(ctx) {
   async function createOnlineRoom() {
     try {
       await ctx.cleanupOldRooms();
+      cleanupRoomIdMatchListener();
 
       const roomId = ctx.createRoomId();
+      roomIdMatchActiveRoomId = roomId;
+      roomIdMatchEntering = false;
+
       ctx.setOnlineState({
         enabled: true,
         roomId,
@@ -38,7 +72,7 @@ export function createOnlineRoomController(ctx) {
       const onlineInviteUrl = ctx.getOnlineInviteUrl();
 
       if (onlineRoomStatus) {
-        onlineRoomStatus.textContent = `部屋作成中... 部屋ID：${roomId}`;
+        onlineRoomStatus.textContent = `部屋作成中...\n部屋ID：${roomId}`;
       }
 
       const initialRoomData = ctx.buildInitialRoomData({ mode: "online1v1" });
@@ -68,7 +102,7 @@ export function createOnlineRoomController(ctx) {
         onlineInviteUrl.textContent = inviteUrl;
       }
 
-      ctx.listenRoom(roomId, roomData => {
+      roomIdMatchUnsubscribe = ctx.listenRoom(roomId, roomData => {
         if (!roomData) return;
 
         const playerBJoined = roomData.players?.B?.joined;
@@ -76,15 +110,13 @@ export function createOnlineRoomController(ctx) {
 
         if (status) {
           status.textContent = playerBJoined
-            ? `PLAYER B が参加しました。部屋ID：${roomId}`
+            ? `PLAYER B が参加しました。機体選択へ移動します。部屋ID：${roomId}`
             : `PLAYER B の参加待ちです。部屋ID：${roomId}`;
         }
 
         if (playerBJoined) {
-          ctx.enterOnlineSelect();
+          enterRoomIdMatchedRoom(roomId, "A");
         }
-
-        ctx.applyOnlineRoomData(roomData);
       });
     } catch (error) {
       console.error(error);
@@ -99,55 +131,59 @@ export function createOnlineRoomController(ctx) {
   }
 
   async function joinOnlineRoom() {
-    await ctx.cleanupOldRooms();
+    try {
+      await ctx.cleanupOldRooms();
+      cleanupRoomIdMatchListener();
 
-    const onlineRoomIdInput = ctx.getOnlineRoomIdInput();
-    const onlineRoomStatus = ctx.getOnlineRoomStatus();
-    const roomId = onlineRoomIdInput?.value.trim();
+      const onlineRoomIdInput = ctx.getOnlineRoomIdInput();
+      const onlineRoomStatus = ctx.getOnlineRoomStatus();
+      const roomId = onlineRoomIdInput?.value.trim();
 
-    if (!roomId) {
-      ctx.showPopup("部屋IDを入力してください");
-      return;
+      if (!roomId) {
+        ctx.showPopup("部屋IDを入力してください");
+        return;
+      }
+
+      const snapshot = await ctx.readRoom(roomId);
+
+      if (!snapshot.exists()) {
+        ctx.showPopup("部屋が見つかりません");
+        return;
+      }
+
+      roomIdMatchActiveRoomId = roomId;
+      roomIdMatchEntering = false;
+
+      ctx.setOnlineState({
+        enabled: true,
+        roomId,
+        myPlayer: "B",
+        isHost: false
+      });
+
+      ctx.setOnlineSelectEntered(false);
+      ctx.setOnlineBattleStarted(false);
+
+      await ctx.updateRoom(roomId, {
+        "players/B/joined": true,
+        "players/B/ready": false,
+        "players/B/unitId": null,
+        "players/B/left": false,
+        "players/B/lastSeen": Date.now(),
+        ...getOnlineProfilePatch("B"),
+        "meta/status": "selecting",
+        "meta/updatedAt": Date.now()
+      });
+
+      if (onlineRoomStatus) {
+        onlineRoomStatus.textContent = "部屋に参加しました。機体選択へ移動します。";
+      }
+
+      enterRoomIdMatchedRoom(roomId, "B");
+    } catch (error) {
+      console.error(error);
+      ctx.showPopup(`部屋参加エラー：${error.message}`);
     }
-
-    const snapshot = await ctx.readRoom(roomId);
-
-    if (!snapshot.exists()) {
-      ctx.showPopup("部屋が見つかりません");
-      return;
-    }
-
-    ctx.setOnlineState({
-      enabled: true,
-      roomId,
-      myPlayer: "B",
-      isHost: false
-    });
-
-    ctx.setOnlineSelectEntered(false);
-    ctx.setOnlineBattleStarted(false);
-
-    await ctx.updateRoom(roomId, {
-      "players/B/joined": true,
-      "players/B/ready": false,
-      "players/B/unitId": null,
-      "players/B/left": false,
-      "players/B/lastSeen": Date.now(),
-      ...getOnlineProfilePatch("B"),
-      "meta/status": "selecting",
-      "meta/updatedAt": Date.now()
-    });
-
-    if (onlineRoomStatus) {
-      onlineRoomStatus.textContent = "部屋に参加しました。機体選択へ移動します。";
-    }
-
-    ctx.enterOnlineSelect();
-
-    ctx.listenRoom(roomId, roomData => {
-      if (!roomData) return;
-      ctx.applyOnlineRoomData(roomData);
-    });
   }
 
   function bootOnlineFromUrl() {
@@ -174,34 +210,35 @@ export function createOnlineRoomController(ctx) {
   }
 
   async function selectOnlineUnit(unit) {
-  if (!ctx.isOnlineEnabled || !ctx.isOnlineEnabled()) return false;
-  if (!unit) return true;
+    if (!ctx.isOnlineEnabled || !ctx.isOnlineEnabled()) return false;
+    if (!unit) return true;
 
-const roomId = ctx.getOnlineRoomId();
-const myPlayer = ctx.getOnlineMyPlayer();
-  if (!roomId || (myPlayer !== "A" && myPlayer !== "B")) {
-    ctx.showPopup("オンライン部屋情報が取得できません");
+    const roomId = ctx.getOnlineRoomId();
+    const myPlayer = ctx.getOnlineMyPlayer();
+
+    if (!roomId || (myPlayer !== "A" && myPlayer !== "B")) {
+      ctx.showPopup("オンライン部屋情報が取得できません");
+      return true;
+    }
+
+    if (myPlayer === "A") {
+      ctx.setSelectedUnitA(unit);
+    } else {
+      ctx.setSelectedUnitB(unit);
+    }
+
+    ctx.updateSelectUi();
+
+    await ctx.updateRoom(roomId, {
+      [`players/${myPlayer}/unitId`]: unit.id || unit.name,
+      [`players/${myPlayer}/ready`]: true,
+      [`players/${myPlayer}/lastSeen`]: Date.now(),
+      "meta/status": "selecting",
+      "meta/updatedAt": Date.now()
+    });
+
     return true;
   }
-
-  if (myPlayer === "A") {
-    ctx.setSelectedUnitA(unit);
-  } else {
-    ctx.setSelectedUnitB(unit);
-  }
-
-  ctx.updateSelectUi();
-
-  await ctx.updateRoom(roomId, {
-    [`players/${myPlayer}/unitId`]: unit.id || unit.name,
-    [`players/${myPlayer}/ready`]: true,
-    [`players/${myPlayer}/lastSeen`]: Date.now(),
-    "meta/status": "selecting",
-    "meta/updatedAt": Date.now()
-  });
-
-  return true;
-}
 
   function applyOnlineRoomData(roomData) {
     if (!ctx.isOnlineEnabled() || !roomData) return;
@@ -287,13 +324,13 @@ const myPlayer = ctx.getOnlineMyPlayer();
   }
 
   return {
-  getOnlineProfilePatch,
-  createOnlineRoom,
-  joinOnlineRoom,
-  bootOnlineFromUrl,
-  selectOnlineUnit,
-  applyOnlineRoomData,
-  enterOnlineSelect,
-  initOnline1v1Battle
-};
+    getOnlineProfilePatch,
+    createOnlineRoom,
+    joinOnlineRoom,
+    bootOnlineFromUrl,
+    selectOnlineUnit,
+    applyOnlineRoomData,
+    enterOnlineSelect,
+    initOnline1v1Battle
+  };
 }
