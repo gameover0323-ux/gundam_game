@@ -65,12 +65,27 @@ export function createUiController(ctx) {
       singleTeamActionButtons.style.display = ctx.isTeamBattleMode() ? "block" : "none";
     }
 
-    const actor = ctx.getPlayerState(ctx.getCurrentPlayer());
-    ctx.ensureActionState(actor);
+    const currentPlayer = ctx.getCurrentPlayer();
+const actor = ctx.getPlayerState(currentPlayer);
 
-    if (actionCounterValue) {
-      actionCounterValue.textContent = actor ? String(actor.actionCount) : "1";
-    }
+if (actor) {
+  ctx.ensureActionState(actor);
+}
+
+if (actionCounterValue) {
+  if (
+    ctx.isTeamBattleMode &&
+    ctx.isTeamBattleMode() &&
+    ctx.twoVtwoAdapter &&
+    ctx.twoVtwoAdapter.getActionCount
+  ) {
+    actionCounterValue.textContent = actor
+      ? String(ctx.twoVtwoAdapter.getActionCount(currentPlayer, actor))
+      : "1";
+  } else {
+    actionCounterValue.textContent = actor ? String(actor.actionCount) : "1";
+  }
+}
 
     if (toggleTestModeBtn) {
       toggleTestModeBtn.textContent = `テストモード: ${ctx.getIsTestMode() ? "ON" : "OFF"}`;
