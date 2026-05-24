@@ -1,4 +1,5 @@
 export function createOnlineRoomController(ctx) {
+  let roomIdMatchActiveRoomId = null;
   function getOnlineProfilePatch(playerKey) {
     const profile = ctx.getPlayerProfile();
 
@@ -24,7 +25,7 @@ export function createOnlineRoomController(ctx) {
       await ctx.cleanupOldRooms();
 
       const roomId = ctx.createRoomId();
-
+roomIdMatchActiveRoomId = roomId;
       ctx.setOnlineState({
         enabled: true,
         roomId,
@@ -178,9 +179,8 @@ export function createOnlineRoomController(ctx) {
   if (!ctx.isOnlineEnabled || !ctx.isOnlineEnabled()) return false;
   if (!unit) return true;
 
-  const roomId = ctx.getOnlineRoomId();
-  const myPlayer = ctx.getOnlineMyPlayer();
-
+const roomId = ctx.getOnlineRoomId ? ctx.getOnlineRoomId() : roomIdMatchActiveRoomId;
+const myPlayer = ctx.getOnlineMyPlayer();
   if (!roomId || (myPlayer !== "A" && myPlayer !== "B")) {
     ctx.showPopup("オンライン部屋情報が取得できません");
     return true;
