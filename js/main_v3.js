@@ -1847,7 +1847,13 @@ gameSetup = createGameSetup({
     showTitle();
   },
 
+onSelectUnit: (unit) => {
+  if (String(battleMode).startsWith("online")) {
+    return selectOnlineUnit(unit);
+  }
 
+  return false;
+},
   
   getBattleMode: () => battleMode,
   
