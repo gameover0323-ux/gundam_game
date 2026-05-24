@@ -1,12 +1,10 @@
 export function showPopup(text) {
   const popup = document.getElementById("popup");
   popup.innerHTML = `
-    ${text}
-    <br><br>
+    <div>${text}</div>
     <button id="closePopupBtn">閉じる</button>
   `;
   popup.style.display = "block";
-
   document.getElementById("closePopupBtn").addEventListener("click", () => {
     popup.style.display = "none";
   });
@@ -22,16 +20,8 @@ export function renderSlots(slots, slotOrder, container, onSlotClick) {
     if (!slot) return;
 
     const div = document.createElement("div");
-    if (slot.gold) {
-      div.className = "slot goldSlot";
-    } else {
-      div.className = slot.ex ? "slot exSlot" : "slot";
-    }
-
-    div.innerHTML = `
-      <span style="color:gray;font-size:10px;">${index + 1}</span>
-      ${slot.label}
-    `;
+    div.className = slot.gold ? "slot goldSlot" : slot.ex ? "slot exSlot" : "slot";
+    div.innerHTML = `<span>${index + 1}</span> ${slot.label}`;
 
     div.addEventListener("click", () => {
       onSlotClick(slot);
@@ -44,6 +34,11 @@ export function renderSlots(slots, slotOrder, container, onSlotClick) {
 export function renderSpecialsStateToArea(state, area, handlers) {
   area.innerHTML = "";
 
+  if (!state || Number(state.hp || 0) <= 0 || state.isDefeated === true) {
+    area.innerHTML = `<div style="color:#ff6666;font-weight:bold;">[撃墜] 特殊行動不可</div>`;
+    return;
+  }
+
   state.specialOrder.forEach((specialKey) => {
     const sp = state.specials[specialKey];
 
@@ -51,21 +46,20 @@ export function renderSpecialsStateToArea(state, area, handlers) {
     div.className = "special";
 
     let title = sp.name;
+
     if (sp.effectType === "shield") {
       title += ` (残り:${state.shieldCount})`;
-      if (state.shieldActive) {
-        title += " [展開中]";
-      }
+      if (state.shieldActive) title += " [展開中]";
     }
 
     const canExecute = handlers.canExecuteSpecial
       ? handlers.canExecuteSpecial(sp, specialKey)
       : false;
 
-    let execButtonHtml = "";
-    if (sp.actionType !== "auto" && canExecute) {
-      execButtonHtml = `<button class="specialExecBtn">実行</button>`;
-    }
+    const execButtonHtml =
+      sp.actionType !== "auto" && canExecute
+        ? `<button class="specialExecBtn">実行</button>`
+        : "";
 
     div.innerHTML = `
       <div>${title}</div>
@@ -92,97 +86,95 @@ export function renderSpecialsStateToArea(state, area, handlers) {
     area.appendChild(div);
   });
 }
+
+function isUnitDefeated(state) {
+  return !state || Number(state.hp || 0) <= 0 || state.isDefeated === true;
+}
+
 function getStatusLineHtml(text) {
   if (typeof text !== "string") return "";
 
   if (text.startsWith("NT-D覚醒 残")) {
-    return `<div style="color:#66ff99;font-weight:bold;">${text}</div>`;
+    return `<div style="color:#ffcc00;">${text}</div>`;
   }
 
   if (text.startsWith("NT-D 残")) {
-    return `<div style="color:#ff4444;font-weight:bold;">${text}</div>`;
+    return `<div style="color:#ff4444;">${text}</div>`;
   }
 
-  return `<div style="color:#d9b3ff;">${text}</div>`;
+  return `<div style="color:#d8b4ff;">${text}</div>`;
 }
+
 function getEvadeDisplayHtml(state) {
   if (!state) return "回避:-";
 
   const current = typeof state.evade === "number" ? state.evade : 0;
   const baseMax = typeof state.evadeMax === "number" ? state.evadeMax : 0;
-  const overCap =
-    typeof state.overEvadeCap === "number"
-      ? state.overEvadeCap
-      : baseMax;
+  const overCap = typeof state.overEvadeCap === "number" ? state.overEvadeCap : baseMax;
   const absoluteMax =
-    typeof state.overEvadeAbsoluteMax === "number"
-      ? state.overEvadeAbsoluteMax
-      : 50;
+    typeof state.overEvadeAbsoluteMax === "number" ? state.overEvadeAbsoluteMax : 50;
 
   if (current <= baseMax) {
     return `回避:${current}/${baseMax}`;
   }
 
   const displayCap = Math.min(overCap, absoluteMax);
+  return `回避:${current}/${displayCap}`;
+}
 
-  if (displayCap >= absoluteMax) {
-    const currentHtml =
-      current > displayCap
-        ? `<span class="evadeRedValue">${current}</span>`
-        : `${current}`;
+function getHpLineHtml(state, unified = false) {
+  if (!state) return "HP:-";
+  if (unified) return "HP:[統合中]";
+  if (isUnitDefeated(state)) return "HP:[撃墜]";
+  return `HP:${state.hp}/${state.maxHp}`;
+}
 
-    return `回避:${currentHtml}/<span class="evadeGoldCap">${displayCap}</span>`;
-  }
-
-  return `回避:<span class="evadeRedValue">${current}</span>/<span class="evadeRedCap">${displayCap}</span>`;
+function getEvadeLineHtml(state, unified = false) {
+  if (!state) return "回避:-";
+  if (unified) return "回避:[統合中]";
+  if (isUnitDefeated(state)) return "回避:[撃墜]";
+  return getEvadeDisplayHtml(state);
 }
 
 export function renderPlayerState(state, container, label, handlers) {
+  const defeated = isUnitDefeated(state);
+
   const confuseText =
     state.isConfusedTurn && state.confuseHits > 0
       ? `<div>攻撃無効蓄積:${state.confuseHits}</div>`
       : "";
 
-  const nameStyle =
-    state.formId === "bio"
-      ? 'style="color:#bb66ff;font-weight:bold;"'
-      : "";
+  const nameStyle = state.formId === "bio"
+    ? 'style="color:#bb66ff;font-weight:bold;"'
+    : "";
 
   const statusHtml =
     Array.isArray(state.statusList) && state.statusList.length > 0
-      ? `
-        <div style="margin-top:6px;">
-          ${state.statusList.map((text) => getStatusLineHtml(text)).join("")}
-        </div>
-      `
+      ? `<div>${state.statusList.map((text) => getStatusLineHtml(text)).join("")}</div>`
       : "";
-
-  const evadeHtml = `
-    <div class="evadeInfo">${getEvadeDisplayHtml(state)}</div>
-  `;
 
   container.innerHTML = `
     <h3>${label}</h3>
-    <div ${nameStyle}><b>${state.displayName || state.name}</b></div>
-    <div>HP:${state.hp}/${state.maxHp}</div>
-    <div class="hpbar">
-      <div class="hpfill" style="width:${Math.max(0, state.hp / state.maxHp * 100)}%"></div>
-    </div>
-    ${evadeHtml}
+    <div ${nameStyle}>${state.displayName || state.name}${defeated ? " [撃墜]" : ""}</div>
+    <div>${getHpLineHtml(state)}</div>
+    <div>${getEvadeLineHtml(state)}</div>
     ${statusHtml}
     ${confuseText}
-    <br>
-    <b>スロット</b>
+    <h3>スロット</h3>
     <div class="slotArea"></div>
-    <br>
-    <b>特殊行動</b>
+    <h3>特殊行動</h3>
     <div class="specialArea"></div>
   `;
 
   const slotArea = container.querySelector(".slotArea");
   const specialArea = container.querySelector(".specialArea");
 
-  renderSlots(state.slots, state.rollableSlotOrder, slotArea, handlers.onSlotClick);
+  if (defeated) {
+    slotArea.innerHTML = `<div style="color:#ff6666;font-weight:bold;">[撃墜] スロット行動不可</div>`;
+  } else {
+    renderSlots(state.slots, state.rollableSlotOrder, slotArea, handlers.onSlotClick);
+  }
+
   renderSpecialsStateToArea(state, specialArea, {
     onSpecialDesc: handlers.onSpecialDesc,
     onSpecialExec: handlers.onSpecialExec,
@@ -196,182 +188,153 @@ export function renderPlayerState2v2(team, container, label, handlers) {
     return;
   }
 
-  const activeState = team[team.activeUnitKey];
-  if (!activeState) {
-    container.innerHTML = `<h3>${label}</h3><div>現在表示中の機体がありません</div>`;
+  const unit1Defeated = isUnitDefeated(team.unit1);
+  const unit2Defeated = isUnitDefeated(team.unit2);
+
+  if (unit1Defeated && unit2Defeated) {
+    container.innerHTML = `
+      <h3>${label} [全滅]</h3>
+      <div style="color:#ff6666;font-weight:bold;">1. ${team.unit1?.name || "空き"} [撃墜]</div>
+      <div>HP:[撃墜]</div>
+      <div style="color:#ff6666;font-weight:bold;">2. ${team.unit2?.name || "空き"} [撃墜]</div>
+      <div>HP:[撃墜]</div>
+    `;
     return;
   }
 
+  if (unit1Defeated && team.activeUnitKey === "unit1") team.activeUnitKey = "unit2";
+  if (unit2Defeated && team.activeUnitKey === "unit2") team.activeUnitKey = "unit1";
+  if (unit1Defeated && team.focusUnitKey === "unit1") team.focusUnitKey = "unit2";
+  if (unit2Defeated && team.focusUnitKey === "unit2") team.focusUnitKey = "unit1";
+
+  const activeState = team[team.activeUnitKey];
   const activeLabel = team.activeUnitKey === "unit1" ? "1" : "2";
   const focusLabel = team.focusUnitKey === "unit1" ? "1" : "2";
   const modeLabel = team.mode === "unified" ? "統合型" : "分散型";
-const unified = team.unified || {};
-  const unifiedHp =
-    Math.max(
-      0,
-      Math.floor(Number(unified.baseHpA || 0)) +
-        Math.floor(Number(unified.baseHpB || 0)) +
-        Math.floor(Number(unified.healA || 0)) +
-        Math.floor(Number(unified.healB || 0)) -
-        Math.floor(Number(unified.totalDamage || 0))
-    );
+
+  const unified = team.unified || {};
+  const unifiedHp = Math.max(
+    0,
+    Math.floor(Number(unified.baseHpA || 0)) +
+      Math.floor(Number(unified.baseHpB || 0)) +
+      Math.floor(Number(unified.healA || 0)) +
+      Math.floor(Number(unified.healB || 0)) -
+      Math.floor(Number(unified.totalDamage || 0))
+  );
 
   const unifiedMaxHp =
     Math.max(0, Number(team.unit1?.maxHp || 0)) +
     Math.max(0, Number(team.unit2?.maxHp || 0));
 
   const unifiedEvade =
-  Math.max(0, Number(team.unit1?.evade || 0)) +
-  Math.max(0, Number(team.unit2?.evade || 0));
-
-  const teamHpBarHtml =
-    team.mode === "unified"
-      ? `
-        <div class="hpbar">
-          <div class="hpfill" style="width:${unifiedMaxHp > 0 ? Math.max(0, unifiedHp / unifiedMaxHp * 100) : 0}%"></div>
-        </div>
-      `
-      : "";
+    Math.max(0, Number(team.unit1?.evade || 0)) +
+    Math.max(0, Number(team.unit2?.evade || 0));
 
   const teamStatusHtml =
     team.mode === "unified"
       ? `
-        <div style="margin-bottom:8px;">
-          <div style="font-weight:bold;">統合HP:${unifiedHp}/${unifiedMaxHp}</div>
-          ${teamHpBarHtml}
-          <div style="font-weight:bold;">統合回避:${unifiedEvade}</div>
-        </div>
+        <div>統合HP:${unifiedHp}/${unifiedMaxHp}</div>
+        <div class="hpBar"><div style="width:${unifiedMaxHp > 0 ? (unifiedHp / unifiedMaxHp) * 100 : 0}%;"></div></div>
+        <div>統合回避:${unifiedEvade}</div>
       `
       : "";
+
   const unit1Focused = team.mode === "unified" || team.focusUnitKey === "unit1";
   const unit2Focused = team.mode === "unified" || team.focusUnitKey === "unit2";
 
-  const unit1NameStyle = unit1Focused ? "color:#ff4040;font-weight:bold;" : "";
-  const unit2NameStyle = unit2Focused ? "color:#ff4040;font-weight:bold;" : "";
+  const unit1NameStyle = unit1Defeated
+    ? "color:#777;font-weight:bold;"
+    : unit1Focused
+      ? "color:#ff4040;font-weight:bold;"
+      : "";
+
+  const unit2NameStyle = unit2Defeated
+    ? "color:#777;font-weight:bold;"
+    : unit2Focused
+      ? "color:#ff4040;font-weight:bold;"
+      : "";
+
+  const activeDefeated = isUnitDefeated(activeState);
 
   const confuseText =
     activeState.isConfusedTurn && activeState.confuseHits > 0
       ? `<div>攻撃無効蓄積:${activeState.confuseHits}</div>`
       : "";
 
-  const nameStyle =
-    activeState.formId === "bio"
-      ? 'style="color:#bb66ff;font-weight:bold;"'
-      : "";
+  const nameStyle = activeState.formId === "bio"
+    ? 'style="color:#bb66ff;font-weight:bold;"'
+    : "";
 
   const statusHtml =
     Array.isArray(activeState.statusList) && activeState.statusList.length > 0
-      ? `
-        <div style="margin-top:6px;">
-          ${activeState.statusList.map((text) => getStatusLineHtml(text)).join("")}
-        </div>
-      `
+      ? `<div>${activeState.statusList.map((text) => getStatusLineHtml(text)).join("")}</div>`
       : "";
 
-  const evadeHtml = `
-    <div class="evadeInfo">${getEvadeDisplayHtml(activeState)}</div>
-  `;
-
-  const focusDisabled = handlers.canChangeFocus ? "" : "disabled";
+  const focusDisabledBase = handlers.canChangeFocus ? "" : "disabled";
 
   container.innerHTML = `
     <h3>${label} [${modeLabel}]</h3>
+    <button class="teamModeBtn">${team.mode === "unified" ? "分散型へ" : "統合型へ"}</button>
 
-    <div style="margin-bottom:8px;">
-      <button class="teamModeBtn">
-        ${team.mode === "unified" ? "分散型へ" : "統合型へ"}
-      </button>
-    </div>
+    <div style="${unit1NameStyle}">1. ${team.unit1.name}${unit1Defeated ? " [撃墜]" : ""}</div>
+    <div>${getHpLineHtml(team.unit1, team.mode === "unified")}</div>
+    <div>${getEvadeLineHtml(team.unit1, team.mode === "unified")}</div>
 
-    <div style="margin-bottom:8px; text-align:left;">
-    
-      <div style="margin-bottom:4px;">
-      
-        <b style="${unit1NameStyle}">1. ${team.unit1.name}</b>
-   <div>${team.mode === "unified" ? "HP:[統合中]" : `HP:${team.unit1.hp}/${team.unit1.maxHp}`}</div>
-        <div>${team.mode === "unified" ? "回避:[統合中]" : getEvadeDisplayHtml(team.unit1)}</div>
-      <div>
-        <b style="${unit2NameStyle}">2. ${team.unit2 ? team.unit2.name : "空き"}</b>
-    <div>${team.unit2 ? (team.mode === "unified" ? "HP:[統合中]" : `HP:${team.unit2.hp}/${team.unit2.maxHp}`) : "HP:-"}</div>
-        <div>${team.unit2 ? (team.mode === "unified" ? "回避:[統合中]" : getEvadeDisplayHtml(team.unit2)) : "回避:-"}</div>
-    </div>
+    <div style="${unit2NameStyle}">2. ${team.unit2 ? team.unit2.name : "空き"}${unit2Defeated ? " [撃墜]" : ""}</div>
+    <div>${team.unit2 ? getHpLineHtml(team.unit2, team.mode === "unified") : "HP:-"}</div>
+    <div>${team.unit2 ? getEvadeLineHtml(team.unit2, team.mode === "unified") : "回避:-"}</div>
 
-    <div style="margin-bottom:6px;">
-      <div style="font-size:12px;">ステータス表示</div>
-      <button class="switchUnitBtn compact2v2Btn" data-unit-key="unit1">[1]</button>
-      <button class="switchUnitBtn compact2v2Btn" data-unit-key="unit2">[2]</button>
-      <div style="font-size:11px;">現在:${activeLabel}</div>
-    </div>
+    <div>ステータス表示</div>
+    <button class="switchUnitBtn" data-unit-key="unit1" ${unit1Defeated ? "disabled" : ""}>[1]</button>
+    <button class="switchUnitBtn" data-unit-key="unit2" ${unit2Defeated ? "disabled" : ""}>[2]</button>
+    <div>現在:${activeLabel}</div>
 
-    <div style="margin-bottom:8px;">
-      <div style="font-size:12px;">フォーカス機体</div>
-      <button class="focusUnitBtn compact2v2Btn" data-unit-key="unit1" ${focusDisabled}>[1]</button>
-      <button class="focusUnitBtn compact2v2Btn" data-unit-key="unit2" ${focusDisabled}>[2]</button>
-      <div style="font-size:11px;">現在:${focusLabel}</div>
-    </div>
-${teamStatusHtml}
- <div ${nameStyle}><b>${activeState.displayName || activeState.name}</b></div>
+    <div>フォーカス機体</div>
+    <button class="focusUnitBtn" data-unit-key="unit1" ${focusDisabledBase || unit1Defeated ? "disabled" : ""}>[1]</button>
+    <button class="focusUnitBtn" data-unit-key="unit2" ${focusDisabledBase || unit2Defeated ? "disabled" : ""}>[2]</button>
+    <div>現在:${focusLabel}</div>
 
-    ${
-      team.mode === "unified"
-        ? `
-          <div>HP:[統合中]</div>
-          <div>回避:[統合中]</div>
-        `
-        : `
-          <div>HP:${activeState.hp}/${activeState.maxHp}</div>
-          <div class="hpbar">
-            <div class="hpfill" style="width:${Math.max(0, activeState.hp / activeState.maxHp * 100)}%"></div>
-          </div>
-          ${evadeHtml}
-        `
-    }
+    ${teamStatusHtml}
+
+    <div ${nameStyle}>${activeState.displayName || activeState.name}${activeDefeated ? " [撃墜]" : ""}</div>
+    <div>${getHpLineHtml(activeState, team.mode === "unified")}</div>
+    <div>${getEvadeLineHtml(activeState, team.mode === "unified")}</div>
     ${statusHtml}
     ${confuseText}
 
-    <br>
-    <b>スロット</b>
+    <h3>スロット</h3>
     <div class="slotArea"></div>
-
-    <br>
-    <b>特殊行動</b>
+    <h3>特殊行動</h3>
     <div class="specialArea"></div>
   `;
 
   const teamModeBtn = container.querySelector(".teamModeBtn");
   if (teamModeBtn) {
     teamModeBtn.addEventListener("click", () => {
-      if (handlers.onToggleTeamMode) {
-        handlers.onToggleTeamMode();
-      }
+      if (handlers.onToggleTeamMode) handlers.onToggleTeamMode();
     });
   }
 
   container.querySelectorAll(".switchUnitBtn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      if (handlers.onSwitchActiveUnit) {
-        handlers.onSwitchActiveUnit(btn.dataset.unitKey);
-      }
+      if (handlers.onSwitchActiveUnit) handlers.onSwitchActiveUnit(btn.dataset.unitKey);
     });
   });
 
   container.querySelectorAll(".focusUnitBtn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      if (handlers.onSwitchFocusUnit) {
-        handlers.onSwitchFocusUnit(btn.dataset.unitKey);
-      }
+      if (handlers.onSwitchFocusUnit) handlers.onSwitchFocusUnit(btn.dataset.unitKey);
     });
   });
 
   const slotArea = container.querySelector(".slotArea");
   const specialArea = container.querySelector(".specialArea");
 
-  renderSlots(
-    activeState.slots,
-    activeState.rollableSlotOrder,
-    slotArea,
-    handlers.onSlotClick
-  );
+  if (activeDefeated) {
+    slotArea.innerHTML = `<div style="color:#ff6666;font-weight:bold;">[撃墜] スロット行動不可</div>`;
+  } else {
+    renderSlots(activeState.slots, activeState.rollableSlotOrder, slotArea, handlers.onSlotClick);
+  }
 
   renderSpecialsStateToArea(activeState, specialArea, {
     onSpecialDesc: handlers.onSpecialDesc,
@@ -379,46 +342,27 @@ ${teamStatusHtml}
     canExecuteSpecial: handlers.canExecuteSpecial
   });
 }
+
 function buildAttackTags(attack) {
   const tags = [];
 
   const renderTag = (text, isAdded = false) => {
-    if (isAdded) {
-      return `<span style="color:#ffd966;font-weight:bold;">${text}</span>`;
-    }
+    if (isAdded) return `<span style="color:#ffcc00;">${text}</span>`;
     return `<span>${text}</span>`;
   };
 
   if (attack.type === "shoot") tags.push(renderTag("[射]"));
   if (attack.type === "melee") tags.push(renderTag("[格]"));
 
-  if (attack.cannotEvade) {
-    tags.push(renderTag("[必]", !!attack.addedCannotEvade));
-  }
-
-  if (attack.ignoreReduction) {
-    tags.push(renderTag("[不]", !!attack.addedIgnoreReduction));
-  }
-
-  if (attack.beam) {
-    tags.push(renderTag("[ビ]", !!attack.addedBeam));
-  }
-
-  if (attack.moonlightButterfly) {
-    tags.push(renderTag("[月光蝶]"));
-  }
+  if (attack.cannotEvade) tags.push(renderTag("[必]", !!attack.addedCannotEvade));
+  if (attack.ignoreReduction) tags.push(renderTag("[不]", !!attack.addedIgnoreReduction));
+  if (attack.beam) tags.push(renderTag("[ビ]", !!attack.addedBeam));
+  if (attack.moonlightButterfly) tags.push(renderTag("[月光蝶]"));
 
   return tags.join("");
 }
 
-export function renderPendingChoiceUI({
-  title,
-  choices,
-  choiceType,
-  currentValue,
-  digits,
-  onChoose
-}) {
+export function renderPendingChoiceUI({ title, choices, choiceType, currentValue, digits, onChoose }) {
   const attackLog = document.getElementById("attackLog");
   attackLog.innerHTML = "";
 
@@ -442,21 +386,11 @@ export function renderPendingChoiceUI({
     for (let i = 0; i <= 9; i++) {
       const btn = document.createElement("button");
       btn.textContent = i;
-
       btn.addEventListener("click", () => {
         if (value.length >= digits) return;
-
         value += String(i);
-
-        renderPendingChoiceUI({
-          title,
-          choiceType,
-          currentValue: value,
-          digits,
-          onChoose
-        });
+        renderPendingChoiceUI({ title, choiceType, currentValue: value, digits, onChoose });
       });
-
       keypad.appendChild(btn);
     }
 
@@ -469,19 +403,12 @@ export function renderPendingChoiceUI({
     const clearBtn = document.createElement("button");
     clearBtn.textContent = "クリア";
     clearBtn.addEventListener("click", () => {
-      renderPendingChoiceUI({
-        title,
-        choiceType,
-        currentValue: "",
-        digits,
-        onChoose
-      });
+      renderPendingChoiceUI({ title, choiceType, currentValue: "", digits, onChoose });
     });
 
     attackLog.appendChild(keypad);
     attackLog.appendChild(okBtn);
     attackLog.appendChild(clearBtn);
-
     return;
   }
 
@@ -490,11 +417,9 @@ export function renderPendingChoiceUI({
   (choices || []).forEach((choice) => {
     const btn = document.createElement("button");
     btn.textContent = choice.label;
-
     btn.addEventListener("click", () => {
       onChoose(choice.value);
     });
-
     wrap.appendChild(btn);
   });
 
