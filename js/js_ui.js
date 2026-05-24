@@ -309,11 +309,22 @@ export function renderPlayerState2v2(team, container, label, handlers) {
   `;
 
   const teamModeBtn = container.querySelector(".teamModeBtn");
-  if (teamModeBtn) {
-    teamModeBtn.addEventListener("click", () => {
-      if (handlers.onToggleTeamMode) handlers.onToggleTeamMode();
-    });
-  }
+if (teamModeBtn) {
+  teamModeBtn.addEventListener("click", () => {
+    if (handlers.onToggleTeamMode) handlers.onToggleTeamMode();
+
+    const nextActiveUnitKey =
+      !isUnitDefeated(team.unit1)
+        ? "unit1"
+        : !isUnitDefeated(team.unit2)
+          ? "unit2"
+          : null;
+
+    if (nextActiveUnitKey && handlers.onSwitchActiveUnit) {
+      handlers.onSwitchActiveUnit(nextActiveUnitKey);
+    }
+  });
+}
 
   container.querySelectorAll(".switchUnitBtn").forEach((btn) => {
     btn.addEventListener("click", () => {
