@@ -90,6 +90,20 @@ import {
   modifyJeganEvadeAttempt,
   onJeganResolveChoice
 } from "./js_unit_rules_jegan_d_type.js";
+import {
+  getZudahDerivedState,
+  canUseZudahSpecial,
+  executeZudahSpecial,
+  onZudahTurnEnd,
+  onZudahBeforeSlot,
+  onZudahEnemyBeforeSlot,
+  onZudahAfterSlotResolved,
+  onZudahActionResolved,
+  onZudahDamaged,
+  modifyZudahTakenDamage,
+  modifyZudahEvadeAttempt,
+  onZudahResolveChoice
+} from "./js_unit_rules_zudah.js";
 
 //ボス機体//
 import { devilGundamRules } from "./js_unit_rules_devil_gundam.js";
@@ -296,6 +310,20 @@ export const unitRulesMap = {
   onTurnEnd: onUnicornTurnEnd,
   modifyTakenDamage: modifyUnicornTakenDamage,
   onDispelBoostState: onUnicornDispelBoostState
+},
+  zudah: {
+  getDerivedState: getZudahDerivedState,
+  canUseSpecial: canUseZudahSpecial,
+  executeSpecial: executeZudahSpecial,
+  onTurnEnd: onZudahTurnEnd,
+  onBeforeSlot: onZudahBeforeSlot,
+  onEnemyBeforeSlot: onZudahEnemyBeforeSlot,
+  onAfterSlotResolved: onZudahAfterSlotResolved,
+  onActionResolved: onZudahActionResolved,
+  onDamaged: onZudahDamaged,
+  modifyTakenDamage: modifyZudahTakenDamage,
+  modifyEvadeAttempt: modifyZudahEvadeAttempt,
+  onResolveChoice: onZudahResolveChoice
 },
 //CPU専用機体//
 cpu_gundam_mc: {
