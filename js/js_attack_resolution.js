@@ -133,12 +133,11 @@ export function createAttackResolution(ctx) {
     if (ctxAtk && typeof ctxAtk.enemyEvadeBefore !== "number") {
   ctxAtk.enemyEvadeBefore = Number(defender?.evade || 0);
 }
-    const currentAttack = ctx.getCurrentAttack();
-    const attack = currentAttack[index];
-    const damagePreview = attack ? attack.damage : 0;
+   const currentAttack = ctx.getCurrentAttack();
+const attack = currentAttack[index];
+const damagePreview = attack ? attack.damage : 0;
 
-    const hitResult = ctx.resolveTakeHit({
-    const currentTotalDamage = currentAttack.reduce((sum, atk) => {
+const currentTotalDamage = currentAttack.reduce((sum, atk) => {
   return sum + Math.max(0, Number(atk?.damage || 0));
 }, 0);
 
