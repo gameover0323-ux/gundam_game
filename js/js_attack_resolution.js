@@ -138,12 +138,26 @@ export function createAttackResolution(ctx) {
     const damagePreview = attack ? attack.damage : 0;
 
     const hitResult = ctx.resolveTakeHit({
-      attacker,
-      defender,
-      currentAttack,
-      attackIndex: index,
-      modifyTakenDamage: (d, a, atk, dmg) => ctx.executeUnitModifyTakenDamage(d, a, atk, dmg)
-    });
+    const currentTotalDamage = currentAttack.reduce((sum, atk) => {
+  return sum + Math.max(0, Number(atk?.damage || 0));
+}, 0);
+
+const hitResult = ctx.resolveTakeHit({
+  attacker,
+  defender,
+  currentAttack,
+  attackIndex: index,
+  modifyTakenDamage: (d, a, atk, dmg) => ctx.executeUnitModifyTakenDamage(d, a, atk, dmg, {
+    attackerPlayer,
+    defenderPlayer,
+    attacker,
+    defender,
+    currentAttack,
+    attackIndex: index,
+    currentAttackContext: ctxAtk,
+    currentTotalDamage
+  })
+});
 
     if (hitResult && hitResult.cancelled) {
       ctx.appendBattleNotice("攻撃無効");
