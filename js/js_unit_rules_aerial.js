@@ -157,6 +157,7 @@ export function onAerialBeforeSlot(state) {
 export function onAerialTurnEnd(state) {
   ensureAerialState(state);
   state.aerialGundbitLinkCountThisTurn = 0;
+  state.aerialCompositeShieldActive = false;
   return { redraw: false, message: null };
 }
 
