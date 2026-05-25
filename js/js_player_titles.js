@@ -273,7 +273,42 @@ export const DEFEAT_TITLE_RULES = [
       [50, "やめてよね"]
     ]
   }),
-
+...makeDefeatTitleRules({
+  category: "playable",
+  targetId: "exia",
+  prefix: "exia",
+  entries: [
+    [1, "剣"],
+    [5, "天使"],
+    [10, "武力介入"],
+    [15, "お前も"],
+    [20, "俺達が"],
+    [25, "GN"],
+    [30, "セブンソード"],
+    [35, "エクシア"],
+    [40, "アヴァランチ"],
+    [45, "TRANS-AM"],
+    [50, "俺がガンダムだ"]
+     ]
+}),
+...makeDefeatTitleRules({
+  category: "cpu",
+  targetId: "cpu_exia",
+  prefix: "cpu_exia",
+  entries: [
+    [1, "少年"],
+    [5, "マイスター"],
+    [10, "雪崩"],
+    [15, "リペア"],
+    [20, "ガンッッ"],
+    [25, "ダァァァム"],
+    [30, "ソレスタルビーイング"],
+    [35, "刹那"],
+    [40, "ソラン"],
+    [45, "クルジスのガキ"],
+    [50, "駆逐する"]
+  ]
+}),
   ...makeDefeatTitleRules({
     category: "playable",
     targetId: "jegan_d_type",
@@ -541,6 +576,8 @@ export function getTitleConditionText(titleId) {
     cpu_wing_gundam_zero: "ウイングガンダムゼロのCPU",
     strike_gundam: "ストライクガンダム",
     cpu_strike_gundam: "ストライクガンダムのCPU",
+    exia: "ガンダムエクシア",
+cpu_exia: "ガンダムエクシアのCPU",
     unicorn_gundam: "ユニコーンガンダム",
     cpu_unicorn_gundam: "ユニコーンガンダムのCPU",
     jegan_d_type: "ジェガンD型",
@@ -593,6 +630,8 @@ export const TITLE_GROUPS = [
     ["cpu_wing_gundam_zero", "CPUウイングガンダムゼロ撃破"],
     ["strike_gundam", "ストライクガンダム使用"],
     ["cpu_strike_gundam", "CPUストライクガンダム撃破"],
+    ["exia", "ガンダムエクシア使用"],
+["cpu_exia", "CPUガンダムエクシア撃破"],
     ["unicorn_gundam", "ユニコーンガンダム使用"],
     ["cpu_unicorn_gundam", "CPUユニコーンガンダム撃破"],
     ["jegan_d_type", "ジェガンD型使用"],
