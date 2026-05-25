@@ -213,8 +213,7 @@ export function modifyAerialTakenDamage(defender, attacker, attack, damage) {
   ensureAerialState(defender);
 
   if (defender.aerialCompositeShieldActive) {
-    defender.aerialCompositeShieldActive = false;
-    return { damage: 0, cancelled: true, message: "コンポジットガンビットシールド：攻撃無効" };
+  return { damage: 0, cancelled: true, message: "コンポジットガンビットシールド：攻撃無効" };
   }
 
   if (Number(defender.evade || 0) <= 0 && chance(0.5)) {
