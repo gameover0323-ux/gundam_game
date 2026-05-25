@@ -130,6 +130,9 @@ export function createAttackResolution(ctx) {
     const defenderPlayer = ctxAtk?.enemyPlayer || ctx.getOpponentPlayer(attackerPlayer);
     const attacker = ctx.getPlayerState(attackerPlayer);
     const defender = ctx.getCombatTargetState(defenderPlayer);
+    if (ctxAtk && typeof ctxAtk.enemyEvadeBefore !== "number") {
+  ctxAtk.enemyEvadeBefore = Number(defender?.evade || 0);
+}
     const currentAttack = ctx.getCurrentAttack();
     const attack = currentAttack[index];
     const damagePreview = attack ? attack.damage : 0;
@@ -188,7 +191,17 @@ export function createAttackResolution(ctx) {
       ctx.appendBattleNotice(`${defender.name}は撃墜された`);
     }
 
-    if (ctxAtk) ctxAtk.hitCount++;
+    if (ctxAtk) {
+  ctxAtk.hitCount++;
+  ctxAtk.damageDealt = Number(ctxAtk.damageDealt || 0) + Number(hitResult?.finalDamage || 0);
+  ctxAtk.enemyEvadeBefore = typeof ctxAtk.enemyEvadeBefore === "number"
+    ? ctxAtk.enemyEvadeBefore
+    : Number(defender?.evade || 0);
+  if (attacker) {
+    attacker.exiaTurnDamageDealt =
+      Number(attacker.exiaTurnDamageDealt || 0) + Number(hitResult?.finalDamage || 0);
+  }
+}
 
     const damagedResult = ctx.executeUnitOnDamaged(defender, attacker, {
       ownerPlayer: defenderPlayer,
