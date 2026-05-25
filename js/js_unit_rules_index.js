@@ -91,6 +91,21 @@ import {
   onUnicornDispelBoostState
 } from "./js_unit_rules_unicorn_gundam.js";
 import {
+  getAerialDerivedState,
+  canUseAerialSpecial,
+  executeAerialSpecial,
+  onAerialTurnEnd,
+  onAerialBeforeSlot,
+  onAerialEnemyBeforeSlot,
+  onAerialAfterSlotResolved,
+  onAerialActionResolved,
+  onAerialDamaged,
+  modifyAerialTakenDamage,
+  modifyAerialEvadeAttempt,
+  onAerialResolveChoice
+} from "./js_unit_rules_aerial.js";
+
+import {
   getJeganDerivedState,
   canUseJeganSpecial,
   executeJeganSpecial,
@@ -234,6 +249,19 @@ import {
   modifyCpuUnicornEvadeAttempt
 } from "./js_unit_rules_cpu_unicorn_gundam.js";
 import {
+  getCpuAerialDerivedState,
+  onCpuAerialBeforeSlot,
+  onCpuAerialEnemyBeforeSlot,
+  onCpuAerialAfterSlotResolved,
+  onCpuAerialActionResolved,
+  onCpuAerialDamaged,
+  onCpuAerialTurnEnd,
+  modifyCpuAerialTakenDamage,
+  modifyCpuAerialEvadeAttempt,
+  onCpuAerialResolveChoice
+} from "./js_unit_rules_cpu_aerial.js";
+
+import {
   getCpuJeganDerivedState,
   onCpuJeganBeforeSlot,
   onCpuJeganEnemyBeforeSlot,
@@ -364,6 +392,21 @@ export const unitRulesMap = {
   modifyTakenDamage: modifyUnicornTakenDamage,
   onDispelBoostState: onUnicornDispelBoostState
 },
+aerial: {
+  getDerivedState: getAerialDerivedState,
+  canUseSpecial: canUseAerialSpecial,
+  executeSpecial: executeAerialSpecial,
+  onTurnEnd: onAerialTurnEnd,
+  onBeforeSlot: onAerialBeforeSlot,
+  onEnemyBeforeSlot: onAerialEnemyBeforeSlot,
+  onAfterSlotResolved: onAerialAfterSlotResolved,
+  onActionResolved: onAerialActionResolved,
+  onDamaged: onAerialDamaged,
+  modifyTakenDamage: modifyAerialTakenDamage,
+  modifyEvadeAttempt: modifyAerialEvadeAttempt,
+  onResolveChoice: onAerialResolveChoice
+},
+  
   zudah: {
   getDerivedState: getZudahDerivedState,
   canUseSpecial: canUseZudahSpecial,
@@ -455,6 +498,19 @@ cpu_unicorn_gundam: {
   modifyTakenDamage: modifyCpuUnicornTakenDamage,
   modifyEvadeAttempt: modifyCpuUnicornEvadeAttempt
 },
+cpu_aerial: {
+  getDerivedState: getCpuAerialDerivedState,
+  onBeforeSlot: onCpuAerialBeforeSlot,
+  onEnemyBeforeSlot: onCpuAerialEnemyBeforeSlot,
+  onAfterSlotResolved: onCpuAerialAfterSlotResolved,
+  onActionResolved: onCpuAerialActionResolved,
+  onDamaged: onCpuAerialDamaged,
+  onTurnEnd: onCpuAerialTurnEnd,
+  modifyTakenDamage: modifyCpuAerialTakenDamage,
+  modifyEvadeAttempt: modifyCpuAerialEvadeAttempt,
+  onResolveChoice: onCpuAerialResolveChoice
+},
+  
 cpu_jegan_d_type: {
     getDerivedState: getCpuJeganDerivedState,
     onBeforeSlot: onCpuJeganBeforeSlot,
