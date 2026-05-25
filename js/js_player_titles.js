@@ -311,6 +311,42 @@ export const DEFEAT_TITLE_RULES = [
     ]
   }),
   ...makeDefeatTitleRules({
+  category: "playable",
+  targetId: "zudah",
+  prefix: "zudah",
+  entries: [
+    [1, "試作機"],
+    [5, "自爆"],
+    [10, "速いぞ"],
+    [15, "オーバーヒート"],
+    [20, "エンジンカット"],
+    [25, "ツィマッド社"],
+    [30, "先陣"],
+    [35, "ヅダ"],
+    [40, "暴発"],
+    [45, "助けてください"],
+    [50, "二階級特進"]
+  ]
+}),
+...makeDefeatTitleRules({
+  category: "cpu",
+  targetId: "cpu_zudah",
+  prefix: "cpu_zudah",
+  entries: [
+    [1, "欠陥品"],
+    [5, "セーフティ"],
+    [10, "試験機"],
+    [15, "ジャン"],
+    [20, "リュック"],
+    [25, "デュバル"],
+    [30, "加速"],
+    [35, "ゴーストファイター"],
+    [40, "空中分解"],
+    [45, "土星エンジン"],
+    [50, "MSIGLOO"]
+  ]
+}),
+  ...makeDefeatTitleRules({
     category: "cpu",
     targetId: "cpu_zaku_ii_soldier",
     prefix: "cpu_zaku_ii_soldier",
@@ -509,6 +545,8 @@ export function getTitleConditionText(titleId) {
     cpu_unicorn_gundam: "ユニコーンガンダムのCPU",
     jegan_d_type: "ジェガンD型",
     cpu_jegan_d_type: "ジェガンD型のCPU",
+    zudah: "ヅダ",
+cpu_zudah: "ヅダのCPU",
     cpu_zaku_ii_soldier: "ザクⅡ(一般兵)",
     cpu_gouf: "グフ",
     cpu_mobile_ginn: "モビルジン",
@@ -559,6 +597,8 @@ export const TITLE_GROUPS = [
     ["cpu_unicorn_gundam", "CPUユニコーンガンダム撃破"],
     ["jegan_d_type", "ジェガンD型使用"],
     ["cpu_jegan_d_type", "CPUジェガンD型撃破"],
+    ["zudah", "ヅダ使用"],
+["cpu_zudah", "CPUヅダ撃破"],
     ["cpu_zaku_ii_soldier", "ザクⅡ(一般兵)撃破"],
     ["cpu_gouf", "グフ撃破"],
     ["cpu_mobile_ginn", "モビルジン撃破"],
