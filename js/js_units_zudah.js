@@ -1,0 +1,89 @@
+export const zudah = {
+  id: "zudah",
+  name: "ヅダ",
+  defaultFormId: "base",
+  forms: {
+    base: {
+      name: "ヅダ",
+      hp: 500,
+      evadeMax: 6,
+      rollableSlotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"],
+      ownedSlotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"],
+      slots: {
+        slot1: {
+          label: "ザクマシンガン 10ダメージ×4回",
+          desc: "10ダメージ×4回。射撃",
+          effect: { type: "attack", attackType: "shoot", damage: 10, count: 4 }
+        },
+        slot2: {
+          label: "ヒートホーク 50ダメージ",
+          desc: "50ダメージ。格闘",
+          effect: { type: "attack", attackType: "melee", damage: 50, count: 1 }
+        },
+        slot3: {
+          label: "回避 +2",
+          desc: "回避ストック+2",
+          effect: { type: "evade", amount: 2 }
+        },
+        slot4: {
+          label: "対艦砲 90ダメージ",
+          desc: "90ダメージ。射撃",
+          effect: { type: "attack", attackType: "shoot", damage: 90, count: 1 }
+        },
+        slot5: {
+          label: "加速",
+          desc: "次の行動ターンから行動数+1、回避ストック最大値と現在の回避所持数を倍加し、HP60回復。5回重ね掛けで自爆する。",
+          effect: { type: "custom", customType: "zudah_accel" }
+        },
+        slot6: {
+          label: "シュツルムファウスト 30ダメージ×2回",
+          desc: "30ダメージ×2回。射撃、軽減不可",
+          effect: {
+            type: "attack",
+            attackType: "shoot",
+            damage: 30,
+            count: 2,
+            ignoreReduction: true
+          }
+        }
+      },
+      specials: [
+        {
+          name: "エンジンカット",
+          effectType: "zudah_engine_cut",
+          timing: "self",
+          desc: "行動回数を1回に戻し、加速の重ね掛け状態を解除する。重ね掛け数×10のHPを回復する。加速1回以下では使用不可。",
+          actionType: "instant"
+        },
+        {
+          name: "シールド",
+          effectType: "zudah_shield",
+          timing: "reaction",
+          desc: "ゲーム中3回まで、攻撃ダメージを半減する。",
+          actionType: "instant"
+        },
+        {
+          name: "突撃",
+          effectType: "zudah_charge",
+          timing: "self",
+          desc: "回避所持数を5消費して、現在ターンの行動回数を1追加する。",
+          actionType: "instant"
+        },
+        {
+          name: "翻弄",
+          effectType: "zudah_feint",
+          timing: "self",
+          desc: "行動回数を1消費して、回避所持数を1増やす。",
+          actionType: "instant"
+        },
+        {
+          name: "特性：超回避",
+          effectType: "zudah_super_evade",
+          timing: "auto",
+          desc: "必中攻撃を回避2消費で回避可能。",
+          actionType: "auto"
+        }
+      ]
+    }
+  }
+};
