@@ -3,6 +3,7 @@ import { z_gundam } from "./js_units_z_gundam.js";
 import { shining_gundam } from "./js_units_shining_gundam.js";
 import { wing_zero } from "./js_units_wing_zero.js";
 import { strike_gundam } from "./js_units_strike_gundam.js";
+import { exia } from "./js_units_exia.js";
 import { unicorn_gundam } from "./js_units_unicorn_gundam.js";
 import { jegan_d_type } from "./js_units_jegan_d_type.js";
 import { zudah } from "./js_units_zudah.js";
@@ -34,6 +35,7 @@ export const unitList = [
   shining_gundam,
   wing_zero,
   strike_gundam,
+  exia,
   unicorn_gundam,
   jegan_d_type,
   zudah
