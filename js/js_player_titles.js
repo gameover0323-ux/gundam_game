@@ -310,6 +310,42 @@ export const DEFEAT_TITLE_RULES = [
   ]
 }),
   ...makeDefeatTitleRules({
+  category: "playable",
+  targetId: "aerial",
+  prefix: "aerial",
+  entries: [
+    [1, "希望の光"],
+    [5, "未来を目指す"],
+    [10, "乗って"],
+    [15, "安心"],
+    [20, "動いて"],
+    [25, "安全"],
+    [30, "飛べる"],
+    [35, "踊れる"],
+    [40, "エアリアル"],
+    [45, "ホルダー"],
+    [50, "エリクト"]
+  ]
+}),
+...makeDefeatTitleRules({
+  category: "cpu",
+  targetId: "cpu_aerial",
+  prefix: "cpu_aerial",
+  entries: [
+    [1, "祝福"],
+    [5, "家族"],
+    [10, "自慢の娘"],
+    [15, "逃げたらひとつ"],
+    [20, "進めばふたつ"],
+    [25, "エスカッシャン"],
+    [30, "スレッタ"],
+    [35, "ミオリネ"],
+    [40, "マーキュリー"],
+    [45, "水星"],
+    [50, "魔女"]
+  ]
+}),
+  ...makeDefeatTitleRules({
     category: "playable",
     targetId: "jegan_d_type",
     prefix: "jegan_d_type",
@@ -580,6 +616,8 @@ export function getTitleConditionText(titleId) {
 cpu_exia: "ガンダムエクシアのCPU",
     unicorn_gundam: "ユニコーンガンダム",
     cpu_unicorn_gundam: "ユニコーンガンダムのCPU",
+    aerial: "ガンダム・エアリアル",
+cpu_aerial: "ガンダム・エアリアルのCPU",
     jegan_d_type: "ジェガンD型",
     cpu_jegan_d_type: "ジェガンD型のCPU",
     zudah: "ヅダ",
@@ -634,6 +672,8 @@ export const TITLE_GROUPS = [
 ["cpu_exia", "CPUガンダムエクシア撃破"],
     ["unicorn_gundam", "ユニコーンガンダム使用"],
     ["cpu_unicorn_gundam", "CPUユニコーンガンダム撃破"],
+    ["aerial", "ガンダム・エアリアル使用"],
+["cpu_aerial", "CPUガンダム・エアリアル撃破"],
     ["jegan_d_type", "ジェガンD型使用"],
     ["cpu_jegan_d_type", "CPUジェガンD型撃破"],
     ["zudah", "ヅダ使用"],
