@@ -219,6 +219,19 @@ import {
   onCpuJeganResolveChoice
 } from "./js_unit_rules_cpu_jegan_d_type.js";
 import {
+  getCpuZudahDerivedState,
+  onCpuZudahBeforeSlot,
+  onCpuZudahEnemyBeforeSlot,
+  onCpuZudahAfterSlotResolved,
+  onCpuZudahActionResolved,
+  onCpuZudahDamaged,
+  onCpuZudahTurnEnd,
+  modifyCpuZudahTakenDamage,
+  modifyCpuZudahEvadeAttempt,
+  onCpuZudahResolveChoice
+} from "./js_unit_rules_cpu_zudah.js";
+
+import {
   getDaisyDerivedState,
   canUseDaisySpecial,
   executeDaisySpecial,
@@ -401,6 +414,19 @@ cpu_jegan_d_type: {
     modifyEvadeAttempt: modifyCpuJeganEvadeAttempt,
     onResolveChoice: onCpuJeganResolveChoice
   },
+cpu_zudah: {
+  getDerivedState: getCpuZudahDerivedState,
+  onBeforeSlot: onCpuZudahBeforeSlot,
+  onEnemyBeforeSlot: onCpuZudahEnemyBeforeSlot,
+  onAfterSlotResolved: onCpuZudahAfterSlotResolved,
+  onActionResolved: onCpuZudahActionResolved,
+  onDamaged: onCpuZudahDamaged,
+  onTurnEnd: onCpuZudahTurnEnd,
+  modifyTakenDamage: modifyCpuZudahTakenDamage,
+  modifyEvadeAttempt: modifyCpuZudahEvadeAttempt,
+  onResolveChoice: onCpuZudahResolveChoice
+},
+
   
 jegan_d_type: {
   getDerivedState: getJeganDerivedState,
