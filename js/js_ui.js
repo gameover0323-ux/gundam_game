@@ -155,7 +155,7 @@ export function renderPlayerState(state, container, label, handlers) {
 
   container.innerHTML = `
     <h3>${label}</h3>
-    <div ${nameStyle}>${state.displayName || state.name}${defeated ? " [撃墜]" : ""}</div>
+    <div ${nameStyle}>${state.name}${state.displaySuffix || ""}${defeated ? " [撃墜]" : ""}</div>
     <div>${getHpLineHtml(state)}</div>
     <div>${getEvadeLineHtml(state)}</div>
     ${statusHtml}
@@ -296,7 +296,7 @@ export function renderPlayerState2v2(team, container, label, handlers) {
 
     ${teamStatusHtml}
 
-    <div ${nameStyle}>${activeState.displayName || activeState.name}${activeDefeated ? " [撃墜]" : ""}</div>
+    <div ${nameStyle}>${activeState.name}${activeState.displaySuffix || ""}${activeDefeated ? " [撃墜]" : ""}</div>
     <div>${getHpLineHtml(activeState, team.mode === "unified")}</div>
     <div>${getEvadeLineHtml(activeState, team.mode === "unified")}</div>
     ${statusHtml}
