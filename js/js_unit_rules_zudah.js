@@ -35,9 +35,30 @@ export function canUseZudahSpecial(state, specialKey) {
   if (!special) return { allowed: false, message: "特殊行動データが見つからない" };
 
   if (special.effectType === "zudah_engine_cut") {
+    const accelOk = state.zudahAccelStack >= 2;
+
+    const turnStartOnly =
+      context?.phase === "turnStart" ||
+      context?.timing === "turnStart" ||
+      state?.isTurnStartPhase === true;
+
+    if (!accelOk) {
+      return {
+        allowed: false,
+        message: "加速2回以上で使用可能"
+      };
+    }
+
+    if (!turnStartOnly) {
+      return {
+        allowed: false,
+        message: "ターン開始時のみ使用可能"
+      };
+    }
+
     return {
-      allowed: state.zudahAccelStack >= 2,
-      message: state.zudahAccelStack >= 2 ? null : "加速2回以上で使用可能"
+      allowed: true,
+      message: null
     };
   }
 
