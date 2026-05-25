@@ -66,6 +66,20 @@ import {
   modifyStrikeEvadeAttempt,
   onStrikeResolveChoice
 } from "./js_unit_rules_strike_gundam.js";
+
+import {
+  getExiaDerivedState,
+  canUseExiaSpecial,
+  executeExiaSpecial,
+  onExiaTurnEnd,
+  onExiaBeforeSlot,
+  onExiaAfterSlotResolved,
+  onExiaActionResolved,
+  onExiaDamaged,
+  modifyExiaTakenDamage,
+  modifyExiaEvadeAttempt,
+  onExiaResolveChoice
+} from "./js_unit_rules_exia.js";
 import {
   getUnicornDerivedState,
   canUseUnicornSpecial,
@@ -314,6 +328,19 @@ export const unitRulesMap = {
     modifyEvadeAttempt: modifyStrikeEvadeAttempt,
     onResolveChoice: onStrikeResolveChoice
   },
+  exia: {
+  getDerivedState: getExiaDerivedState,
+  canUseSpecial: canUseExiaSpecial,
+  executeSpecial: executeExiaSpecial,
+  onTurnEnd: onExiaTurnEnd,
+  onBeforeSlot: onExiaBeforeSlot,
+  onAfterSlotResolved: onExiaAfterSlotResolved,
+  onActionResolved: onExiaActionResolved,
+  onDamaged: onExiaDamaged,
+  modifyTakenDamage: modifyExiaTakenDamage,
+  modifyEvadeAttempt: modifyExiaEvadeAttempt,
+  onResolveChoice: onExiaResolveChoice
+},
   unicorn_gundam: {
   getDerivedState: getUnicornDerivedState,
   canUseSpecial: canUseUnicornSpecial,
