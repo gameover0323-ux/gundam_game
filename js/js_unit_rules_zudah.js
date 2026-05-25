@@ -28,7 +28,7 @@ export function getZudahDerivedState(state) {
   return { status, slots: {}, specials: {} };
 }
 
-export function canUseZudahSpecial(state, specialKey) {
+export function canUseZudahSpecial(state, specialKey, context = {}) {
   ensureZudahState(state);
 
   const special = state.specials?.[specialKey];
@@ -90,13 +90,25 @@ export function canUseZudahSpecial(state, specialKey) {
   return { allowed: true, message: null };
 }
 
-export function executeZudahSpecial(state, specialKey) {
+export function executeZudahSpecial(state, specialKey, context = {}) {
   ensureZudahState(state);
 
   const special = state.specials?.[specialKey];
   if (!special) return { handled: true, redraw: false, message: "特殊行動データが見つからない" };
 
   if (special.effectType === "zudah_engine_cut") {
+    const turnStartOnly =
+      context?.phase === "turnStart" ||
+      context?.timing === "turnStart" ||
+      state?.isTurnStartPhase === true;
+
+    if (!turnStartOnly) {
+      return {
+        handled: true,
+        redraw: false,
+        message: "ターン開始時のみ使用可能"
+      };
+    }
     if (state.zudahAccelStack < 2) {
       return { handled: true, redraw: false, message: "加速2回以上で使用可能" };
     }
