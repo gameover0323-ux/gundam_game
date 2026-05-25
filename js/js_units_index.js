@@ -5,7 +5,7 @@ import { wing_zero } from "./js_units_wing_zero.js";
 import { strike_gundam } from "./js_units_strike_gundam.js";
 import { unicorn_gundam } from "./js_units_unicorn_gundam.js";
 import { jegan_d_type } from "./js_units_jegan_d_type.js";
-
+import { zudah } from "./js_units_zudah.js";
 //ボス機体//
 import { devil_gundam } from "./js_units_devil_gundam.js";
 import { extreme_gundam } from "./js_units_extreme_gundam.js";
@@ -34,7 +34,8 @@ export const unitList = [
   wing_zero,
   strike_gundam,
   unicorn_gundam,
-  jegan_d_type
+  jegan_d_type,
+  zudah
 ];
 
 export const bossList = [
