@@ -211,6 +211,19 @@ import {
   modifyCpuStrikeEvadeAttempt,
   getCpuStrikeExtraWeaponResult
 } from "./js_unit_rules_cpu_strike_gundam.js";
+
+import {
+  getCpuExiaDerivedState,
+  onCpuExiaBeforeSlot,
+  onCpuExiaEnemyBeforeSlot,
+  onCpuExiaAfterSlotResolved,
+  onCpuExiaActionResolved,
+  onCpuExiaDamaged,
+  onCpuExiaTurnEnd,
+  modifyCpuExiaTakenDamage,
+  modifyCpuExiaEvadeAttempt,
+  onCpuExiaResolveChoice
+} from "./js_unit_rules_cpu_exia.js";
 import {
   getCpuUnicornDerivedState,
   onCpuUnicornBeforeSlot,
@@ -419,6 +432,19 @@ cpu_strike_gundam: {
   modifyTakenDamage: modifyCpuStrikeTakenDamage,
   modifyEvadeAttempt: modifyCpuStrikeEvadeAttempt,
   getExtraWeaponResult: getCpuStrikeExtraWeaponResult
+},
+
+  cpu_exia: {
+  getDerivedState: getCpuExiaDerivedState,
+  onBeforeSlot: onCpuExiaBeforeSlot,
+  onEnemyBeforeSlot: onCpuExiaEnemyBeforeSlot,
+  onAfterSlotResolved: onCpuExiaAfterSlotResolved,
+  onActionResolved: onCpuExiaActionResolved,
+  onDamaged: onCpuExiaDamaged,
+  onTurnEnd: onCpuExiaTurnEnd,
+  modifyTakenDamage: modifyCpuExiaTakenDamage,
+  modifyEvadeAttempt: modifyCpuExiaEvadeAttempt,
+  onResolveChoice: onCpuExiaResolveChoice
 },
 cpu_unicorn_gundam: {
   getDerivedState: getCpuUnicornDerivedState,
