@@ -271,10 +271,10 @@ return afterResult;
 
     if (!actor) return false;
 
-    const slot = slotOverride || getSlotByKey(actor, slotKey);
-    if (!slot) return false;
+    let slot = slotOverride || getSlotByKey(actor, slotKey);
+if (!slot) return false;
 
-    const slotNumber = getSlotNumberFromKey(slotKey);
+let slotNumber = getSlotNumberFromKey(slotKey);
 
     actor.lastSlotKey = slotKey;
 
@@ -296,10 +296,16 @@ const beforeResult = executeUnitBeforeSlot(actor, slotNumber, {
       ctx.appendBattleNotice(beforeResult.message);
     }
     if (beforeResult.cancelSlot) {
-      ctx.redrawBattleBoards();
-      ctx.renderAttackLogText(beforeResult.message || "行動不能");
-      return false;
-    }
+  ctx.redrawBattleBoards();
+  ctx.renderAttackLogText(beforeResult.message || "行動不能");
+  return false;
+}
+
+if (beforeResult.replaceSlotAction) {
+  slotKey = beforeResult.replaceSlotAction.slotKey || slotKey;
+  slot = beforeResult.replaceSlotAction.slotData || slot;
+  slotNumber = getSlotNumberFromKey(slotKey);
+}
     
 
     if (defender) {
@@ -345,12 +351,12 @@ function collectCpuSlotAction(ownerPlayer, slotKey, slotOverride = null, actionI
       return null;
     }
 
-    const slot = slotOverride || getSlotByKey(actor, slotKey);
-    if (!slot) {
-      return null;
-    }
+    let slot = slotOverride || getSlotByKey(actor, slotKey);
+if (!slot) {
+  return null;
+}
 
-    const slotNumber = getSlotNumberFromKey(slotKey);
+let slotNumber = getSlotNumberFromKey(slotKey);
     const sourceLabel = `${actionIndex}回目スロット行動：${slotNumber}.${slot.label}`;
 
     actor.lastSlotKey = slotKey;
@@ -377,14 +383,20 @@ function collectCpuSlotAction(ownerPlayer, slotKey, slotOverride = null, actionI
       ctx.redrawBattleBoards();
     }
 
-    if (beforeResult.cancelSlot) {
-      return {
-        ok: false,
-        attacks: [],
-        notices,
-        message: beforeResult.message || `${sourceLabel}：行動不能`
-      };
-    }
+if (beforeResult.cancelSlot) {
+  return {
+    ok: false,
+    attacks: [],
+    notices,
+    message: beforeResult.message || `${sourceLabel}：行動不能`
+  };
+}
+
+if (beforeResult.replaceSlotAction) {
+  slotKey = beforeResult.replaceSlotAction.slotKey || slotKey;
+  slot = beforeResult.replaceSlotAction.slotData || slot;
+  slotNumber = getSlotNumberFromKey(slotKey);
+}
 
     if (defender) {
       const enemyBeforeResult = executeUnitEnemyBeforeSlot(defender, slotNumber, {
