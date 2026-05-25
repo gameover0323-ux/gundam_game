@@ -822,19 +822,13 @@ export function executeUnitOnDamaged(defender, attacker, context = {}) {
   return { redraw: false, message: null };
 }
 
-export function executeUnitModifyTakenDamage(defender, attacker, attack, damage) {
+export function executeUnitModifyTakenDamage(defender, attacker, attack, damage, context = {}) {
   const rules = unitRulesMap[defender.unitId];
-
   if (rules && rules.modifyTakenDamage) {
-    return rules.modifyTakenDamage(defender, attacker, attack, damage);
+    return rules.modifyTakenDamage(defender, attacker, attack, damage, context);
   }
-
-  return {
-    damage,
-    message: null
-  };
+  return { damage, message: null };
 }
-
 export function addPendingAttack(state, pendingAttack) {
   if (!state) return;
   if (!Array.isArray(state.pendingAttacks)) state.pendingAttacks = [];
