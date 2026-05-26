@@ -309,6 +309,43 @@ export const DEFEAT_TITLE_RULES = [
     [50, "駆逐する"]
   ]
 }),
+...makeDefeatTitleRules({
+  category: "playable",
+  targetId: "barbatos",
+  prefix: "barbatos",
+  entries: [
+    [1, "メイス"],
+    [5, "レンチ"],
+    [10, "阿頼耶識"],
+    [15, "鉄華団"],
+    [20, "ナノラミネートアーマー"],
+    [25, "バルバトス"],
+    [30, "第4形態"],
+    [35, "第6形態"],
+    [40, "太刀"],
+    [45, "鉄血"],
+    [50, "オルフェンズ"]
+  ]
+}),
+...makeDefeatTitleRules({
+  category: "cpu",
+  targetId: "cpu_barbatos",
+  prefix: "cpu_barbatos",
+  entries: [
+    [1, "少年兵"],
+    [5, "叛逆"],
+    [10, "厄祭戦"],
+    [15, "三日月"],
+    [20, "CGS"],
+    [25, "三番組"],
+    [30, "クーデリア"],
+    [35, "アトラ"],
+    [40, "もっと寄越せ"],
+    [45, "次は何をすればいい"],
+    [50, "オルガ"]
+  ]
+}),
+  
   ...makeDefeatTitleRules({
   category: "playable",
   targetId: "aerial",
@@ -616,6 +653,8 @@ export function getTitleConditionText(titleId) {
 cpu_exia: "ガンダムエクシアのCPU",
     unicorn_gundam: "ユニコーンガンダム",
     cpu_unicorn_gundam: "ユニコーンガンダムのCPU",
+ barbatos: "ガンダム・バルバトス",
+cpu_barbatos: "ガンダム・バルバトスのCPU",
     aerial: "ガンダム・エアリアル",
 cpu_aerial: "ガンダム・エアリアルのCPU",
     jegan_d_type: "ジェガンD型",
@@ -672,6 +711,8 @@ export const TITLE_GROUPS = [
 ["cpu_exia", "CPUガンダムエクシア撃破"],
     ["unicorn_gundam", "ユニコーンガンダム使用"],
     ["cpu_unicorn_gundam", "CPUユニコーンガンダム撃破"],
+    ["barbatos", "ガンダム・バルバトス使用"],
+["cpu_barbatos", "CPUガンダム・バルバトス撃破"],
     ["aerial", "ガンダム・エアリアル使用"],
 ["cpu_aerial", "CPUガンダム・エアリアル撃破"],
     ["jegan_d_type", "ジェガンD型使用"],
