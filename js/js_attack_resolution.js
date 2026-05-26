@@ -16,7 +16,35 @@ export function createAttackResolution(ctx) {
     }
     return false;
   }
+function getAttackTypeFromAttack(attack) {
+    return attack?.type || attack?.attackType || null;
+  }
 
+  function recordResolvedAttack(context, attack) {
+    if (!context || !attack) return;
+
+    if (!Array.isArray(context.resolvedAttacks)) {
+      context.resolvedAttacks = [];
+    }
+
+    context.resolvedAttacks.push({ ...attack });
+  }
+
+  function rememberLastEnemyAttackType(defender, context) {
+    if (!defender || !context) return;
+
+    const attacks = Array.isArray(context.resolvedAttacks)
+      ? context.resolvedAttacks
+      : [];
+
+    const firstAttackType = attacks
+      .map(getAttackTypeFromAttack)
+      .find(type => type === "shoot" || type === "melee");
+
+    if (!firstAttackType) return;
+
+    defender.barbatosLastEnemyAttackType = firstAttackType;
+  }
   function finishCurrentAttackResolution() {
     const currentAttackContexts = ctx.getCurrentAttackContexts();
 
@@ -31,9 +59,10 @@ export function createAttackResolution(ctx) {
 
         const resolvedAttackSnapshot = ctx.getCurrentAttack ? [...ctx.getCurrentAttack()] : [];
 
+        rememberLastEnemyAttackType(defender, context);
+
         const actionResult = ctx.executeUnitActionResolved(attacker, defender, {
           ...context,
-          resolvedAttacks: resolvedAttackSnapshot,
           allEvaded:
             context.totalCount > 0 &&
             context.hitCount === 0 &&
@@ -87,9 +116,10 @@ export function createAttackResolution(ctx) {
 
     const resolvedAttackSnapshot = ctx.getCurrentAttack ? [...ctx.getCurrentAttack()] : [];
 
+    rememberLastEnemyAttackType(defender, context);
+
     const actionResult = ctx.executeUnitActionResolved(attacker, defender, {
       ...context,
-      resolvedAttacks: resolvedAttackSnapshot,
       allEvaded:
         context.totalCount > 0 &&
         context.hitCount === 0 &&
@@ -141,7 +171,7 @@ export function createAttackResolution(ctx) {
    const currentAttack = ctx.getCurrentAttack();
 const attack = currentAttack[index];
 const damagePreview = attack ? attack.damage : 0;
-
+recordResolvedAttack(ctxAtk, attack);
 const currentTotalDamage = currentAttack.reduce((sum, atk) => {
   return sum + Math.max(0, Number(atk?.damage || 0));
 }, 0);
@@ -255,7 +285,7 @@ const hitResult = ctx.resolveTakeHit({
     const defender = ctx.getCombatTargetState(defenderPlayer);
     const currentAttack = ctx.getCurrentAttack();
     const attack = currentAttack[index];
-
+recordResolvedAttack(ctxAtk, attack);
     const customEvade = ctx.executeUnitModifyEvadeAttempt(defender, attacker, attack, {
       attacker,
       defender,
