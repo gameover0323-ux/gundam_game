@@ -29,14 +29,16 @@ export function createAttackResolution(ctx) {
         const attacker = context.attacker;
         const defender = ctx.getCombatTargetState(context.enemyPlayer);
 
+        const resolvedAttackSnapshot = ctx.getCurrentAttack ? [...ctx.getCurrentAttack()] : [];
+
         const actionResult = ctx.executeUnitActionResolved(attacker, defender, {
           ...context,
+          resolvedAttacks: resolvedAttackSnapshot,
           allEvaded:
             context.totalCount > 0 &&
             context.hitCount === 0 &&
             context.evadeCount === context.totalCount
         });
-
         if (actionResult.message) {
           ctx.appendBattleNotice(actionResult.message);
         }
@@ -83,8 +85,11 @@ export function createAttackResolution(ctx) {
 
     ctx.setCurrentAttackContext(null);
 
+    const resolvedAttackSnapshot = ctx.getCurrentAttack ? [...ctx.getCurrentAttack()] : [];
+
     const actionResult = ctx.executeUnitActionResolved(attacker, defender, {
       ...context,
+      resolvedAttacks: resolvedAttackSnapshot,
       allEvaded:
         context.totalCount > 0 &&
         context.hitCount === 0 &&
