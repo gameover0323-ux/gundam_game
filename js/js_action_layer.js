@@ -899,15 +899,49 @@ if (unitResult.startSlotAction) {
   return;
 }
 
-      if (unitResult.appendAttacks && unitResult.appendAttacks.length > 0) {
-        currentAttack.push(...unitResult.appendAttacks);
+     if (unitResult.appendAttacks && unitResult.appendAttacks.length > 0) {
+        const hasActiveAttack =
+          Array.isArray(currentAttack) &&
+          currentAttack.length > 0 &&
+          currentAttackContext;
 
-        if (currentAttackContext) {
+        if (hasActiveAttack) {
+          currentAttack.push(...unitResult.appendAttacks);
+
           currentAttackContext.totalCount += unitResult.appendAttacks.length;
+
+          ctx.setCurrentAttack(currentAttack);
+          ctx.setCurrentAttackContext(currentAttackContext);
+          ctx.redrawBattleBoards();
+
+          if (unitResult.message) {
+            ctx.appendBattleNotice(unitResult.message);
+          }
+
+          ctx.renderAttackChoices();
+          return;
         }
 
-        ctx.setCurrentAttack(currentAttack);
-        ctx.setCurrentAttackContext(currentAttackContext);
+        const enemyPlayer = ctx.getOpponentPlayer(ownerPlayer);
+
+        ctx.setCurrentAction(
+          `${actor.name} の特殊追撃`,
+          unitResult.appendAttackLabel || unitResult.message || special.name
+        );
+
+        ctx.setCurrentAttack(unitResult.appendAttacks);
+        ctx.setCurrentAttackContext({
+          ownerPlayer,
+          enemyPlayer,
+          slotKey: null,
+          slotNumber: null,
+          slotLabel: unitResult.appendAttackLabel || special.name,
+          slotDesc: unitResult.appendSlotDesc || special.desc || "",
+          totalCount: unitResult.appendAttacks.length,
+          hitCount: 0,
+          evadeCount: 0,
+          appendedFromSpecial: special.name
+        });
 
         ctx.redrawBattleBoards();
 
@@ -952,7 +986,6 @@ if (unitResult.startSlotAction) {
       return;
     }
   }
-
 
 
 function resolvePendingChoice(selectedValue) {
