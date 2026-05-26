@@ -14,6 +14,7 @@ import { resolveSlotEffect } from "./js_slot_effects.js";
 function ensureBarbatosState(state) {
   if (!state) return;
   if (typeof state.barbatosSkipNextTurn !== "boolean") state.barbatosSkipNextTurn = false;
+  if (typeof state.barbatosAlayaCostResolving !== "boolean") state.barbatosAlayaCostResolving = false;
   if (typeof state.barbatosMaceExReady !== "boolean") state.barbatosMaceExReady = false;
   if (typeof state.barbatosIaidoStock !== "number") state.barbatosIaidoStock = 0;
   if (typeof state.barbatosIaidoPendingNegate !== "boolean") state.barbatosIaidoPendingNegate = false;
@@ -301,6 +302,10 @@ export function onBarbatosBeforeSlot(state, rolledSlotNumber, context = {}) {
   ensureBarbatosState(state);
 
   if (state.barbatosSkipNextTurn) {
+    if (state.barbatosAlayaCostResolving && context.isForcedSlotAction) {
+      return { redraw: false, message: null };
+    }
+
     state.barbatosSkipNextTurn = false;
     return { redraw: true, cancelSlot: true, message: `${state.name} は行動不能` };
   }
@@ -344,6 +349,11 @@ export function onBarbatosEnemyBeforeSlot(state, rolledSlotNumber, context = {})
 
 export function onBarbatosAfterSlotResolved(state, slotNumber, payload = {}) {
   ensureBarbatosState(state);
+
+  if (state.barbatosAlayaCostResolving) {
+    state.barbatosAlayaCostResolving = false;
+  }
+
   const resolveResult = payload.resolveResult || payload;
   const slot = payload.slot || state.slots?.[`slot${slotNumber}`];
   const customEffectId = resolveResult.customEffectId;
@@ -513,6 +523,7 @@ export function onBarbatosResolveChoice(state, pendingChoice, selectedValue, con
 
     state.hp -= 50;
     state.barbatosSkipNextTurn = true;
+    state.barbatosAlayaCostResolving = true;
 
     return {
       handled: true,
