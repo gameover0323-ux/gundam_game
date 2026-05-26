@@ -5,6 +5,7 @@ import { wing_zero } from "./js_units_wing_zero.js";
 import { strike_gundam } from "./js_units_strike_gundam.js";
 import { exia } from "./js_units_exia.js";
 import { unicorn_gundam } from "./js_units_unicorn_gundam.js";
+import { barbatos } from "./js_units_barbatos.js";
 import { aerial } from "./js_units_aerial.js";
 import { jegan_d_type } from "./js_units_jegan_d_type.js";
 import { zudah } from "./js_units_zudah.js";
@@ -25,6 +26,7 @@ import { cpu_wing_zero } from "./js_units_cpu_wing_zero.js";
 import { cpu_strike_gundam } from "./js_units_cpu_strike_gundam.js";
 import { cpu_exia } from "./js_units_cpu_exia.js";
 import { cpu_unicorn_gundam } from "./js_units_cpu_unicorn_gundam.js";
+import { cpu_barbatos } from "./js_units_cpu_barbatos.js";
 import { cpu_aerial } from "./js_units_cpu_aerial.js";
 import { cpu_jegan_d_type } from "./js_units_cpu_jegan_d_type.js";
 import { cpu_zudah } from "./js_units_cpu_zudah.js";
@@ -40,6 +42,7 @@ export const unitList = [
   strike_gundam,
   exia,
   unicorn_gundam,
+  barbatos,
   aerial,
   jegan_d_type,
   zudah
@@ -58,6 +61,7 @@ export const cpuList = [
   cpu_strike_gundam,
   cpu_exia,
   cpu_unicorn_gundam,
+  cpu_barbatos,
   cpu_aerial,
   cpu_jegan_d_type,
   cpu_zudah
