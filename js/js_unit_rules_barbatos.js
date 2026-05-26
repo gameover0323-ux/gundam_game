@@ -23,6 +23,7 @@ function ensureBarbatosState(state) {
   if (typeof state.barbatosExtraArmorActive !== "boolean") state.barbatosExtraArmorActive = false;
   if (typeof state.barbatosLastEnemyAttackType !== "string") state.barbatosLastEnemyAttackType = "";
   if (!state.barbatosLastComboAttack) state.barbatosLastComboAttack = null;
+  if (typeof state.barbatosComboCountThisTurn !== "number") state.barbatosComboCountThisTurn = 0;
 }
 
 function getAttackType(attack) {
@@ -175,6 +176,9 @@ export function canUseBarbatosSpecial(state, specialKey, context = {}) {
   }
 
   if (special.effectType === "barbatos_combo") {
+    if (Number(state.barbatosComboCountThisTurn || 0) >= 4) {
+      return { allowed: false, message: "阿頼耶識軌道・連撃は1ターン4回まで" };
+    }
     if (Number(state.evade || 0) < 1) return { allowed: false, message: "回避が足りない" };
     const currentAttack = context.currentAttack || [];
     if (Array.isArray(currentAttack) && currentAttack.length > 0) return { allowed: true, message: null };
@@ -261,6 +265,7 @@ export function executeBarbatosSpecial(state, specialKey, context = {}) {
     if (!attack) return { handled: true, redraw: false, message: "追撃対象の攻撃がない" };
 
     reduceEvade(state, 1);
+    state.barbatosComboCountThisTurn += 1;
     return {
       handled: true,
       redraw: true,
@@ -510,6 +515,7 @@ export function onBarbatosTurnEnd(state) {
   ensureBarbatosState(state);
   state.barbatosIaidoNegateContextId = "";
   state.barbatosExtraArmorActive = false;
+  state.barbatosComboCountThisTurn = 0;
   return { redraw: false, message: null };
 }
 
