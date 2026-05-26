@@ -91,6 +91,20 @@ import {
   onUnicornDispelBoostState
 } from "./js_unit_rules_unicorn_gundam.js";
 import {
+  getBarbatosDerivedState,
+  canUseBarbatosSpecial,
+  executeBarbatosSpecial,
+  onBarbatosTurnEnd,
+  onBarbatosBeforeSlot,
+  onBarbatosEnemyBeforeSlot,
+  onBarbatosAfterSlotResolved,
+  onBarbatosActionResolved,
+  onBarbatosDamaged,
+  modifyBarbatosTakenDamage,
+  modifyBarbatosEvadeAttempt,
+  onBarbatosResolveChoice
+} from "./js_unit_rules_barbatos.js";
+import {
   getAerialDerivedState,
   canUseAerialSpecial,
   executeAerialSpecial,
@@ -249,6 +263,18 @@ import {
   modifyCpuUnicornEvadeAttempt
 } from "./js_unit_rules_cpu_unicorn_gundam.js";
 import {
+  getCpuBarbatosDerivedState,
+  onCpuBarbatosBeforeSlot,
+  onCpuBarbatosEnemyBeforeSlot,
+  onCpuBarbatosAfterSlotResolved,
+  onCpuBarbatosActionResolved,
+  onCpuBarbatosDamaged,
+  onCpuBarbatosTurnEnd,
+  modifyCpuBarbatosTakenDamage,
+  modifyCpuBarbatosEvadeAttempt,
+  onCpuBarbatosResolveChoice
+} from "./js_unit_rules_cpu_barbatos.js";
+import {
   getCpuAerialDerivedState,
   onCpuAerialBeforeSlot,
   onCpuAerialEnemyBeforeSlot,
@@ -392,6 +418,21 @@ export const unitRulesMap = {
   modifyTakenDamage: modifyUnicornTakenDamage,
   onDispelBoostState: onUnicornDispelBoostState
 },
+barbatos: {
+  getDerivedState: getBarbatosDerivedState,
+  canUseSpecial: canUseBarbatosSpecial,
+  executeSpecial: executeBarbatosSpecial,
+  onTurnEnd: onBarbatosTurnEnd,
+  onBeforeSlot: onBarbatosBeforeSlot,
+  onEnemyBeforeSlot: onBarbatosEnemyBeforeSlot,
+  onAfterSlotResolved: onBarbatosAfterSlotResolved,
+  onActionResolved: onBarbatosActionResolved,
+  onDamaged: onBarbatosDamaged,
+  modifyTakenDamage: modifyBarbatosTakenDamage,
+  modifyEvadeAttempt: modifyBarbatosEvadeAttempt,
+  onResolveChoice: onBarbatosResolveChoice
+},
+  
 aerial: {
   getDerivedState: getAerialDerivedState,
   canUseSpecial: canUseAerialSpecial,
@@ -498,6 +539,19 @@ cpu_unicorn_gundam: {
   modifyTakenDamage: modifyCpuUnicornTakenDamage,
   modifyEvadeAttempt: modifyCpuUnicornEvadeAttempt
 },
+cpu_barbatos: {
+  getDerivedState: getCpuBarbatosDerivedState,
+  onBeforeSlot: onCpuBarbatosBeforeSlot,
+  onEnemyBeforeSlot: onCpuBarbatosEnemyBeforeSlot,
+  onAfterSlotResolved: onCpuBarbatosAfterSlotResolved,
+  onActionResolved: onCpuBarbatosActionResolved,
+  onDamaged: onCpuBarbatosDamaged,
+  onTurnEnd: onCpuBarbatosTurnEnd,
+  modifyTakenDamage: modifyCpuBarbatosTakenDamage,
+  modifyEvadeAttempt: modifyCpuBarbatosEvadeAttempt,
+  onResolveChoice: onCpuBarbatosResolveChoice
+},
+  
 cpu_aerial: {
   getDerivedState: getCpuAerialDerivedState,
   onBeforeSlot: onCpuAerialBeforeSlot,
