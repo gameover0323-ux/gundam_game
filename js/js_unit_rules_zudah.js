@@ -158,8 +158,9 @@ if (special.effectType === "shield") {
       redraw: true,
       message: `${state.name} シールド展開。このターンの被ダメージ半減`
     };
-}
-  return { handled: false, redraw: false, message: null, passToCommon: true };
+  }
+
+  return { handled: false, redraw: false, message: null };
 }
 
 export function onZudahAfterSlotResolved(state, slotNumber, context = {}) {
