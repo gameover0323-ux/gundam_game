@@ -14,6 +14,7 @@ function ensureAerialState(state) {
   if (typeof state.aerialBitOnReduction !== "number") state.aerialBitOnReduction = 0;
   if (typeof state.aerialOrbitalNextTurn !== "boolean") state.aerialOrbitalNextTurn = false;
   if (typeof state.aerialOrbitalActiveThisTurn !== "boolean") state.aerialOrbitalActiveThisTurn = false;
+  if (typeof state.aerialScoreSixTurnTicked !== "boolean") state.aerialScoreSixTurnTicked = false;
 }
 
 function enterScoreSix(state) {
@@ -29,13 +30,13 @@ function enterScoreSix(state) {
 function exitScoreSix(state) {
   state.aerialScoreSixTurns = 0;
   state.aerialScoreSixJustActivated = false;
+  state.aerialScoreSixTurnTicked = false;
   state.aerialBitOnReduction = 0;
   state.aerialOrbitalNextTurn = false;
   state.aerialOrbitalActiveThisTurn = false;
   setForm(state, "base", { preserveHp: true, preserveEvade: true });
   normalizeEvadeCapState(state);
 }
-
 function buildGundbitSlot() {
   return {
     key: "slot7",
@@ -139,15 +140,21 @@ export function onAerialBeforeSlot(state) {
     state.aerialOrbitalActiveThisTurn = false;
   }
 
-  if (state.formId === "score_six") {
+ if (state.formId === "score_six") {
     if (state.aerialScoreSixJustActivated) {
       state.aerialScoreSixJustActivated = false;
+      state.aerialScoreSixTurnTicked = true;
       return { redraw: true, message: null };
     }
-    state.aerialScoreSixTurns -= 1;
-    if (state.aerialScoreSixTurns <= 0) {
-      exitScoreSix(state);
-      return { redraw: true, message: "スコアシックス終了" };
+
+    if (!state.aerialScoreSixTurnTicked) {
+      state.aerialScoreSixTurnTicked = true;
+      state.aerialScoreSixTurns -= 1;
+
+      if (state.aerialScoreSixTurns <= 0) {
+        exitScoreSix(state);
+        return { redraw: true, message: "スコアシックス終了" };
+      }
     }
   }
 
@@ -158,6 +165,7 @@ export function onAerialTurnEnd(state) {
   ensureAerialState(state);
   state.aerialGundbitLinkCountThisTurn = 0;
   state.aerialCompositeShieldActive = false;
+  state.aerialScoreSixTurnTicked = false;
   return { redraw: false, message: null };
 }
 
