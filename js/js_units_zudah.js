@@ -56,12 +56,12 @@ export const zudah = {
           actionType: "instant"
         },
         {
-  name: "シールド",
-  effectType: "shield",
-  timing: "reaction",
-  desc: "相手の攻撃時、3回だけ1ターンに受けるダメージを半減する。",
-  actionType: "instant"
-},
+          name: "シールド",
+          effectType: "shield",
+          timing: "reaction",
+          desc: "相手の攻撃時、3回だけ1ターンに受けるダメージを半減する。",
+          actionType: "instant"
+        },
         {
           name: "突撃",
           effectType: "zudah_charge",
