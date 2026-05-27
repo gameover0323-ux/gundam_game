@@ -591,6 +591,116 @@ if (beforeResult.replaceSlotAction) {
       `${actor.name} の連続行動`,
       labels.join(" + ")
     );
+function executeCpuAutoSlotBatch(ownerPlayer) {
+  const actor = ctx.getPlayerState(ownerPlayer);
+  if (!actor) return false;
+
+  if (typeof ctx.ensureActionState === "function") {
+    ctx.ensureActionState(actor);
+  }
+
+  const adapter = ctx.twoVtwoAdapter || null;
+
+  const getActionCount = () => {
+    if (adapter) {
+      return adapter.getActionCount(ownerPlayer, actor);
+    }
+    return Math.max(0, Number(actor.actionCount || 0));
+  };
+
+  const canConsumeAction = () => {
+    if (adapter) {
+      return adapter.canConsumeAction(ownerPlayer, actor, 1);
+    }
+
+    if (typeof ctx.canConsumeAction === "function") {
+      return ctx.canConsumeAction(actor, 1);
+    }
+
+    return Number(actor.actionCount || 0) >= 1;
+  };
+
+  const consumeAction = () => {
+    if (adapter) {
+      return adapter.consumeAction(ownerPlayer, actor, 1);
+    }
+
+    if (typeof ctx.consumeActionCount === "function") {
+      ctx.consumeActionCount(actor, 1);
+      return true;
+    }
+
+    actor.actionCount = Math.max(0, Number(actor.actionCount || 0) - 1);
+    return true;
+  };
+
+  const maxLoop = Math.max(1, Number(getActionCount() || 0));
+  const allAttacks = [];
+  const notices = [];
+  const labels = [];
+  let usedCount = 0;
+
+  for (let i = 1; i <= maxLoop; i += 1) {
+    if (!canConsumeAction()) {
+      break;
+    }
+
+    const rollableSlotKeys = ctx.getRollableSlotKeys(actor);
+    if (!Array.isArray(rollableSlotKeys) || rollableSlotKeys.length === 0) {
+      notices.push(`${actor.name}：使用可能なスロットがない`);
+      break;
+    }
+
+    const slotKey = rollableSlotKeys[Math.floor(Math.random() * rollableSlotKeys.length)];
+    const part = collectCpuSlotAction(ownerPlayer, slotKey, null, i);
+
+    if (!part) {
+      break;
+    }
+
+    const consumed = consumeAction();
+    if (!consumed) {
+      break;
+    }
+
+    usedCount += 1;
+
+    if (part.message) {
+      notices.push(part.message);
+    }
+
+    if (Array.isArray(part.notices)) {
+      notices.push(...part.notices.filter(Boolean));
+    }
+
+    if (part.sourceLabel) {
+      labels.push(part.sourceLabel);
+    }
+
+    if (Array.isArray(part.attacks) && part.attacks.length > 0) {
+      allAttacks.push(...part.attacks);
+    }
+
+    if (ctx.getPendingChoice && ctx.getPendingChoice()) {
+      break;
+    }
+
+    if (ctx.getCurrentAttack && ctx.getCurrentAttack().length > 0) {
+      break;
+    }
+  }
+
+  if (notices.length > 0) {
+    notices.forEach((text) => ctx.appendBattleNotice(text));
+  }
+
+  if (allAttacks.length > 0) {
+    const enemyPlayer = ctx.getOpponentPlayer(ownerPlayer);
+
+    ctx.setCurrentAction(
+      `${actor.name} の連続行動`,
+      labels.join(" + ")
+    );
 
     ctx.setCurrentAttack(allAttacks);
     ctx.setCurrentAttackContext({
@@ -607,16 +717,17 @@ if (beforeResult.replaceSlotAction) {
       usedActionCount: usedCount
     });
 
+    ctx.redrawBattleBoards();
     ctx.renderAttackChoices();
     return true;
   }
 
+  ctx.redrawBattleBoards();
   ctx.renderAttackLogText(
     notices.length > 0 ? notices.join("\n") : `${actor.name} は行動を完了`
   );
-
   return usedCount > 0;
-}
+    }
   function resolveSlot(slot, slotMeta = {}) {
   ctx.setCurrentAttack([]);
 
