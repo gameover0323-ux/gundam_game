@@ -414,72 +414,94 @@ export function createOnlineBattleUi(ctx) {
   }
 
 function renderSpectatorControlArea(roomData) {
-    const area = document.getElementById("onlineSpectatorControlArea");
-    if (!area) return;
+  const area = document.getElementById("onlineSpectatorControlArea");
+  if (!area) return;
 
-    if (isSpectator()) {
-      const count = Object.values(roomData?.spectators || {})
-        .filter(s => s && !s.left && !s.kicked).length;
+  const spectators = Object.entries(roomData?.spectators || {})
+    .filter(([, data]) => data && !data.left && !data.kicked);
 
-      area.textContent = `観戦者：${count}人`;
-      return;
+  function appendLatestSpectatorChat(parent) {
+    const latest = roomData?.spectatorChat?.latest || null;
+
+    const chatRow = document.createElement("div");
+    chatRow.style.marginTop = "4px";
+    chatRow.style.padding = "4px";
+    chatRow.style.borderTop = "1px solid #888";
+    chatRow.style.fontSize = "12px";
+
+    if (latest?.text) {
+      chatRow.textContent = `[観戦者チャット] ${latest.name || "観戦者"}：${latest.text}`;
+    } else {
+      chatRow.textContent = "[観戦者チャット] まだ発言はありません";
     }
 
-    const myPlayer = ctx.getOnlineMyPlayer();
-    if (myPlayer !== "A" && myPlayer !== "B") {
-      area.textContent = "";
-      return;
-    }
+    parent.appendChild(chatRow);
+  }
 
-    const policy = roomData?.spectatorSettings?.policy || "allow";
-    const spectators = Object.entries(roomData?.spectators || {})
-      .filter(([, data]) => data && !data.left && !data.kicked);
-
+  if (isSpectator()) {
     area.innerHTML = "";
 
-    const policyBtn = document.createElement("button");
-    policyBtn.textContent = policy === "deny" ? "観戦許可にする" : "観戦お断りにする";
-    policyBtn.style.marginRight = "6px";
-    policyBtn.addEventListener("click", () => {
-      const nextPolicy = policy === "deny" ? "allow" : "deny";
+    const countLine = document.createElement("div");
+    countLine.textContent = `観戦者：${spectators.length}人`;
+    area.appendChild(countLine);
 
+    appendLatestSpectatorChat(area);
+    return;
+  }
+
+  const myPlayer = ctx.getOnlineMyPlayer();
+  if (myPlayer !== "A" && myPlayer !== "B") {
+    area.textContent = "";
+    return;
+  }
+
+  const policy = roomData?.spectatorSettings?.policy || "allow";
+
+  area.innerHTML = "";
+
+  const title = document.createElement("span");
+  title.textContent = `観戦者：${spectators.length}人 `;
+
+  const policyBtn = document.createElement("button");
+  policyBtn.textContent = policy === "deny" ? "観戦許可にする" : "観戦お断りにする";
+  policyBtn.style.marginRight = "6px";
+  policyBtn.addEventListener("click", () => {
+    const nextPolicy = policy === "deny" ? "allow" : "deny";
+    ctx.updateRoom(ctx.getOnlineRoomId(), {
+      "spectatorSettings/policy": nextPolicy,
+      "spectatorSettings/updatedAt": Date.now(),
+      "meta/updatedAt": Date.now()
+    });
+  });
+
+  area.appendChild(title);
+  area.appendChild(policyBtn);
+
+  appendLatestSpectatorChat(area);
+
+  spectators.forEach(([spectatorId, data]) => {
+    const row = document.createElement("div");
+    row.style.marginTop = "4px";
+
+    const name = document.createElement("span");
+    name.textContent = `(${data.name || "観戦者"}) `;
+
+    const kickBtn = document.createElement("button");
+    kickBtn.textContent = "キック";
+    kickBtn.addEventListener("click", () => {
       ctx.updateRoom(ctx.getOnlineRoomId(), {
-        "spectatorSettings/policy": nextPolicy,
-        "spectatorSettings/updatedAt": Date.now(),
+        [`spectators/${spectatorId}/kicked`]: true,
+        [`spectators/${spectatorId}/left`]: true,
+        [`spectators/${spectatorId}/lastSeen`]: Date.now(),
         "meta/updatedAt": Date.now()
       });
     });
 
-    const title = document.createElement("span");
-    title.textContent = `観戦者：${spectators.length}人 `;
-
-    area.appendChild(title);
-    area.appendChild(policyBtn);
-
-    spectators.forEach(([spectatorId, data]) => {
-      const row = document.createElement("div");
-      row.style.marginTop = "4px";
-
-      const name = document.createElement("span");
-      name.textContent = `(${data.name || "観戦者"}) `;
-
-      const kickBtn = document.createElement("button");
-      kickBtn.textContent = "キック";
-      kickBtn.addEventListener("click", () => {
-        ctx.updateRoom(ctx.getOnlineRoomId(), {
-          [`spectators/${spectatorId}/kicked`]: true,
-          [`spectators/${spectatorId}/left`]: true,
-          [`spectators/${spectatorId}/lastSeen`]: Date.now(),
-          "meta/updatedAt": Date.now()
-        });
-      });
-
-      row.appendChild(name);
-      row.appendChild(kickBtn);
-      area.appendChild(row);
-    });
-  }
-
+    row.appendChild(name);
+    row.appendChild(kickBtn);
+    area.appendChild(row);
+  });
+}
   function applyOnlinePeaceRequest(roomData) {
     if (isSpectator()) return;
 
