@@ -3,7 +3,7 @@ import { reduceEvade, normalizeEvadeCapState } from "./js_unit_runtime.js";
 function ensureZudahState(state) {
   if (!state) return;
   if (typeof state.zudahAccelStack !== "number") state.zudahAccelStack = 0;
-  
+}
 
 function heal(state, amount) {
   state.hp = Math.min(Number(state.maxHp || state.hp || 0), Number(state.hp || 0) + amount);
@@ -20,7 +20,7 @@ export function getZudahDerivedState(state) {
   const status = [
     "特性：超回避",
     `加速重ね掛け:${state.zudahAccelStack}/5`,
-  `シールド残り:${Math.max(0, Number(state.shieldCount || 0))}/3`
+    `シールド残り:${Math.max(0, Number(state.shieldCount || 0))}/3`
   ];
 
   return { status, slots: {}, specials: {} };
@@ -60,7 +60,6 @@ export function canUseZudahSpecial(state, specialKey, context = {}) {
     };
   }
 
-  
   if (special.effectType === "zudah_charge") {
     return {
       allowed: Number(state.evade || 0) >= 5,
@@ -101,6 +100,7 @@ export function executeZudahSpecial(state, specialKey, context = {}) {
         message: "ターン開始時のみ使用可能"
       };
     }
+
     if (state.zudahAccelStack < 2) {
       return { handled: true, redraw: false, message: "加速2回以上で使用可能" };
     }
@@ -117,13 +117,6 @@ export function executeZudahSpecial(state, specialKey, context = {}) {
       redraw: true,
       message: `エンジンカット：行動回数を1に戻し、HP${healAmount}回復`
     };
-  }
-
-
-    state.zudahShieldUsed++;
-    state.zudahShieldActive = true;
-
-    return { handled: true, redraw: true, message: null };
   }
 
   if (special.effectType === "zudah_charge") {
