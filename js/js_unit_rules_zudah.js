@@ -141,8 +141,25 @@ export function executeZudahSpecial(state, specialKey, context = {}) {
 
     return { handled: true, redraw: true, message: "翻弄：行動回数-1、回避+1" };
   }
+if (special.effectType === "shield") {
+    if (state.shieldCount <= 0) {
+      return { handled: true, redraw: false, message: "シールドはもう使えない" };
+    }
 
-  return { handled: false, redraw: false, message: null };
+    if (state.shieldActive) {
+      return { handled: true, redraw: false, message: "シールドは既に展開中" };
+    }
+
+    state.shieldActive = true;
+    state.shieldCount--;
+
+    return {
+      handled: true,
+      redraw: true,
+      message: `${state.name} シールド展開。このターンの被ダメージ半減`
+    };
+}
+  return { handled: false, redraw: false, message: null, passToCommon: true };
 }
 
 export function onZudahAfterSlotResolved(state, slotNumber, context = {}) {
