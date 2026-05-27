@@ -188,18 +188,7 @@ export function onZudahAfterSlotResolved(state, slotNumber, context = {}) {
 }
 
 export function modifyZudahTakenDamage(defender, attacker, attack, damage) {
-  ensureZudahState(defender);
-
-  if (!defender.zudahShieldActive) {
-    return { damage, message: null };
-  }
-
-  defender.zudahShieldActive = false;
-
-  return {
-    damage: Math.ceil(damage / 2),
-    message: null
-  };
+  return { damage, message: null };
 }
 
 export function modifyZudahEvadeAttempt(defender, attacker, attack) {
