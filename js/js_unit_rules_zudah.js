@@ -3,9 +3,7 @@ import { reduceEvade, normalizeEvadeCapState } from "./js_unit_runtime.js";
 function ensureZudahState(state) {
   if (!state) return;
   if (typeof state.zudahAccelStack !== "number") state.zudahAccelStack = 0;
-  if (typeof state.zudahShieldUsed !== "number") state.zudahShieldUsed = 0;
-  if (typeof state.zudahShieldActive !== "boolean") state.zudahShieldActive = false;
-}
+  
 
 function heal(state, amount) {
   state.hp = Math.min(Number(state.maxHp || state.hp || 0), Number(state.hp || 0) + amount);
