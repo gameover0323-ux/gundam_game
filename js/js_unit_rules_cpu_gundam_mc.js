@@ -3,7 +3,6 @@ import { createAttack } from "./js_battle_system.js";
 import {
   getGundamMcDerivedState,
   executeGundamMcSpecial,
-  onGundamMcTurnEnd,
   onGundamMcBeforeSlot,
   onGundamMcEnemyBeforeSlot,
   onGundamMcDamaged,
@@ -15,8 +14,17 @@ import {
 
 function ensureCpuGundamState(state) {
   if (typeof state.cpuGundamTurnCount !== "number") state.cpuGundamTurnCount = 0;
+  if (typeof state.ntTimer !== "number") state.ntTimer = 0;
 }
+function pickRandomPredictSlotKey(slotKeys) {
+  const keys = Array.isArray(slotKeys)
+    ? slotKeys.filter(key => typeof key === "string" && /^slot\d+$/.test(key))
+    : [];
 
+  if (keys.length <= 0) return null;
+
+  return keys[Math.floor(Math.random() * keys.length)];
+}
 function getAdapter(context) {
   return context?.twoVtwoAdapter || null;
 }
@@ -140,19 +148,28 @@ export function onCpuGundamMcTurnEnd(state, context = {}) {
   ensureCpuGundamState(state);
 
   state.cpuGundamTurnCount += 1;
+  state.ntTimer += 1;
 
-  const baseResult = onGundamMcTurnEnd(state, context) || {
-    redraw: false,
-    message: null
-  };
+  const messages = [];
+
+  if (state.ntTimer >= 3) {
+    state.ntTimer = 0;
+
+    const predictSlotKey = pickRandomPredictSlotKey(context.enemyPredictableSlotKeys);
+
+    if (predictSlotKey) {
+      state.ntGuessSlotKey = predictSlotKey;
+      messages.push("CPUガンダムMC：ニュータイプ予測を自動設定");
+    } else {
+      state.ntGuessSlotKey = null;
+    }
+  }
 
   return {
-    ...baseResult,
     redraw: true,
-    message: baseResult.message || null
+    message: messages.join("\n") || null
   };
 }
-
 export function modifyCpuGundamMcTakenDamage(state, attacker, attack, damage) {
   ensureCpuGundamState(state);
   return modifyGundamMcTakenDamage(state, attacker, attack, damage);
@@ -166,6 +183,15 @@ export function modifyCpuGundamMcEvadeAttempt(state, attacker, attack, context =
 
 export function onCpuGundamMcResolveChoice(state, pendingChoice, selectedValue, context = {}) {
   ensureCpuGundamState(state);
+
+  if (pendingChoice?.source === "nt_prediction") {
+    return {
+      handled: true,
+      redraw: false,
+      message: null
+    };
+  }
+
   return onGundamMcResolveChoice(state, pendingChoice, selectedValue, context);
 }
 
