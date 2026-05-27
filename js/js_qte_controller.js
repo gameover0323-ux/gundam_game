@@ -13,24 +13,26 @@ export function createQteController(ctx) {
   }
 
   function renderAttackChoices() {
-    if (ctx.autoResolveBossQteIfNeeded()) {
-      ctx.clearBattleNotice();
-      return;
-    }
-
-    ctx.renderAttackChoicesUI({
-      currentAttack: ctx.getCurrentAttack(),
-      battleNotice: ctx.getBattleNotice(),
-      currentActionHeader: ctx.getCurrentActionHeader(),
-      currentActionLabel: ctx.getCurrentActionLabel(),
-      onHit: (index) => takeHit(index),
-      onEvade: (index) => evadeAttack(index),
-      onSupportDefense: (index) => supportDefenseAttack(index),
-      canSupportDefense: ctx.isTeamBattleMode()
-    });
-
+  if (ctx.autoResolveBossQteIfNeeded()) {
     ctx.clearBattleNotice();
+    return;
   }
+
+  ctx.redrawBattleBoards();
+
+  ctx.renderAttackChoicesUI({
+    currentAttack: ctx.getCurrentAttack(),
+    battleNotice: ctx.getBattleNotice(),
+    currentActionHeader: ctx.getCurrentActionHeader(),
+    currentActionLabel: ctx.getCurrentActionLabel(),
+    onHit: (index) => takeHit(index),
+    onEvade: (index) => evadeAttack(index),
+    onSupportDefense: (index) => supportDefenseAttack(index),
+    canSupportDefense: ctx.isTeamBattleMode()
+  });
+
+  ctx.clearBattleNotice();
+}
 
   function takeHit(i) {
     if (!canOperateQteDefender()) {
