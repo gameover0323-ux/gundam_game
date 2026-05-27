@@ -607,8 +607,25 @@ export function modifyExtremeGundamTakenDamage(state, attacker, attack, damage) 
 
 
   if (state.formId === "carnage") {
-    nextDamage = Math.max(0, nextDamage - 30);
-    messages.push("カルネージフェイズ特性：ダメージ30軽減");
+  const attackContext = context?.currentAttackContext;
+
+  if (attackContext) {
+    if (typeof attackContext.extremeCarnageReductionRemaining !== "number") {
+      attackContext.extremeCarnageReductionRemaining = 30;
+    }
+
+    const reduceAmount = Math.min(
+      nextDamage,
+      Math.max(0, attackContext.extremeCarnageReductionRemaining)
+    );
+
+    nextDamage = Math.max(0, nextDamage - reduceAmount);
+    attackContext.extremeCarnageReductionRemaining -= reduceAmount;
+
+    if (reduceAmount > 0) {
+      messages.push(`カルネージフェイズ特性：総ダメージ軽減 残り${attackContext.extremeCarnageReductionRemaining}`);
+    }
+  }
   }
 
   if (state.formId === "tachyon" && state.extremeSkipActionTurns > 0 && !attack.ignoreReduction) {
