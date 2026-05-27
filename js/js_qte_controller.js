@@ -85,4 +85,55 @@ export function createQteController(ctx) {
     supportDefenseAttack,
     finishCurrentAttackResolution
   };
+}      ctx.showPopup("防御側プレイヤーのみ操作できます");
+      return;
+    }
+
+    const result = ctx.attackTakeHit(i);
+    ctx.checkBattleEnd();
+
+    ctx.publishOnlineQteAction("hit", i);
+
+    return result;
+  }
+
+  function evadeAttack(i) {
+    if (!canOperateQteDefender()) {
+      ctx.showPopup("防御側プレイヤーのみ操作できます");
+      return;
+    }
+
+    const result = ctx.attackEvadeAttack(i);
+
+    ctx.publishOnlineQteAction("evade", i);
+
+    return result;
+  }
+
+  function supportDefenseAttack(i) {
+    if (!canOperateQteDefender()) {
+      ctx.showPopup("防御側プレイヤーのみ操作できます");
+      return;
+    }
+
+    const result = ctx.attackSupportDefenseAttack(i);
+    ctx.checkBattleEnd();
+
+    ctx.publishOnlineQteAction("supportDefense", i);
+
+    return result;
+  }
+
+  function finishCurrentAttackResolution() {
+    return ctx.finishCurrentAttackResolutionRaw();
+  }
+
+  return {
+    canOperateQteDefender,
+    renderAttackChoices,
+    takeHit,
+    evadeAttack,
+    supportDefenseAttack,
+    finishCurrentAttackResolution
+  };
 }
