@@ -60,13 +60,7 @@ export function canUseZudahSpecial(state, specialKey, context = {}) {
     };
   }
 
-  if (special.effectType === "zudah_shield") {
-    return {
-      allowed: state.zudahShieldUsed < 3,
-      message: state.zudahShieldUsed < 3 ? null : "シールド使用回数が残っていない"
-    };
-  }
-
+  
   if (special.effectType === "zudah_charge") {
     return {
       allowed: Number(state.evade || 0) >= 5,
@@ -125,10 +119,6 @@ export function executeZudahSpecial(state, specialKey, context = {}) {
     };
   }
 
-  if (special.effectType === "zudah_shield") {
-    if (state.zudahShieldUsed >= 3) {
-      return { handled: true, redraw: false, message: "シールド使用回数が残っていない" };
-    }
 
     state.zudahShieldUsed++;
     state.zudahShieldActive = true;
