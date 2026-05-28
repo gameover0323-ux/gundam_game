@@ -11,7 +11,8 @@ import {
   query,
   orderByChild,
   endAt,
-  limitToLast
+  limitToLast,
+  push
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 const firebaseConfig = {
   apiKey: "AIzaSyAycT0fkOYGT59qutLaBjxOTq9ZILNDTL4",
@@ -329,4 +330,38 @@ export async function cleanupOldRandomMatch(maxAgeMs = 10 * 60 * 1000) {
   }
 
   return count;
+}
+export function getFeedbackRef(feedbackId = null) {
+  return feedbackId
+    ? ref(db, `feedback/${feedbackId}`)
+    : ref(db, "feedback");
+}
+
+export function submitFeedback(data) {
+  return push(getFeedbackRef(), data);
+}
+
+export async function readFeedbackList(limit = 100) {
+  const feedbackQuery = query(
+    getFeedbackRef(),
+    orderByChild("createdAt"),
+    limitToLast(limit)
+  );
+
+  const snapshot = await get(feedbackQuery);
+  if (!snapshot.exists()) return [];
+
+  const list = [];
+  snapshot.forEach(childSnap => {
+    list.push({
+      id: childSnap.key,
+      ...childSnap.val()
+    });
+  });
+
+  return list.sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+}
+
+export function deleteFeedback(feedbackId) {
+  return remove(getFeedbackRef(feedbackId));
 }
