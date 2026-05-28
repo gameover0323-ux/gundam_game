@@ -65,7 +65,10 @@ import {
   removeRandomMatchSession,
   writeRandomMatchAnnouncement,
 listenRandomMatchAnnouncement,
-  cleanupOldRandomMatch
+  cleanupOldRandomMatch,
+  submitFeedback,
+readFeedbackList,
+deleteFeedback
 } from "./js_online_firebase.js";
 import { onlineState } from "./js_online_state.js";
 import { unitList, bossList, cpuList, cpuBeginnerList, debugUnitList } from "./js_units_index.js";
@@ -159,6 +162,7 @@ let isTestMode = false;
 
 let battleMode = "1v1";
 let playerStatsUi = null;
+let feedbackForm = null;
 let randomMatchController = null;
 let onlineBattleUi = null;
 let onlineActionSync = null;
@@ -229,7 +233,9 @@ function getTitleName(titleId) {
 function renderAccountListPanel() {
   return playerStatsUi.renderAccountListPanel();
 }
-
+function renderFeedbackViewer() {
+  return feedbackForm.renderFeedbackViewer();
+}
 function refreshPlayerAchievementsNow() {
   return playerStatsUi.refreshPlayerAchievementsNow();
 }
@@ -939,6 +945,16 @@ unitLookupController = createUnitLookupController({
     extraUnlockedUnits = value;
   }
 });
+feedbackForm = createFeedbackForm({
+  getPlayerProfile: () => playerSession.profile,
+  submitFeedback,
+  readFeedbackList,
+  deleteFeedback,
+  renderAccountListPanel,
+  showPopup
+});
+
+feedbackForm.ensureFeedbackButton();
 playerAccountUi = createPlayerAccountUi({
   getPlayerProfile: () => playerSession.profile,
 
