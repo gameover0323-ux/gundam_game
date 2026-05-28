@@ -666,8 +666,16 @@ export function createPlayerStatsUi(ctx) {
           ${rows || `<tr><td colspan="7">登録アカウントなし</td></tr>`}
         </tbody>
       </table>
+    <button id="openFeedbackViewerBtn">意見・要望一覧</button>
       <button id="backToStatsFromAccountListBtn">戦績に戻る</button>
     `;
+
+    document.getElementById("openFeedbackViewerBtn")
+      ?.addEventListener("click", () => {
+        if (ctx.renderFeedbackViewer) {
+          ctx.renderFeedbackViewer();
+        }
+      });
 
     document.getElementById("backToStatsFromAccountListBtn")
       ?.addEventListener("click", renderPlayerStatsPanel);
