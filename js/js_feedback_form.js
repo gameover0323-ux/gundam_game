@@ -65,7 +65,23 @@ export function createFeedbackForm(ctx) {
   }
 
   async function renderFeedbackViewer() {
-    const list = await ctx.readFeedbackList();
+    const panel = document.getElementById("playerStatsPanel");
+    const content = document.getElementById("playerStatsContent");
+
+    if (!panel || !content) {
+      ctx.showPopup("意見・要望一覧の表示先が見つかりません");
+      return;
+    }
+
+    let list = [];
+
+    try {
+      list = await ctx.readFeedbackList();
+    } catch (error) {
+      console.error(error);
+      ctx.showPopup(`意見・要望の読み込みに失敗しました：${error.message}`);
+      return;
+    }
 
     const html = list.length
       ? list.map(item => `
@@ -78,21 +94,30 @@ export function createFeedbackForm(ctx) {
       `).join("")
       : "<p>要望はありません。</p>";
 
-    document.getElementById("playerStatsContent").innerHTML = `
+    content.innerHTML = `
       <h2>意見・要望一覧</h2>
       ${html}
       <button id="backFromFeedbackViewerBtn">戻る</button>
     `;
 
-    document.querySelectorAll("[data-feedback-delete]").forEach(btn => {
+    content.querySelectorAll("[data-feedback-delete]").forEach(btn => {
       btn.addEventListener("click", async () => {
         if (!confirm("この要望を削除しますか？")) return;
-        await ctx.deleteFeedback(btn.dataset.feedbackDelete);
-        renderFeedbackViewer();
+
+        try {
+          await ctx.deleteFeedback(btn.dataset.feedbackDelete);
+          renderFeedbackViewer();
+        } catch (error) {
+          console.error(error);
+          ctx.showPopup(`削除に失敗しました：${error.message}`);
+        }
       });
     });
 
-    document.getElementById("backFromFeedbackViewerBtn").addEventListener("click", ctx.renderAccountListPanel);
+    document.getElementById("backFromFeedbackViewerBtn")
+      ?.addEventListener("click", ctx.renderAccountListPanel);
+
+    panel.style.display = "";
   }
 
   function ensureFeedbackButton() {
