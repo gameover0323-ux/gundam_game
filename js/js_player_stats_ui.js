@@ -671,9 +671,17 @@ export function createPlayerStatsUi(ctx) {
     `;
 
     document.getElementById("openFeedbackViewerBtn")
-      ?.addEventListener("click", () => {
-        if (ctx.renderFeedbackViewer) {
-          ctx.renderFeedbackViewer();
+      ?.addEventListener("click", async () => {
+        if (!ctx.renderFeedbackViewer) {
+          ctx.showPopup("renderFeedbackViewer が渡されていません");
+          return;
+        }
+
+        try {
+          await ctx.renderFeedbackViewer();
+        } catch (error) {
+          console.error(error);
+          ctx.showPopup(`意見・要望一覧の表示に失敗しました：${error.message}`);
         }
       });
 
