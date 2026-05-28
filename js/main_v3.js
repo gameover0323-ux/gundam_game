@@ -118,6 +118,8 @@ import { createGameSetup } from "./js_game_setup.js";
 
 import { createActionLayer } from "./js_action_layer.js";
 
+import { createFeedbackForm } from "./js_feedback_form.js";
+
 const screens = {
   title: document.getElementById("title"),
   select: document.getElementById("select"),
