@@ -26,7 +26,76 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const auth = getAuth(app);
 
+function playerIdToEmail(playerId) {
+  return `${String(playerId || "").toLowerCase()}@online-gvs.local`;
+}
+
+export function getCurrentAuthUser() {
+  return auth.currentUser;
+}
+
+export function waitAuthReady() {
+  return new Promise(resolve => {
+    const unsubscribe = onAuthStateChanged(auth, user => {
+      unsubscribe();
+      resolve(user);
+    });
+  });
+}
+
+export async function registerAuthPlayer(playerId, password) {
+  const credential = await createUserWithEmailAndPassword(
+    auth,
+    playerIdToEmail(playerId),
+    password
+  );
+  return credential.user;
+}
+
+export async function loginAuthPlayer(playerId, password) {
+  const credential = await signInWithEmailAndPassword(
+    auth,
+    playerIdToEmail(playerId),
+    password
+  );
+  return credential.user;
+}
+
+export function logoutAuthPlayer() {
+  return signOut(auth);
+}
+
+export function getPlayerIdMapRef(playerId) {
+  return ref(db, `playerIds/${playerId}`);
+}
+
+export async function readPlayerUidById(playerId) {
+  const snapshot = await get(getPlayerIdMapRef(playerId));
+  return snapshot.exists() ? snapshot.val() : null;
+}
+
+export function writePlayerIdMap(playerId, uid) {
+  return set(getPlayerIdMapRef(playerId), uid);
+}
+
+export function getPlayerProfileByUidRef(uid) {
+  return ref(db, `players/${uid}`);
+}
+
+export async function readPlayerProfileByUid(uid) {
+  const snapshot = await get(getPlayerProfileByUidRef(uid));
+  return snapshot.exists() ? snapshot.val() : null;
+}
+
+export function writePlayerProfileByUid(uid, data) {
+  return set(getPlayerProfileByUidRef(uid), data);
+}
+
+export function updatePlayerProfileByUid(uid, patch) {
+  return update(getPlayerProfileByUidRef(uid), patch);
+}
 export function createRoomId() {
   return Math.random().toString(36).slice(2, 8);
 }
