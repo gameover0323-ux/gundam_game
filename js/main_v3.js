@@ -1775,7 +1775,8 @@ playerStatsUi = createPlayerStatsUi({
   saveCurrentPlayerProfile,
   updatePlayerCardUi,
   readAccountListForViewer,
-  showPopup
+  showPopup,
+  renderFeedbackViewer
 });
 battleInitController = createBattleInitController({
   createBattleState,
