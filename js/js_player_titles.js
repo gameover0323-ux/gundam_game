@@ -236,6 +236,43 @@ export const DEFEAT_TITLE_RULES = [
     ]
   }),
 
+
+  ...makeDefeatTitleRules({
+  category: "playable",
+  targetId: "v2_gundam",
+  prefix: "v2_gundam",
+  entries: [
+    [1, "最高性能"],
+    [5, "制圧"],
+    [10, "おかしいですよ"],
+    [15, "天に昇れ"],
+    [20, "光の翼"],
+    [25, "ウッソ"],
+    [30, "V2"],
+    [35, "キャノン装備"],
+    [40, "アサルト"],
+    [45, "バスター"],
+    [50, "V2アサルトバスター"]
+  ]
+}),
+...makeDefeatTitleRules({
+  category: "cpu",
+  targetId: "cpu_v2_gundam",
+  prefix: "cpu_v2_gundam",
+  entries: [
+    [1, "高性能機"],
+    [5, "おかしいよ"],
+    [10, "カテジナさん"],
+    [15, "リガ・ミリティア"],
+    [20, "戦略級"],
+    [25, "メガビームシールド"],
+    [30, "スペシャルな"],
+    [35, "終わりのない"],
+    [40, "ディフェンス"],
+    [45, "いけ！いけ！ぼくらの"],
+    [50, "死ぬもんか！"]
+  ]
+}),
   ...makeDefeatTitleRules({
     category: "playable",
     targetId: "strike_gundam",
@@ -647,6 +684,8 @@ export function getTitleConditionText(titleId) {
     cpu_shining_gundam: "シャイニングガンダムのCPU",
     wing_gundam_zero: "ウイングガンダムゼロ",
     cpu_wing_gundam_zero: "ウイングガンダムゼロのCPU",
+    v2_gundam: "V2ガンダム",
+cpu_v2_gundam: "V2ガンダムのCPU",
     strike_gundam: "ストライクガンダム",
     cpu_strike_gundam: "ストライクガンダムのCPU",
     exia: "ガンダムエクシア",
@@ -705,6 +744,8 @@ export const TITLE_GROUPS = [
     ["cpu_shining_gundam", "CPUシャイニングガンダム撃破"],
     ["wing_gundam_zero", "ウイングガンダムゼロ使用"],
     ["cpu_wing_gundam_zero", "CPUウイングガンダムゼロ撃破"],
+    ["v2_gundam", "V2ガンダム使用"],
+["cpu_v2_gundam", "CPU V2ガンダム撃破"],
     ["strike_gundam", "ストライクガンダム使用"],
     ["cpu_strike_gundam", "CPUストライクガンダム撃破"],
     ["exia", "ガンダムエクシア使用"],
