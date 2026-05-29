@@ -53,6 +53,22 @@ import {
 } from "./js_unit_rules_wing_zero.js";
 
 import {
+  getV2DerivedState,
+  canUseV2Special,
+  executeV2Special,
+  onV2TurnEnd,
+  onV2BeforeSlot,
+  onV2EnemyBeforeSlot,
+  onV2AfterSlotResolved,
+  onV2ActionResolved,
+  onV2Damaged,
+  modifyV2TakenDamage,
+  modifyV2EvadeAttempt,
+  onV2ResolveChoice
+} from "./js_unit_rules_v2_gundam.js";
+
+
+import {
   getStrikeDerivedState,
   canUseStrikeSpecial,
   executeStrikeSpecial,
@@ -231,6 +247,18 @@ import {
 } from "./js_unit_rules_cpu_wing_zero.js";
 
 import {
+  getCpuV2DerivedState,
+  onCpuV2BeforeSlot,
+  onCpuV2EnemyBeforeSlot,
+  onCpuV2AfterSlotResolved,
+  onCpuV2ActionResolved,
+  onCpuV2Damaged,
+  onCpuV2TurnEnd,
+  modifyCpuV2TakenDamage,
+  modifyCpuV2EvadeAttempt
+} from "./js_unit_rules_cpu_v2_gundam.js";
+
+import {
   getCpuStrikeDerivedState,
   onCpuStrikeBeforeSlot,
   onCpuStrikeAfterSlotResolved,
@@ -380,6 +408,22 @@ export const unitRulesMap = {
     modifyEvadeAttempt: modifyWingZeroEvadeAttempt,
     onResolveChoice: onWingZeroResolveChoice
   },
+
+v2_gundam: {
+  getDerivedState: getV2DerivedState,
+  canUseSpecial: canUseV2Special,
+  executeSpecial: executeV2Special,
+  onTurnEnd: onV2TurnEnd,
+  onBeforeSlot: onV2BeforeSlot,
+  onEnemyBeforeSlot: onV2EnemyBeforeSlot,
+  onAfterSlotResolved: onV2AfterSlotResolved,
+  onActionResolved: onV2ActionResolved,
+  onDamaged: onV2Damaged,
+  modifyTakenDamage: modifyV2TakenDamage,
+  modifyEvadeAttempt: modifyV2EvadeAttempt,
+  onResolveChoice: onV2ResolveChoice
+},
+
   
   strike_gundam: {
     getDerivedState: getStrikeDerivedState,
@@ -507,6 +551,19 @@ cpu_gundam_mc: {
   getExtraWeaponResult: getCpuWingZeroExtraWeaponResult
 },
 
+
+cpu_v2_gundam: {
+  getDerivedState: getCpuV2DerivedState,
+  onBeforeSlot: onCpuV2BeforeSlot,
+  onEnemyBeforeSlot: onCpuV2EnemyBeforeSlot,
+  onAfterSlotResolved: onCpuV2AfterSlotResolved,
+  onActionResolved: onCpuV2ActionResolved,
+  onDamaged: onCpuV2Damaged,
+  onTurnEnd: onCpuV2TurnEnd,
+  modifyTakenDamage: modifyCpuV2TakenDamage,
+  modifyEvadeAttempt: modifyCpuV2EvadeAttempt
+},
+  
 cpu_strike_gundam: {
   getDerivedState: getCpuStrikeDerivedState,
   onBeforeSlot: onCpuStrikeBeforeSlot,
