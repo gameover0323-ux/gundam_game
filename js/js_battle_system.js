@@ -84,15 +84,8 @@ function applyAttackOnHitSpecial({ attacker, defender, attack }) {
   return null;
 }
 
-export function takeHit({
-  attacker,
-  defender,
-  currentAttack,
-  attackIndex,
-  modifyTakenDamage
-}) {
+export function takeHit({ attacker, defender, currentAttack, attackIndex, modifyTakenDamage }) {
   const attack = currentAttack[attackIndex];
-
   if (!attacker || !defender || !attack) {
     return null;
   }
@@ -101,11 +94,9 @@ export function takeHit({
     if (attacker.confuseHits > 0) {
       attacker.confuseHits--;
       currentAttack.splice(attackIndex, 1);
-
       if (attacker.confuseHits === 0) {
         attacker.isConfusedTurn = false;
       }
-
       return {
         defender,
         attacker,
@@ -116,7 +107,6 @@ export function takeHit({
         damageMessage: null
       };
     }
-
     attacker.isConfusedTurn = false;
   }
 
@@ -127,14 +117,24 @@ export function takeHit({
   }
 
   let damageMessage = null;
+  let appendAttacks = null;
+  let appendAttackLabel = null;
+  let appendSlotLabel = null;
+  let appendSlotDesc = null;
 
   if (typeof modifyTakenDamage === "function") {
     const modified = modifyTakenDamage(defender, attacker, attack, finalDamage) || {};
 
+    if (Array.isArray(modified.appendAttacks) && modified.appendAttacks.length > 0) {
+      appendAttacks = modified.appendAttacks;
+      appendAttackLabel = modified.appendAttackLabel || null;
+      appendSlotLabel = modified.appendSlotLabel || null;
+      appendSlotDesc = modified.appendSlotDesc || null;
+    }
+
     if (modified.cancelled) {
       defender.lastDamageTaken = 0;
       currentAttack.splice(attackIndex, 1);
-
       return {
         defender,
         attacker,
@@ -142,7 +142,11 @@ export function takeHit({
         attack,
         finalDamage: 0,
         damageMessage: modified.message || "攻撃を無効化した",
-        cancelled: true
+        cancelled: true,
+        appendAttacks,
+        appendAttackLabel,
+        appendSlotLabel,
+        appendSlotDesc
       };
     }
 
@@ -155,9 +159,7 @@ export function takeHit({
 
   const onHitMessage = applyAttackOnHitSpecial({ attacker, defender, attack });
   if (onHitMessage) {
-    damageMessage = damageMessage
-      ? `${damageMessage}<br>${onHitMessage}`
-      : onHitMessage;
+    damageMessage = damageMessage ? `${damageMessage}\n${onHitMessage}` : onHitMessage;
   }
 
   currentAttack.splice(attackIndex, 1);
@@ -168,7 +170,11 @@ export function takeHit({
     currentAttack,
     attack,
     finalDamage,
-    damageMessage
+    damageMessage,
+    appendAttacks,
+    appendAttackLabel,
+    appendSlotLabel,
+    appendSlotDesc
   };
 }
 
