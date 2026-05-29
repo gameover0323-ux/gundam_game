@@ -2,6 +2,7 @@ import { gundam_mc } from "./js_units_gundam_mc.js";
 import { z_gundam } from "./js_units_z_gundam.js";
 import { shining_gundam } from "./js_units_shining_gundam.js";
 import { wing_zero } from "./js_units_wing_zero.js";
+import { v2_gundam } from "./js_units_v2_gundam.js";
 import { strike_gundam } from "./js_units_strike_gundam.js";
 import { exia } from "./js_units_exia.js";
 import { unicorn_gundam } from "./js_units_unicorn_gundam.js";
@@ -23,6 +24,7 @@ import { cpu_gundam_mc } from "./js_units_cpu_gundam_mc.js";
 import { cpu_z_gundam } from "./js_units_cpu_z_gundam.js";
 import { cpu_shining_gundam } from "./js_units_cpu_shining_gundam.js";
 import { cpu_wing_zero } from "./js_units_cpu_wing_zero.js";
+import { cpu_v2_gundam } from "./js_units_cpu_v2_gundam.js";
 import { cpu_strike_gundam } from "./js_units_cpu_strike_gundam.js";
 import { cpu_exia } from "./js_units_cpu_exia.js";
 import { cpu_unicorn_gundam } from "./js_units_cpu_unicorn_gundam.js";
@@ -39,6 +41,7 @@ export const unitList = [
   z_gundam,
   shining_gundam,
   wing_zero,
+  v2_gundam,
   strike_gundam,
   exia,
   unicorn_gundam,
@@ -58,6 +61,7 @@ export const cpuList = [
   cpu_z_gundam,
   cpu_shining_gundam,
   cpu_wing_zero,
+  cpu_v2_gundam,
   cpu_strike_gundam,
   cpu_exia,
   cpu_unicorn_gundam,
