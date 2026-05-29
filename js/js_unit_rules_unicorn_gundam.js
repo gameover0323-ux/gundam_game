@@ -539,17 +539,22 @@ export function onUnicornAfterSlotResolved(state, slotNumber, payload = {}) {
   }
 
   if (result?.customEffectId === "unicorn_rush") {
-    const count = Math.max(0, getRuleEvade(state, payload));
+  const count = Math.max(0, getRuleEvade(state, payload));
 
+  if (count <= 0) {
     return {
       redraw: false,
-      appendAttacks: createAttack(40, count, {
-        type: "melee",
-        source: "乱撃"
-      }),
-      message: `乱撃：40ダメージ×${count}回`
+      appendAttacks: createAttack(60, 1, { type: "melee", source: "乱撃" }),
+      message: "乱撃：回避無所持 60ダメージ"
     };
   }
+
+  return {
+    redraw: false,
+    appendAttacks: createAttack(40, count, { type: "melee", source: "乱撃" }),
+    message: `乱撃：40ダメージ×${count}回`
+  };
+}
 
   if (result?.customEffectId === "unicorn_double_evade") {
     doubleRuleEvadeRedCap(state, payload);
