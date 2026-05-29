@@ -304,7 +304,8 @@ export function getV2DerivedState(state) {
     }
   }
 
-  if (formId(state) === "assault_buster") {
+if (formId(state) === "assault_buster") {
+  if (Math.random() < 0.5) {
     slots.slot2 = {
       label: "2EX 回避 +4",
       desc: "回避4＋補填分の回避ストック最大値増加",
@@ -312,6 +313,7 @@ export function getV2DerivedState(state) {
       effect: { type: "custom", customType: "v2_ab_evade4" }
     };
   }
+}
 
   if (formId(state) === "assault_buster_cannon") {
   if (Math.random() < 0.5) {
