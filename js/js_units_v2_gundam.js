@@ -19,7 +19,7 @@ export const v2_gundam = {
       },
       specials: [
         { name: "特性", effectType: "v2_trait", timing: "auto", actionType: "auto", desc: "各形態換装クールタイムは5ターン。" },
-        { name: "シールド", effectType: "shield", timing: "self", actionType: "instant", desc: "3回まで、1ターン間の相手の攻撃ダメージを半減する。" },
+        { name: "シールド", effectType: "shield", timing: "reaction", actionType: "instant", desc: "3回まで、1ターン間の相手の攻撃ダメージを半減する。" },
         { name: "換装", effectType: "v2_change_form", timing: "self", actionType: "choice", desc: "各形態へ換装。通常換装はHP50回復、アサルトバスター系はHP100回復。" },
         { name: "マルチプルアサルト追撃", effectType: "v2_multiple_assault", timing: "self", actionType: "instant", desc: "4の行動選択時、回避2消費で4EXを続けて発動。" }
       ]
@@ -41,9 +41,9 @@ export const v2_gundam = {
       },
       specials: [
         { name: "特性", effectType: "v2_assault_trait", timing: "auto", actionType: "auto", desc: "毎ターンHP-10、回避ストック最大値-1。最大値0でV2へ戻りHP50回復。" },
-        { name: "シールド", effectType: "shield", timing: "self", actionType: "instant", desc: "3回まで、1ターン間の相手の攻撃ダメージを半減する。" },
+        { name: "シールド", effectType: "shield", timing: "reaction", actionType: "instant", desc: "3回まで、1ターン間の相手の攻撃ダメージを半減する。" },
         { name: "換装", effectType: "v2_change_form", timing: "self", actionType: "choice", desc: "同形態欄は換装解除。" },
-        { name: "メガビームシールド", effectType: "v2_mega_beam_shield", timing: "self", actionType: "instant", desc: "3回のみ、相手の攻撃ダメージを1ターン間無効化する。" }
+        { name: "メガビームシールド", effectType: "v2_mega_beam_shield", timing: "reaction", actionType: "instant", desc: "3回のみ、相手の攻撃ダメージを1ターン間無効化する。アサルトと回数共有。" }
       ]
     },
 
@@ -63,7 +63,7 @@ export const v2_gundam = {
       },
       specials: [
         { name: "特性", effectType: "v2_buster_trait", timing: "auto", actionType: "auto", desc: "毎ターンHP-20。4EX追撃消費回避1。スロット3が50%で3EX。2ターン目以降20%で2EX、3回使用でV2へ戻る。" },
-        { name: "シールド", effectType: "shield", timing: "self", actionType: "instant", desc: "3回まで、1ターン間の相手の攻撃ダメージを半減する。" },
+        { name: "シールド", effectType: "shield", timing: "reaction", actionType: "instant", desc: "3回まで、1ターン間の相手の攻撃ダメージを半減する。" },
         { name: "換装", effectType: "v2_change_form", timing: "self", actionType: "choice", desc: "同形態欄は換装解除。" },
         { name: "マルチプルアサルト追撃", effectType: "v2_multiple_assault", timing: "self", actionType: "instant", desc: "4の行動選択時、回避2消費で4EXを続けて発動。バスター特性で消費1。" }
       ]
@@ -77,15 +77,15 @@ export const v2_gundam = {
       ownedSlotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"],
       slots: {
         slot1: { label: "回復 100", desc: "HP100回復", effect: { type: "heal", amount: 100 } },
-        slot2: { label: "チャージ", desc: "大口径系の攻撃数値+5", effect: { type: "custom", customType: "v2_cannon_charge" } },
-        slot3: { label: "チャージ", desc: "大口径系の攻撃数値+5", effect: { type: "custom", customType: "v2_cannon_charge" } },
-        slot4: { label: "チャージ", desc: "大口径系の攻撃数値+5", effect: { type: "custom", customType: "v2_cannon_charge" } },
+        slot2: { label: "チャージ", desc: "キャノン装備系の攻撃数値+5", effect: { type: "custom", customType: "v2_cannon_charge" } },
+        slot3: { label: "チャージ", desc: "キャノン装備系の攻撃数値+5", effect: { type: "custom", customType: "v2_cannon_charge" } },
+        slot4: { label: "チャージ", desc: "キャノン装備系の攻撃数値+5", effect: { type: "custom", customType: "v2_cannon_charge" } },
         slot5: { label: "大口径ビームサーベル 150ダメージ", desc: "150ダメージ＋チャージ加算。格闘。ビーム", effect: { type: "custom", customType: "v2_cannon_saber" } },
         slot6: { label: "大口径ビームキャノン 150ダメージ", desc: "150ダメージ＋チャージ加算。射撃。ビーム", effect: { type: "custom", customType: "v2_cannon_beam_cannon" } }
       },
       specials: [
         { name: "特性", effectType: "v2_cannon_trait", timing: "auto", actionType: "auto", desc: "毎ターンHP-10。3回攻撃行動命中でV2へ戻りHP50回復。" },
-        { name: "シールド", effectType: "shield", timing: "self", actionType: "instant", desc: "3回まで、1ターン間の相手の攻撃ダメージを半減する。" },
+        { name: "シールド", effectType: "shield", timing: "reaction", actionType: "instant", desc: "3回まで、1ターン間の相手の攻撃ダメージを半減する。" },
         { name: "換装", effectType: "v2_change_form", timing: "self", actionType: "choice", desc: "同形態欄は換装解除。" },
         { name: "出力安定化", effectType: "v2_cannon_ignore_reduction", timing: "self", actionType: "instant", desc: "攻撃行動時に回避1消費で軽減不可付与。" },
         { name: "命中補正最大", effectType: "v2_cannon_cannot_evade", timing: "self", actionType: "instant", desc: "攻撃行動時に回避5消費で必中付与。" }
@@ -108,10 +108,10 @@ export const v2_gundam = {
       },
       specials: [
         { name: "特性", effectType: "v2_ab_trait", timing: "auto", actionType: "auto", desc: "毎ターン回避+1、回避ストック最大値-1、HP-30。最大値0でV2へ戻りHP50回復。" },
-        { name: "シールド", effectType: "shield", timing: "self", actionType: "instant", desc: "3回まで、1ターン間の相手の攻撃ダメージを半減する。" },
+        { name: "シールド", effectType: "shield", timing: "reaction", actionType: "instant", desc: "3回まで、1ターン間の相手の攻撃ダメージを半減する。" },
         { name: "換装", effectType: "v2_change_form", timing: "self", actionType: "choice", desc: "同形態欄は換装解除。" },
         { name: "マルチプルアサルト追撃", effectType: "v2_multiple_assault", timing: "self", actionType: "instant", desc: "4の行動選択時、回避1消費で4EXを続けて発動。" },
-        { name: "メガビームシールド", effectType: "v2_mega_beam_shield", timing: "self", actionType: "instant", desc: "3回のみ、相手の攻撃ダメージを1ターン間無効化する。アサルトと回数共有。" }
+        { name: "メガビームシールド", effectType: "v2_mega_beam_shield", timing: "reaction", actionType: "instant", desc: "3回のみ、相手の攻撃ダメージを1ターン間無効化する。アサルトと回数共有。" }
       ]
     },
 
@@ -131,10 +131,10 @@ export const v2_gundam = {
       },
       specials: [
         { name: "特性", effectType: "v2_abc_trait", timing: "auto", actionType: "auto", desc: "毎ターン回避+1、回避ストック最大値-1、HP-50。最大値0でV2へ戻りHP50回復。" },
-        { name: "シールド", effectType: "shield", timing: "self", actionType: "instant", desc: "3回まで、1ターン間の相手の攻撃ダメージを半減する。" },
+        { name: "シールド", effectType: "shield", timing: "reaction", actionType: "instant", desc: "3回まで、1ターン間の相手の攻撃ダメージを半減する。" },
         { name: "換装", effectType: "v2_change_form", timing: "self", actionType: "choice", desc: "同形態欄は換装解除。" },
         { name: "マルチプルアサルト追撃", effectType: "v2_multiple_assault", timing: "self", actionType: "instant", desc: "4の行動選択時、回避1消費で4EXを続けて発動。" },
-        { name: "メガビームシールド", effectType: "v2_mega_beam_shield", timing: "self", actionType: "instant", desc: "3回のみ、相手の攻撃ダメージを1ターン間無効化する。アサルトと回数共有。" }
+        { name: "メガビームシールド", effectType: "v2_mega_beam_shield", timing: "reaction", actionType: "instant", desc: "3回のみ、相手の攻撃ダメージを1ターン間無効化する。アサルトと回数共有。" }
       ]
     }
   }
