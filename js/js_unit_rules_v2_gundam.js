@@ -394,7 +394,6 @@ export function executeV2Special(state, specialKey, context = {}) {
     if (Number(state.evade || 0) < cost) return { handled: true, redraw: false, message: "回避が足りない" };
 
     reduceEvade(state, cost);
-    state.v2LastSlot4Ready = false;
     return { handled: true, redraw: true, message: `マルチプルアサルト追撃：回避${cost}消費`, appendAttacks: multipleAssaultAttack() };
   }
 
