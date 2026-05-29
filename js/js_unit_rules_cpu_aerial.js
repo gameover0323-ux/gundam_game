@@ -1,18 +1,7 @@
-import {
-  getAerialDerivedState,
-  onAerialBeforeSlot,
-  onAerialEnemyBeforeSlot,
-  onAerialAfterSlotResolved,
-  onAerialActionResolved,
-  onAerialDamaged,
-  onAerialTurnEnd,
-  modifyAerialTakenDamage,
-  modifyAerialEvadeAttempt,
-  onAerialResolveChoice
-} from "./js_unit_rules_aerial.js";
-
+import { getAerialDerivedState, onAerialBeforeSlot, onAerialEnemyBeforeSlot, onAerialAfterSlotResolved, onAerialActionResolved, onAerialDamaged, onAerialTurnEnd, modifyAerialTakenDamage, modifyAerialEvadeAttempt, onAerialResolveChoice } from "./js_unit_rules_aerial.js";
 import { reduceEvade } from "./js_unit_runtime.js";
 import { createAttack } from "./js_battle_system.js";
+import { resolveSlotEffect } from "./js_slot_effects.js";
 
 function chance(rate) { return Math.random() < rate; }
 
@@ -135,4 +124,95 @@ export function modifyCpuAerialEvadeAttempt(defender, attacker, attack, context 
 export function onCpuAerialResolveChoice(state, pendingChoice, selectedValue, context = {}) {
   ensureCpuAerialState(state);
   return onAerialResolveChoice(state, pendingChoice, selectedValue, context);
+}
+function getRandomSlotKey(state) {
+  const keys = state.rollableSlotOrder || Object.keys(state.slots || {});
+  if (!keys.length) return null;
+  return keys[Math.floor(Math.random() * keys.length)];
+}
+
+function getSlotNumber(slotKey) {
+  return Number(String(slotKey).replace(/^slot/, ""));
+}
+
+function addCpuAerialGundbitLinks(state, total) {
+  const ratio = getEvadeRatio(state);
+
+  while (
+    Number(state.aerialGundbitLinkCountThisTurn || 0) < 3 &&
+    Number(state.evade || 0) >= 1 &&
+    chance(ratio)
+  ) {
+    reduceEvade(state, 1);
+    state.aerialGundbitLinkCountThisTurn += 1;
+    total.appendAttacks.push(...createAttack(20, 1, {
+      type: "shoot",
+      beam: true,
+      source: "ガンビット"
+    }));
+    total.appendMessages.push("CPUエアリアル：ガンビット連携");
+  }
+}
+
+function resolveCpuAerialExtraSlot(state, slotKey, context = {}, total) {
+  const slot = state.slots?.[slotKey];
+  if (!slot) return;
+
+  const slotNumber = getSlotNumber(slotKey);
+  total.appendMessages.push(`CPUエアリアル追加行動：${slotNumber}.${slot.label}`);
+
+  const before = onCpuAerialBeforeSlot(state, slotNumber, context) || {};
+  if (before.message) total.appendMessages.push(before.message);
+  if (before.cancelSlot) return;
+
+  const result = resolveSlotEffect({
+    slot,
+    actor: state,
+    context
+  });
+
+  if (result.kind === "attack") {
+    total.appendAttacks.push(...result.attacks);
+  }
+
+  if (result.message) total.appendMessages.push(result.message);
+
+  const after = onCpuAerialAfterSlotResolved(state, slotNumber, {
+    ...context,
+    resolveResult: result
+  }) || {};
+
+  if (after.message) total.appendMessages.push(after.message);
+  if (Array.isArray(after.appendAttacks)) {
+    total.appendAttacks.push(...after.appendAttacks);
+  }
+
+  addCpuAerialGundbitLinks(state, total);
+}
+
+export function getCpuAerialExtraWeaponResult(state, context = {}) {
+  ensureCpuAerialState(state);
+
+  const total = {
+    appendAttacks: [],
+    appendMessages: [],
+    redraw: true
+  };
+
+  addCpuAerialGundbitLinks(state, total);
+
+  while (Number(state.actionCount || 0) > 0) {
+    state.actionCount -= 1;
+
+    const slotKey = getRandomSlotKey(state);
+    if (!slotKey) break;
+
+    resolveCpuAerialExtraSlot(state, slotKey, context, total);
+  }
+
+  if (total.appendAttacks.length === 0 && total.appendMessages.length === 0) {
+    return null;
+  }
+
+  return total;
 }
