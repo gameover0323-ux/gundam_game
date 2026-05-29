@@ -111,15 +111,16 @@ function getEvadeDisplayHtml(state) {
   const current = typeof state.evade === "number" ? state.evade : 0;
   const baseMax = typeof state.evadeMax === "number" ? state.evadeMax : 0;
   const overCap = typeof state.overEvadeCap === "number" ? state.overEvadeCap : baseMax;
-  const absoluteMax =
-    typeof state.overEvadeAbsoluteMax === "number" ? state.overEvadeAbsoluteMax : 50;
+  const absoluteMax = typeof state.overEvadeAbsoluteMax === "number" ? state.overEvadeAbsoluteMax : 50;
 
   if (current <= baseMax) {
     return `回避:${current}/${baseMax}`;
   }
 
-  const displayCap = Math.min(overCap, absoluteMax);
-  return `回避:${current}/${displayCap}`;
+  const displayCap = Math.min(Math.max(overCap, current, baseMax), absoluteMax);
+  const color = displayCap >= absoluteMax ? "#ffd700" : "#ff4444";
+
+  return `回避:<span style="color:${color};">${current}/${displayCap}</span>`;
 }
 
 function getHpLineHtml(state, unified = false) {
