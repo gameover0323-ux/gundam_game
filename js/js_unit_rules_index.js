@@ -312,6 +312,7 @@ import {
   onCpuAerialTurnEnd,
   modifyCpuAerialTakenDamage,
   modifyCpuAerialEvadeAttempt,
+  getCpuAerialExtraWeaponResult,
   onCpuAerialResolveChoice
 } from "./js_unit_rules_cpu_aerial.js";
 
@@ -610,6 +611,7 @@ cpu_barbatos: {
 },
   
 cpu_aerial: {
+cpu_aerial: {
   getDerivedState: getCpuAerialDerivedState,
   onBeforeSlot: onCpuAerialBeforeSlot,
   onEnemyBeforeSlot: onCpuAerialEnemyBeforeSlot,
@@ -619,7 +621,8 @@ cpu_aerial: {
   onTurnEnd: onCpuAerialTurnEnd,
   modifyTakenDamage: modifyCpuAerialTakenDamage,
   modifyEvadeAttempt: modifyCpuAerialEvadeAttempt,
-  onResolveChoice: onCpuAerialResolveChoice
+  onResolveChoice: onCpuAerialResolveChoice,
+  getExtraWeaponResult: getCpuAerialExtraWeaponResult
 },
   
 cpu_jegan_d_type: {
