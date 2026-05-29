@@ -158,7 +158,30 @@ function getAttackTypeFromAttack(attack) {
 
     ctx.renderAttackLogText("攻撃解決済み");
   }
+function startCounterAttackFromHitResult(hitResult, defenderPlayer, attackerPlayer, ctxAtk) {
+  if (!hitResult || !Array.isArray(hitResult.appendAttacks) || hitResult.appendAttacks.length === 0) {
+    return false;
+  }
 
+  ctx.setCurrentAttack(hitResult.appendAttacks);
+  ctx.setCurrentAttackContext({
+    ownerPlayer: defenderPlayer,
+    enemyPlayer: attackerPlayer,
+    slotKey: "counter",
+    slotNumber: null,
+    slotLabel: hitResult.appendSlotLabel || hitResult.appendAttackLabel || "カウンター攻撃",
+    slotDesc: hitResult.appendSlotDesc || "",
+    totalCount: hitResult.appendAttacks.length,
+    hitCount: 0,
+    evadeCount: 0,
+    appendedFrom: ctxAtk?.slotLabel || null,
+    counterAttack: true
+  });
+
+  ctx.redrawBattleBoards();
+  ctx.renderAttackChoices();
+  return true;
+}
   function takeHit(index) {
     const ctxAtk = ctx.getCurrentAttackContext();
     const attackerPlayer = ctxAtk?.ownerPlayer || ctx.getCurrentPlayer();
@@ -194,15 +217,21 @@ const hitResult = ctx.resolveTakeHit({
 });
 
     if (hitResult && hitResult.cancelled) {
-      ctx.appendBattleNotice("攻撃無効");
-      if (currentAttack.length === 0) {
-        finishCurrentAttackResolution();
-        return;
-      }
-      ctx.redrawBattleBoards();
-      ctx.renderAttackChoices();
+  ctx.appendBattleNotice(hitResult.damageMessage || "攻撃無効");
+
+  if (currentAttack.length === 0) {
+    if (startCounterAttackFromHitResult(hitResult, defenderPlayer, attackerPlayer, ctxAtk)) {
       return;
     }
+
+    finishCurrentAttackResolution();
+    return;
+  }
+
+  ctx.redrawBattleBoards();
+  ctx.renderAttackChoices();
+  return;
+}
 
     const defenderTeam = ctx.getTeam(defenderPlayer);
 
@@ -250,7 +279,9 @@ const hitResult = ctx.resolveTakeHit({
       Number(attacker.exiaTurnDamageDealt || 0) + Number(hitResult?.finalDamage || 0);
   }
 }
-
+if (startCounterAttackFromHitResult(hitResult, defenderPlayer, attackerPlayer, ctxAtk)) {
+  return;
+}
     const damagedResult = ctx.executeUnitOnDamaged(defender, attacker, {
       ownerPlayer: defenderPlayer,
       enemyPlayer: attackerPlayer,
