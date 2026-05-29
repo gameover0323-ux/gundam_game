@@ -314,21 +314,15 @@ export function getV2DerivedState(state) {
   }
 
   if (formId(state) === "assault_buster_cannon") {
+  if (Math.random() < 0.5) {
     slots.slot2 = {
       label: "2EX 回避 +6",
       desc: "回避6＋補填分の回避ストック最大値増加",
       ex: true,
       effect: { type: "custom", customType: "v2_abc_evade6" }
     };
-
-    slots.slot4 = {
-      label: "4EX マルチプルランチャー 60ダメージ",
-      desc: "60ダメージ。射撃",
-      ex: true,
-      effect: { type: "attack", attackType: "shoot", damage: 60, count: 1 }
-    };
   }
-
+}
   return derived;
 }
 
