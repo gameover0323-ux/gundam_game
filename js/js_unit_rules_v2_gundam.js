@@ -446,19 +446,17 @@ export function onV2BeforeSlot(state, rolledSlotNumber, context = {}) {
   }
 
   if (formId(state) === "assault_buster") {
-    ensureV2DynamicEvadeCap(state);
-    addEvade(state, 1);
-    reduceCap(state, 1);
-    damageSelf(state, 30);
-    messages.push("V2AB特性：回避+1、回避ストック最大値-1、HP-30");
+  ensureV2DynamicEvadeCap(state);
+  reduceCap(state, 1);
+  damageSelf(state, 30);
+  messages.push("V2AB特性：回避ストック最大値-1、HP-30");
   }
 
   if (formId(state) === "assault_buster_cannon") {
-    ensureV2DynamicEvadeCap(state);
-    addEvade(state, 1);
-    reduceCap(state, 1);
-    damageSelf(state, 50);
-    messages.push("V2ABC特性：回避+1、回避ストック最大値-1、HP-50");
+  ensureV2DynamicEvadeCap(state);
+  reduceCap(state, 1);
+  damageSelf(state, 50);
+  messages.push("V2ABC特性：回避ストック最大値-1、HP-50");
   }
 
   if (usesV2DynamicEvadeCap(state) && getV2CurrentEvadeMax(state) <= 0) {
