@@ -238,8 +238,6 @@ export function writeRandomMatchAnnouncement(data) {
   return set(getRandomMatchAnnouncementRef(), data);
 }
 
-
-
 export function listenRandomMatchAnnouncement(callback) {
   return onValue(getRandomMatchAnnouncementRef(), snapshot => {
     callback(snapshot.val());
