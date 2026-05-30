@@ -310,6 +310,42 @@ export const DEFEAT_TITLE_RULES = [
       [50, "やめてよね"]
     ]
   }),
+  ...makeDefeatTitleRules({
+    category: "playable",
+    targetId: "freedom_gundam",
+    prefix: "freedom_gundam",
+    entries: [
+      [1, "自由"],
+      [5, "舞い降りる"],
+      [10, "ラケルタ"],
+      [15, "ルプス"],
+      [20, "クスィフィアス"],
+      [25, "バラエーナ"],
+      [30, "ハイマット"],
+      [35, "フルバースト"],
+      [40, "フリーダム"],
+      [45, "守りたい世界があるんだ"],
+      [50, "スーパーコーディネイター"]
+    ]
+  }),
+  ...makeDefeatTitleRules({
+    category: "cpu",
+    targetId: "cpu_freedom_gundam",
+    prefix: "cpu_freedom_gundam",
+    entries: [
+      [1, "キラー"],
+      [5, "ヒビキ"],
+      [10, "撃ちたくない"],
+      [15, "撃たせないで"],
+      [20, "不殺"],
+      [25, "Nジャマーキャンセラー"],
+      [30, "アンビテクストラス"],
+      [35, "ハルバード"],
+      [40, "バレルロール"],
+      [45, "オーブ"],
+      [50, "当たれぇー！"]
+    ]
+  }),
 ...makeDefeatTitleRules({
   category: "playable",
   targetId: "exia",
@@ -688,6 +724,8 @@ export function getTitleConditionText(titleId) {
 cpu_v2_gundam: "V2ガンダムのCPU",
     strike_gundam: "ストライクガンダム",
     cpu_strike_gundam: "ストライクガンダムのCPU",
+    freedom_gundam: "フリーダムガンダム",
+    cpu_freedom_gundam: "フリーダムガンダムのCPU",
     exia: "ガンダムエクシア",
 cpu_exia: "ガンダムエクシアのCPU",
     unicorn_gundam: "ユニコーンガンダム",
@@ -748,6 +786,8 @@ export const TITLE_GROUPS = [
 ["cpu_v2_gundam", "CPU V2ガンダム撃破"],
     ["strike_gundam", "ストライクガンダム使用"],
     ["cpu_strike_gundam", "CPUストライクガンダム撃破"],
+    ["freedom_gundam", "フリーダムガンダム使用"],
+    ["cpu_freedom_gundam", "CPUフリーダムガンダム撃破"],
     ["exia", "ガンダムエクシア使用"],
 ["cpu_exia", "CPUガンダムエクシア撃破"],
     ["unicorn_gundam", "ユニコーンガンダム使用"],
