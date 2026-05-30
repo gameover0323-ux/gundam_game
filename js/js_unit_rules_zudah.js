@@ -14,6 +14,18 @@ function addAction(state, amount) {
   state.actionCount += amount;
 }
 
+function isTurnStartForZudah(state, context = {}) {
+  if (
+    context?.phase === "turnStart" ||
+    context?.timing === "turnStart" ||
+    state?.isTurnStartPhase === true
+  ) {
+    return true;
+  }
+
+  return Number(state.actionCount || 0) === Number(state.baseActionCount || 1);
+}
+
 export function getZudahDerivedState(state) {
   ensureZudahState(state);
 
@@ -33,29 +45,15 @@ export function canUseZudahSpecial(state, specialKey, context = {}) {
   if (!special) return { allowed: false, message: "特殊行動データが見つからない" };
 
   if (special.effectType === "zudah_engine_cut") {
-    const accelOk = state.zudahAccelStack >= 2;
-
-    const turnStartOnly =
-  Number(state.actionCount || 0) === Number(state.baseActionCount || 1);
-
-    if (!accelOk) {
-      return {
-        allowed: false,
-        message: "加速2回以上で使用可能"
-      };
+    if (state.zudahAccelStack < 2) {
+      return { allowed: false, message: "加速2回以上で使用可能" };
     }
 
-    if (!turnStartOnly) {
-      return {
-        allowed: false,
-        message: "ターン開始時のみ使用可能"
-      };
+    if (!isTurnStartForZudah(state, context)) {
+      return { allowed: false, message: "ターン開始時のみ使用可能" };
     }
 
-    return {
-      allowed: true,
-      message: null
-    };
+    return { allowed: true, message: null };
   }
 
   if (special.effectType === "zudah_charge") {
@@ -86,21 +84,12 @@ export function executeZudahSpecial(state, specialKey, context = {}) {
   if (!special) return { handled: true, redraw: false, message: "特殊行動データが見つからない" };
 
   if (special.effectType === "zudah_engine_cut") {
-    const turnStartOnly =
-      context?.phase === "turnStart" ||
-      context?.timing === "turnStart" ||
-      state?.isTurnStartPhase === true;
-
-    if (!turnStartOnly) {
-      return {
-        handled: true,
-        redraw: false,
-        message: "ターン開始時のみ使用可能"
-      };
-    }
-
     if (state.zudahAccelStack < 2) {
       return { handled: true, redraw: false, message: "加速2回以上で使用可能" };
+    }
+
+    if (!isTurnStartForZudah(state, context)) {
+      return { handled: true, redraw: false, message: "ターン開始時のみ使用可能" };
     }
 
     const healAmount = state.zudahAccelStack * 10;
@@ -139,7 +128,8 @@ export function executeZudahSpecial(state, specialKey, context = {}) {
 
     return { handled: true, redraw: true, message: "翻弄：行動回数-1、回避+1" };
   }
-if (special.effectType === "shield") {
+
+  if (special.effectType === "shield") {
     if (state.shieldCount <= 0) {
       return { handled: true, redraw: false, message: "シールドはもう使えない" };
     }
@@ -175,10 +165,7 @@ export function onZudahAfterSlotResolved(state, slotNumber, context = {}) {
 
     if (state.zudahAccelStack >= 5) {
       state.hp = 0;
-      return {
-        redraw: true,
-        message: "ヅダは加速を5回重ね掛けし、自爆した"
-      };
+      return { redraw: true, message: "ヅダは加速を5回重ね掛けし、自爆した" };
     }
 
     state.baseActionCount = 1 + state.zudahAccelStack;
