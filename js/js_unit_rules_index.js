@@ -472,22 +472,21 @@ v2_gundam: {
     onResolveChoice: onStrikeResolveChoice
   },
 
-freedom_gundam: {
-    getDerivedState: getFreedomDerivedState,
-    canUseSpecial: canUseFreedomSpecial,
-    executeSpecial: executeFreedomSpecial,
-    beforeSlot: onFreedomBeforeSlot,
-    enemyBeforeSlot: onFreedomEnemyBeforeSlot,
-    afterSlotResolved: onFreedomAfterSlotResolved,
-    onActionResolved: onFreedomActionResolved,
-    onDamaged: onFreedomDamaged,
-    onTurnEnd: onFreedomTurnEnd,
-    modifyTakenDamage: modifyFreedomTakenDamage,
-    modifyEvadeAttempt: modifyFreedomEvadeAttempt,
-    resolveChoice: onFreedomResolveChoice
-  },
 
-  
+  freedom_gundam: {
+  getDerivedState: getFreedomDerivedState,
+  canUseSpecial: canUseFreedomSpecial,
+  executeSpecial: executeFreedomSpecial,
+  onTurnEnd: onFreedomTurnEnd,
+  onBeforeSlot: onFreedomBeforeSlot,
+  onEnemyBeforeSlot: onFreedomEnemyBeforeSlot,
+  onAfterSlotResolved: onFreedomAfterSlotResolved,
+  onActionResolved: onFreedomActionResolved,
+  onDamaged: onFreedomDamaged,
+  modifyTakenDamage: modifyFreedomTakenDamage,
+  modifyEvadeAttempt: modifyFreedomEvadeAttempt,
+  onResolveChoice: onFreedomResolveChoice
+},
   exia: {
   getDerivedState: getExiaDerivedState,
   canUseSpecial: canUseExiaSpecial,
@@ -625,19 +624,20 @@ cpu_strike_gundam: {
 },
 
   cpu_freedom_gundam: {
-    getDerivedState: getCpuFreedomDerivedState,
-    executeSpecial: executeCpuFreedomSpecial,
-    beforeSlot: onCpuFreedomBeforeSlot,
-    enemyBeforeSlot: onCpuFreedomEnemyBeforeSlot,
-    afterSlotResolved: onCpuFreedomAfterSlotResolved,
-    onActionResolved: onCpuFreedomActionResolved,
-    onDamaged: onCpuFreedomDamaged,
-    onTurnEnd: onCpuFreedomTurnEnd,
-    modifyTakenDamage: modifyCpuFreedomTakenDamage,
-    modifyEvadeAttempt: modifyCpuFreedomEvadeAttempt,
-    resolveChoice: onCpuFreedomResolveChoice,
-    getExtraWeaponResult: getCpuFreedomExtraWeaponResult
-  },
+  getDerivedState: getCpuFreedomDerivedState,
+  executeSpecial: executeCpuFreedomSpecial,
+  onTurnEnd: onCpuFreedomTurnEnd,
+  onBeforeSlot: onCpuFreedomBeforeSlot,
+  onEnemyBeforeSlot: onCpuFreedomEnemyBeforeSlot,
+  onAfterSlotResolved: onCpuFreedomAfterSlotResolved,
+  onActionResolved: onCpuFreedomActionResolved,
+  onDamaged: onCpuFreedomDamaged,
+  modifyTakenDamage: modifyCpuFreedomTakenDamage,
+  modifyEvadeAttempt: modifyCpuFreedomEvadeAttempt,
+  onResolveChoice: onCpuFreedomResolveChoice,
+  getExtraWeaponResult: getCpuFreedomExtraWeaponResult
+},
+  
   cpu_exia: {
   getDerivedState: getCpuExiaDerivedState,
   onBeforeSlot: onCpuExiaBeforeSlot,
