@@ -630,10 +630,11 @@ function canReceiveRandomMatchAnnouncement(data) {
   }
 
   return {
-  getRandomMatchState,
-  resetRandomMatchState,
-  ensureRandomMatchUi,
-  listenRandomMatchAnnouncementsOnceReady,
-  startRandomMatch,
-  enterRandomMatchedRoom
-};
+    getRandomMatchState,
+    resetRandomMatchState,
+    ensureRandomMatchUi,
+    listenRandomMatchAnnouncementsOnceReady,
+    startRandomMatch,
+    enterRandomMatchedRoom
+  };
+}
