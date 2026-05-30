@@ -42,23 +42,27 @@ export function createRandomMatchController(ctx) {
     return "";
   }
 
-  function canReceiveRandomMatchAnnouncement(data) {
-    const profile = ctx.getPlayerProfile();
+function canReceiveRandomMatchAnnouncement(data) {
+  const profile = ctx.getPlayerProfile();
 
-    if (!profile) return false;
-    if (!data || !data.id) return false;
-    if (data.profileId && data.profileId === profile.id) return false;
-    if (data.id === lastSeenRandomMatchAnnouncementId) return false;
-    if (randomMatchInviteShowing) return false;
-    if (ctx.isOnlineEnabled() || randomMatchState.enabled) return false;
+  if (!profile) return false;
+  if (!data || !data.id) return false;
 
-    const scene = getCurrentRandomMatchNotifyScene();
-    if (!scene) return false;
+  // ←ここ追加
+  if (data.status && data.status !== "recruiting") return false;
 
-    const settings = getRandomMatchNotifySettings();
-    return settings[scene] === true;
-  }
+  if (data.profileId && data.profileId === profile.id) return false;
+  if (data.id === lastSeenRandomMatchAnnouncementId) return false;
+  if (randomMatchInviteShowing) return false;
+  if (ctx.isOnlineEnabled() || randomMatchState.enabled) return false;
 
+  const scene = getCurrentRandomMatchNotifyScene();
+  if (!scene) return false;
+
+  const settings = getRandomMatchNotifySettings();
+  return settings[scene] === true;
+}
+  
   function listenRandomMatchAnnouncementsOnceReady() {
     if (randomMatchAnnouncementUnsubscribe) return;
 
