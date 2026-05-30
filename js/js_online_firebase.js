@@ -238,13 +238,7 @@ export function writeRandomMatchAnnouncement(data) {
   return set(getRandomMatchAnnouncementRef(), data);
 }
 
-export function clearRandomMatchAnnouncement(ticketId = null) {
-  return set(getRandomMatchAnnouncementRef(), {
-    id: ticketId || `cleared_${Date.now()}`,
-    status: "cancelled",
-    updatedAt: Date.now()
-  });
-}
+
 
 export function listenRandomMatchAnnouncement(callback) {
   return onValue(getRandomMatchAnnouncementRef(), snapshot => {
