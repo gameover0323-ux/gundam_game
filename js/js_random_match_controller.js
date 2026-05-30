@@ -48,8 +48,15 @@ function canReceiveRandomMatchAnnouncement(data) {
   if (!profile) return false;
   if (!data || !data.id) return false;
 
-  // ←ここ追加
+  // status がある場合は recruiting のみ通知対象。
+  // status 未設定の古い通知データは、下の有効期限判定で自然に落とす。
   if (data.status && data.status !== "recruiting") return false;
+
+  const updatedAt = Number(data.updatedAt || data.createdAt || 0);
+  if (!updatedAt) return false;
+
+  // 古い募集通知は無視。60秒で自然失効。
+  if (Date.now() - updatedAt > 60 * 1000) return false;
 
   if (data.profileId && data.profileId === profile.id) return false;
   if (data.id === lastSeenRandomMatchAnnouncementId) return false;
@@ -308,12 +315,13 @@ function canReceiveRandomMatchAnnouncement(data) {
       const now = Date.now();
 
       await ctx.writeRandomMatchAnnouncement({
-        id: myTicketId,
-        profileId: profile.id,
-        profileName: profile.name || profile.id || "プレイヤー",
-        createdAt: now,
-        updatedAt: now
-      });
+  id: myTicketId,
+  status: "recruiting",
+  profileId: profile.id,
+  profileName: profile.name || profile.id || "プレイヤー",
+  createdAt: now,
+  updatedAt: now
+});
 
       randomMatchState.ticketId = myTicketId;
 
