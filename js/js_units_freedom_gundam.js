@@ -30,12 +30,12 @@ export const freedom_gundam = {
       rollableSlotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"],
       ownedSlotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"],
       slots: {
-        slot1: { label: "1EX ラケルタ連撃 20ダメージ×所持回避数", desc: "20ダメージ×所持回避数。格闘、ビーム属性、S.E.E.D.中は橙必中。", effect: { type: "attack", damage: 20, count: 1, attackType: "melee", beam: true } },
-        slot2: { label: "2EX バラエーナ 50ダメージ×2回", desc: "50ダメージ×2回。射撃、ビーム属性、S.E.E.D.中は橙必中。", effect: { type: "attack", damage: 50, count: 2, attackType: "shoot", beam: true } },
-        slot3: { label: "3EX 回避 4回", desc: "回避4回", effect: { type: "evade", amount: 4 } },
-        slot4: { label: "4EX 回復 80", desc: "HP80回復", effect: { type: "heal", amount: 80 } },
-        slot5: { label: "5EX S.E.E.D.覚醒 3ターン延長", desc: "S.E.E.D.覚醒の残りターン+3", effect: { type: "custom", effectId: "freedom_seed_extend" } },
-        slot6: { label: "6EX ハイマットフルバースト 180ダメージ", desc: "180ダメージ。射撃、ビーム属性、S.E.E.D.中は橙必中。", effect: { type: "attack", damage: 180, count: 1, attackType: "shoot", beam: true } }
+        slot1: { label: "1EX ラケルタ連撃 20ダメージ×所持回避数", desc: "20ダメージ×所持回避数。格闘、ビーム属性、S.E.E.D.中は必中。",ex: true, effect: { type: "attack", damage: 20, count: 1, attackType: "melee", beam: true } },
+        slot2: { label: "2EX バラエーナ 50ダメージ×2回", desc: "50ダメージ×2回。射撃、ビーム属性、S.E.E.D.中は必中。",ex: true, effect: { type: "attack", damage: 50, count: 2, attackType: "shoot", beam: true } },
+        slot3: { label: "3EX 回避 4回", desc: "回避4回", ex: true,effect: { type: "evade", amount: 4 } },
+        slot4: { label: "4EX 回復 80", desc: "HP80回復", ex: true,effect: { type: "heal", amount: 80 } },
+        slot5: { label: "5EX S.E.E.D.覚醒 3ターン延長", desc: "S.E.E.D.覚醒の残りターン+3",ex: true, effect: { type: "custom", effectId: "freedom_seed_extend" } },
+        slot6: { label: "6EX ハイマットフルバースト 180ダメージ", desc: "180ダメージ。射撃、ビーム属性、S.E.E.D.中は必中。",ex: true, effect: { type: "attack", damage: 180, count: 1, attackType: "shoot", beam: true } }
       },
       specials: [
         { name: "シールド", effectType: "freedom_shield", timing: "reaction", desc: "相手の攻撃時、3回だけ1ターンに受けるダメージを半減する。", actionType: "instant" },
