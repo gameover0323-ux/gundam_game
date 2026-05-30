@@ -36,9 +36,7 @@ export function canUseZudahSpecial(state, specialKey, context = {}) {
     const accelOk = state.zudahAccelStack >= 2;
 
     const turnStartOnly =
-      context?.phase === "turnStart" ||
-      context?.timing === "turnStart" ||
-      state?.isTurnStartPhase === true;
+  Number(state.actionCount || 0) === Number(state.baseActionCount || 1);
 
     if (!accelOk) {
       return {
