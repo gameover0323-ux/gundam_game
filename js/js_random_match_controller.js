@@ -626,10 +626,10 @@ export function createRandomMatchController(ctx) {
   }
 
   return {
-    getRandomMatchState,
-    resetRandomMatchState,
-    ensureRandomMatchUi,
-    listenRandomMatchAnnouncementsOnceReady,
-    startRandomMatch
-  };
-      }
+  getRandomMatchState,
+  resetRandomMatchState,
+  ensureRandomMatchUi,
+  listenRandomMatchAnnouncementsOnceReady,
+  startRandomMatch,
+  enterRandomMatchedRoom
+};
