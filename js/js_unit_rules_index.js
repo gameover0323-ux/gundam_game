@@ -613,7 +613,6 @@ cpu_barbatos: {
 },
   
 cpu_aerial: {
-cpu_aerial: {
   getDerivedState: getCpuAerialDerivedState,
   onBeforeSlot: onCpuAerialBeforeSlot,
   onEnemyBeforeSlot: onCpuAerialEnemyBeforeSlot,
