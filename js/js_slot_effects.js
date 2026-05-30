@@ -80,7 +80,16 @@ function resolveStructuredEffect({ slot, actor, ownerPlayer, twoVtwoAdapter }) {
 
   if (effect.type === "attack") {
     const damage = Number(effect.damage || 0);
-    let count = Number(effect.count || 1);
+    let count = typeof effect.count === "number" ? Number(effect.count) : Number(effect.count || 1);
+
+if (count <= 0) {
+  return {
+    kind: "attack",
+    attacks: [],
+    message: "",
+    scalingOnUse: effect.scalingOnUse || null
+  };
+}
 
     if (typeof effect.randomCountMax === "number") {
       const min = Number(effect.randomCountMin || 1);
