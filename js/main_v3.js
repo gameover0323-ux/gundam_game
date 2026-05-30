@@ -62,8 +62,9 @@ import {
   writeRandomMatchSession,
   updateRandomMatchSession,
   listenRandomMatchSession,
+  removeRandomMatchSession,
   writeRandomMatchAnnouncement,
-  listenRandomMatchAnnouncement,
+listenRandomMatchAnnouncement,
   cleanupOldRandomMatch,
   submitFeedback,
 readFeedbackList,
@@ -1730,9 +1731,10 @@ randomMatchController = createRandomMatchController({
   listenRandomMatchSession,
   removeRandomMatchSession,
   writeRandomMatchAnnouncement,
-    listenRandomMatchAnnouncement,
+  listenRandomMatchAnnouncement,
 
   abortCurrentBattleWithoutRecordForRandomMatch,
+
   enterRandomMatchedRoom: ({ roomId, playerSide }) => {
   onlineState.enabled = true;
   onlineState.roomId = roomId;
