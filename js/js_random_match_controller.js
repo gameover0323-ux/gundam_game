@@ -543,7 +543,7 @@ export function createRandomMatchController(ctx) {
 
   if (ticketId) {
     await ctx.removeRandomMatchWaiting(ticketId).catch(() => {});
-    await ctx.clearRandomMatchAnnouncement(ticketId).catch(() => {});
+    
   }
 
   if (sessionId) {
