@@ -63,7 +63,6 @@ import {
   updateRandomMatchSession,
   listenRandomMatchSession,
   writeRandomMatchAnnouncement,
-  clearRandomMatchAnnouncement,
   listenRandomMatchAnnouncement,
   cleanupOldRandomMatch,
   submitFeedback,
@@ -1731,8 +1730,7 @@ randomMatchController = createRandomMatchController({
   listenRandomMatchSession,
   removeRandomMatchSession,
   writeRandomMatchAnnouncement,
-  clearRandomMatchAnnouncement,
-  listenRandomMatchAnnouncement,
+    listenRandomMatchAnnouncement,
 
   abortCurrentBattleWithoutRecordForRandomMatch,
   enterRandomMatchedRoom: ({ roomId, playerSide }) => {
