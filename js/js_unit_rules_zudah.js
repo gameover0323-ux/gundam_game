@@ -23,9 +23,12 @@ function isTurnStartForZudah(state, context = {}) {
     return true;
   }
 
-  return Number(state.actionCount || 0) === Number(state.baseActionCount || 1);
-}
+  const actionCount = Number(state.actionCount || 0);
+  const accelStack = Number(state.zudahAccelStack || 0);
+  const expectedStartActionCount = 1 + accelStack;
 
+  return actionCount === expectedStartActionCount;
+}
 export function getZudahDerivedState(state) {
   ensureZudahState(state);
 
