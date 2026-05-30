@@ -4,7 +4,6 @@ import { shining_gundam } from "./js_units_shining_gundam.js";
 import { wing_zero } from "./js_units_wing_zero.js";
 import { v2_gundam } from "./js_units_v2_gundam.js";
 import { strike_gundam } from "./js_units_strike_gundam.js";
-
 import { exia } from "./js_units_exia.js";
 import { unicorn_gundam } from "./js_units_unicorn_gundam.js";
 import { barbatos } from "./js_units_barbatos.js";
@@ -27,7 +26,6 @@ import { cpu_shining_gundam } from "./js_units_cpu_shining_gundam.js";
 import { cpu_wing_zero } from "./js_units_cpu_wing_zero.js";
 import { cpu_v2_gundam } from "./js_units_cpu_v2_gundam.js";
 import { cpu_strike_gundam } from "./js_units_cpu_strike_gundam.js";
-
 import { cpu_exia } from "./js_units_cpu_exia.js";
 import { cpu_unicorn_gundam } from "./js_units_cpu_unicorn_gundam.js";
 import { cpu_barbatos } from "./js_units_cpu_barbatos.js";
@@ -45,7 +43,6 @@ export const unitList = [
   wing_zero,
   v2_gundam,
   strike_gundam,
-  
   exia,
   unicorn_gundam,
   barbatos,
@@ -66,7 +63,6 @@ export const cpuList = [
   cpu_wing_zero,
   cpu_v2_gundam,
   cpu_strike_gundam,
- 
   cpu_exia,
   cpu_unicorn_gundam,
   cpu_barbatos,
