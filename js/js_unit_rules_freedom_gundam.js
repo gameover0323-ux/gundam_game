@@ -153,10 +153,15 @@ export function getFreedomDerivedState(state, context = {}) {
 
   result.slots.slot1 = buildSeedSlot1(state, context);
 
-  ["slot2", "slot6"].forEach((slotKey) => {
-    const baseSlot = state.slots?.[slotKey];
-    if (baseSlot) result.slots[slotKey] = applySeedAttackAttributes(baseSlot);
-  });
+["slot2", "slot3", "slot4", "slot5", "slot6"].forEach((slotKey) => {
+  const baseSlot = state.slots?.[slotKey];
+  if (!baseSlot) return;
+
+  result.slots[slotKey] =
+    baseSlot.effect?.type === "attack"
+      ? applySeedAttackAttributes(baseSlot)
+      : { ...baseSlot, ex: true };
+});
 
   return result;
 }
