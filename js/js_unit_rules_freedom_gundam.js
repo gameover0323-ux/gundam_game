@@ -106,9 +106,10 @@ function tickSeed(state) {
 }
 
 function applySeedAttackAttributes(slot) {
-  if (!slot?.effect || slot.effect.type !== "attack") return slot;
+  if (!slot?.effect || slot.effect.type !== "attack") return { ...slot, ex: true };
   return {
     ...slot,
+    ex: true,
     effect: {
       ...slot.effect,
       cannotEvade: true,
@@ -155,12 +156,7 @@ export function getFreedomDerivedState(state, context = {}) {
 
 ["slot2", "slot3", "slot4", "slot5", "slot6"].forEach((slotKey) => {
   const baseSlot = state.slots?.[slotKey];
-  if (!baseSlot) return;
-
-  result.slots[slotKey] =
-    baseSlot.effect?.type === "attack"
-      ? applySeedAttackAttributes(baseSlot)
-      : { ...baseSlot, ex: true };
+  if (baseSlot) result.slots[slotKey] = applySeedAttackAttributes(baseSlot);
 });
 
   return result;
