@@ -47,6 +47,7 @@ export function createRandomMatchController(ctx) {
 
     if (!profile) return false;
     if (!data || !data.id) return false;
+    if (data.status !== "recruiting") return false;
     if (data.profileId && data.profileId === profile.id) return false;
     if (data.id === lastSeenRandomMatchAnnouncementId) return false;
     if (randomMatchInviteShowing) return false;
@@ -304,12 +305,13 @@ export function createRandomMatchController(ctx) {
       const now = Date.now();
 
       await ctx.writeRandomMatchAnnouncement({
-        id: myTicketId,
-        profileId: profile.id,
-        profileName: profile.name || profile.id || "プレイヤー",
-        createdAt: now,
-        updatedAt: now
-      });
+  id: myTicketId,
+  status: "recruiting",
+  profileId: profile.id,
+  profileName: profile.name || profile.id || "プレイヤー",
+  createdAt: now,
+  updatedAt: now
+});
 
       randomMatchState.ticketId = myTicketId;
 
@@ -534,23 +536,24 @@ export function createRandomMatchController(ctx) {
   }
 
   async function cancelRandomMatch() {
-    const ticketId = randomMatchState.ticketId;
-    const sessionId = randomMatchState.sessionId;
+  const ticketId = randomMatchState.ticketId;
+  const sessionId = randomMatchState.sessionId;
 
-    resetRandomMatchState();
+  resetRandomMatchState();
 
-    if (ticketId) {
-      await ctx.removeRandomMatchWaiting(ticketId).catch(() => {});
-    }
-
-    if (sessionId) {
-      await ctx.updateRandomMatchSession(sessionId, {
-        status: "reroll",
-        rerollBy: null,
-        updatedAt: Date.now()
-      }).catch(() => {});
-    }
+  if (ticketId) {
+    await ctx.removeRandomMatchWaiting(ticketId).catch(() => {});
+    await ctx.clearRandomMatchAnnouncement(ticketId).catch(() => {});
   }
+
+  if (sessionId) {
+    await ctx.updateRandomMatchSession(sessionId, {
+      status: "reroll",
+      rerollBy: null,
+      updatedAt: Date.now()
+    }).catch(() => {});
+  }
+}
 
   async function createRoomFromRandomMatchSession(sessionData) {
     if (randomMatchState.enteringRoom) return;
