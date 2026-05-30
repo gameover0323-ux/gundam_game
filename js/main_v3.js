@@ -1731,10 +1731,10 @@ randomMatchController = createRandomMatchController({
   listenRandomMatchSession,
   removeRandomMatchSession,
   writeRandomMatchAnnouncement,
+  clearRandomMatchAnnouncement,
   listenRandomMatchAnnouncement,
 
   abortCurrentBattleWithoutRecordForRandomMatch,
-
   enterRandomMatchedRoom: ({ roomId, playerSide }) => {
   onlineState.enabled = true;
   onlineState.roomId = roomId;
