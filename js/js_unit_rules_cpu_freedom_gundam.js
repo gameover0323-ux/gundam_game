@@ -129,8 +129,7 @@ function trySeedCancel(state, total) {
     Number(seed.turns || 0) === 2 &&
     Math.random() < 0.1
   ) {
-    state.stateEffects.freedom_seed = null;
-    delete state.stateEffects.freedom_seed;
+    delete state.stateEffects?.freedom_seed;
     state.formId = "base";
     state.evade = Math.max(0, Number(state.evade || 0)) * 2;
     total.appendMessages.push("CPUフリーダム特性：覚醒キャンセル、回避数値を倍加");
