@@ -6,9 +6,9 @@ const MOCHI_ANIMS = {
   normal: [{ file: "mochi_nomal.png", frames: 1 }],
 
   idleBlink: [
-    { file: "mochi_idol1.png", frames: 3 },
-    { file: "mochi_idol2.png", frames: 3 },
-    { file: "mochi_idol1.png", frames: 3 },
+    { file: "mochi_idol1.png", frames: 4 },
+    { file: "mochi_idol2.png", frames: 4 },
+    { file: "mochi_idol1.png", frames: 4 },
     { file: "mochi_nomal.png", frames: 1 }
   ],
 
