@@ -6,31 +6,31 @@ const MOCHI_ANIMS = {
   normal: [{ file: "mochi_nomal.png", frames: 1 }],
 
   idleBlink: [
-    { file: "mochi_idol1.png", frames: 2 },
-    { file: "mochi_idol2.png", frames: 2 },
-    { file: "mochi_idol1.png", frames: 2 },
+    { file: "mochi_idol1.png", frames: 3 },
+    { file: "mochi_idol2.png", frames: 3 },
+    { file: "mochi_idol1.png", frames: 3 },
     { file: "mochi_nomal.png", frames: 1 }
   ],
 
   idleJump: [
-    { file: "mochi_up1.png", frames: 2 },
-    { file: "mochi_up2.png", frames: 2 },
-    { file: "mochi_up3.png", frames: 2 },
-    { file: "mochi_up4.png", frames: 2 },
-    { file: "mochi_up5.png", frames: 2 },
-    { file: "mochi_up4.png", frames: 2 },
-    { file: "mochi_up3.png", frames: 2 },
-    { file: "mochi_up2.png", frames: 2 },
-    { file: "mochi_up1.png", frames: 2 },
-    { file: "mochi_nomal.png", frames: 1 }
+    { file: "mochi_up1.png", frames: 3 },
+    { file: "mochi_up2.png", frames: 3 },
+    { file: "mochi_up3.png", frames: 3 },
+    { file: "mochi_up4.png", frames: 3 },
+    { file: "mochi_up5.png", frames: 3 },
+    { file: "mochi_up4.png", frames: 3 },
+    { file: "mochi_up3.png", frames: 3 },
+    { file: "mochi_up2.png", frames: 3 },
+    { file: "mochi_up1.png", frames: 3 },
+    { file: "mochi_nomal.png", frames: 2 }
   ],
 
   tap: [
-    { file: "mochi_tap1.png", frames: 2 },
-    { file: "mochi_tap2.png", frames: 2 },
+    { file: "mochi_tap1.png", frames: 4 },
+    { file: "mochi_tap2.png", frames: 4 },
     { file: "mochi_tap3.png", frames: 120, text: true },
-    { file: "mochi_tap2.png", frames: 2 },
-    { file: "mochi_tap1.png", frames: 2 },
+    { file: "mochi_tap2.png", frames: 4 },
+    { file: "mochi_tap1.png", frames: 4 },
     { file: "mochi_nomal.png", frames: 1 }
   ],
 
@@ -43,11 +43,11 @@ const MOCHI_ANIMS = {
   ],
 
   land: [
-    { file: "mochi_up5.png", frames: 2 },
-    { file: "mochi_up4.png", frames: 2 },
-    { file: "mochi_up3.png", frames: 2 },
-    { file: "mochi_up2.png", frames: 2, click: true },
-    { file: "mochi_up1.png", frames: 2 },
+    { file: "mochi_up5.png", frames: 3 },
+    { file: "mochi_up4.png", frames: 3 },
+    { file: "mochi_up3.png", frames: 3 },
+    { file: "mochi_up2.png", frames: 3, click: true },
+    { file: "mochi_up1.png", frames: 3 },
     { file: "mochi_nomal.png", frames: 1 }
   ]
 };
