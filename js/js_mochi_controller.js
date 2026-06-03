@@ -204,6 +204,7 @@ let state = loadState();
 let root = null;
 let img = null;
 let bubble = null;
+let followLayer = null;
 let enabled = state.enabled === true;
 let mode = "idle";
 let currentDir = "normal";
@@ -620,7 +621,70 @@ function stopFollowing() {
     returnToNormalFromCurrentDir();
   }
 }
+function createFollowLayer() {
+  if (followLayer) return;
 
+  followLayer = document.createElement("div");
+  followLayer.id = "mochiFollowLayer";
+  followLayer.className = "mochi-follow-layer";
+  document.body.appendChild(followLayer);
+
+  followLayer.addEventListener("contextmenu", (event) => {
+    event.preventDefault();
+  });
+
+  followLayer.addEventListener("pointerdown", (event) => {
+    if (!enabled || !root) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    clearTimeout(followHoldTimer);
+
+    const startClientX = event.clientX;
+    const startClientY = event.clientY;
+
+    followHoldTimer = setTimeout(() => {
+      startFollowing(startClientX, startClientY);
+    }, FOLLOW_HOLD_MS);
+  });
+
+  followLayer.addEventListener("pointermove", (event) => {
+    if (!isFollowing || !followTarget) return;
+
+    event.preventDefault();
+
+    followTarget.x = window.scrollX + event.clientX;
+    followTarget.y = window.scrollY + event.clientY;
+
+    if (arrived) {
+      arrived = false;
+      clearInterval(arriveJumpTimer);
+      arriveJumpTimer = null;
+      walkTowardTarget();
+    }
+  });
+
+  followLayer.addEventListener("pointerup", (event) => {
+    event.preventDefault();
+    clearTimeout(followHoldTimer);
+    followHoldTimer = null;
+    stopFollowing();
+  });
+
+  followLayer.addEventListener("pointercancel", (event) => {
+    event.preventDefault();
+    clearTimeout(followHoldTimer);
+    followHoldTimer = null;
+    stopFollowing();
+  });
+}
+
+function removeFollowLayer() {
+  if (!followLayer) return;
+  followLayer.remove();
+  followLayer = null;
+}
 function createMochi() {
   if (root) return;
 
@@ -647,9 +711,9 @@ function createMochi() {
   }
 
   applyPosition();
-  bindMochiEvents();
-  bindWorldFollowEvents();
-  startIdleMode();
+createFollowLayer();
+bindMochiEvents();
+startIdleMode();
 }
 
 function removeMochi() {
@@ -660,7 +724,7 @@ function removeMochi() {
   stopFollowTimers();
 
   if (root) root.remove();
-
+removeFollowLayer();
   root = null;
   img = null;
   bubble = null;
