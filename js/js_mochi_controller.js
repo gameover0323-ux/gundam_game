@@ -205,6 +205,7 @@ let state = loadState();
 let root = null;
 let img = null;
 let bubble = null;
+let followLayer = null;
 let enabled = state.enabled === true;
 let mode = "idle";
 let currentDir = "normal";
@@ -582,6 +583,52 @@ function returnToNormalFromCurrentDir() {
   });
 }
 
+function createFollowLayer() {
+  if (followLayer) return;
+
+  followLayer = document.createElement("div");
+  followLayer.id = "mochiFollowLayer";
+  followLayer.className = "mochi-follow-layer";
+  document.body.appendChild(followLayer);
+
+  followLayer.addEventListener("contextmenu", (event) => {
+    event.preventDefault();
+  });
+
+  followLayer.addEventListener("pointermove", (event) => {
+    if (!isFollowing || !followTarget) return;
+
+    event.preventDefault();
+
+    followTarget.x = window.scrollX + event.clientX;
+    followTarget.y = window.scrollY + event.clientY;
+
+    if (arrived) {
+      arrived = false;
+      arriveMessageShown = false;
+      clearInterval(arriveJumpTimer);
+      arriveJumpTimer = null;
+      walkTowardTarget();
+    }
+  });
+
+  followLayer.addEventListener("pointerup", (event) => {
+    event.preventDefault();
+    stopFollowing();
+  });
+
+  followLayer.addEventListener("pointercancel", (event) => {
+    event.preventDefault();
+    stopFollowing();
+  });
+}
+
+function removeFollowLayer() {
+  if (!followLayer) return;
+  followLayer.remove();
+  followLayer = null;
+}
+
 function startFollowing(clientX, clientY) {
   if (!enabled || !root || dragging || lifted) return;
 
@@ -599,6 +646,8 @@ function startFollowing(clientX, clientY) {
     y: window.scrollY + clientY
   };
 
+  createFollowLayer();
+
   followTalkTimer = setInterval(() => {
     if (isFollowing && !arrived) {
       showRandomText(MOCHI_FOLLOW_TEXTS, 2000);
@@ -612,13 +661,17 @@ function stopFollowing() {
   clearTimeout(followHoldTimer);
   followHoldTimer = null;
 
-  if (!isFollowing) return;
+  if (!isFollowing) {
+    removeFollowLayer();
+    return;
+  }
 
   isFollowing = false;
   followTarget = null;
   arrived = false;
   arriveMessageShown = false;
   stopFollowTimers();
+  removeFollowLayer();
 
   if (!dragging && !lifted) {
     returnToNormalFromCurrentDir();
@@ -662,6 +715,7 @@ function removeMochi() {
   holdTimer = null;
   stopIdleTimers();
   stopFollowTimers();
+  removeFollowLayer();
 
   if (root) root.remove();
 
@@ -708,6 +762,7 @@ function bindMochiEvents() {
       stopIdleTimers();
       stopFollowTimers();
       clearMotionTimers();
+      removeFollowLayer();
 
       canTap = false;
       lifted = true;
@@ -799,6 +854,7 @@ function bindWorldFollowEvents() {
   document.addEventListener("pointerdown", (event) => {
     if (!enabled || !root) return;
     if (root.contains(event.target)) return;
+    if (event.target?.closest?.("button, a, summary, input, textarea, select, label")) return;
 
     pressing = true;
     moved = false;
@@ -837,8 +893,6 @@ function bindWorldFollowEvents() {
 
     if (!isFollowing || !followTarget) return;
 
-    event.preventDefault();
-
     followTarget.x = window.scrollX + latestX;
     followTarget.y = window.scrollY + latestY;
 
@@ -849,7 +903,7 @@ function bindWorldFollowEvents() {
       arriveJumpTimer = null;
       walkTowardTarget();
     }
-  }, { capture: true, passive: false });
+  }, true);
 
   document.addEventListener("pointerup", (event) => {
     if (pressPointerId !== null && event.pointerId !== pressPointerId) return;
