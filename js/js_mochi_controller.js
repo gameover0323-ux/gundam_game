@@ -776,18 +776,36 @@ function bindMochiEvents() {
 }
 
 function bindWorldFollowEvents() {
+  let worldPointerDown = false;
+  let worldPointerId = null;
+  let startClientX = 0;
+  let startClientY = 0;
+
   document.addEventListener("pointerdown", (event) => {
     if (!enabled || !root) return;
     if (root.contains(event.target)) return;
 
+    worldPointerDown = true;
+    worldPointerId = event.pointerId;
+    startClientX = event.clientX;
+    startClientY = event.clientY;
+
     clearTimeout(followHoldTimer);
 
     followHoldTimer = setTimeout(() => {
-      startFollowing(event.clientX, event.clientY);
+      if (!worldPointerDown) return;
+
+      startFollowing(startClientX, startClientY);
     }, FOLLOW_HOLD_MS);
   }, true);
 
   document.addEventListener("pointermove", (event) => {
+    if (!worldPointerDown) return;
+    if (worldPointerId !== null && event.pointerId !== worldPointerId) return;
+
+    startClientX = event.clientX;
+    startClientY = event.clientY;
+
     if (!isFollowing || !followTarget) return;
 
     followTarget.x = window.scrollX + event.clientX;
@@ -801,11 +819,25 @@ function bindWorldFollowEvents() {
     }
   }, true);
 
-  document.addEventListener("pointerup", () => {
+  document.addEventListener("pointerup", (event) => {
+    if (worldPointerId !== null && event.pointerId !== worldPointerId) return;
+
+    worldPointerDown = false;
+    worldPointerId = null;
+    clearTimeout(followHoldTimer);
+    followHoldTimer = null;
+
     stopFollowing();
   }, true);
 
-  document.addEventListener("pointercancel", () => {
+  document.addEventListener("pointercancel", (event) => {
+    if (worldPointerId !== null && event.pointerId !== worldPointerId) return;
+
+    worldPointerDown = false;
+    worldPointerId = null;
+    clearTimeout(followHoldTimer);
+    followHoldTimer = null;
+
     stopFollowing();
   }, true);
 }
