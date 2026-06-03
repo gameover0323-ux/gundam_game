@@ -604,12 +604,11 @@ function createFollowLayer() {
     followTarget.y = window.scrollY + event.clientY;
 
     if (arrived) {
-      arrived = false;
-      arriveMessageShown = false;
-      clearInterval(arriveJumpTimer);
-      arriveJumpTimer = null;
-      walkTowardTarget();
-    }
+  arrived = false;
+  clearInterval(arriveJumpTimer);
+  arriveJumpTimer = null;
+  walkTowardTarget();
+}
   });
 
   followLayer.addEventListener("pointerup", (event) => {
@@ -892,17 +891,18 @@ function bindWorldFollowEvents() {
     const dy = latestY - startY;
     const dist = Math.hypot(dx, dy);
 
-    if (!isFollowing && dist > FOLLOW_MOVE_CANCEL_DISTANCE) {
+    if (!followLayer && !isFollowing && dist > FOLLOW_MOVE_CANCEL_DISTANCE) {
       moved = true;
       pressing = false;
-
       clearTimeout(preLayerTimer);
       clearTimeout(followHoldTimer);
       preLayerTimer = null;
       followHoldTimer = null;
-
-      removeFollowLayer();
       return;
+    }
+
+    if (followLayer || isFollowing) {
+      event.preventDefault();
     }
 
     if (!isFollowing || !followTarget) return;
@@ -912,12 +912,11 @@ function bindWorldFollowEvents() {
 
     if (arrived) {
       arrived = false;
-      arriveMessageShown = false;
       clearInterval(arriveJumpTimer);
       arriveJumpTimer = null;
       walkTowardTarget();
     }
-  }, true);
+  }, { capture: true, passive: false });
 
   document.addEventListener("pointerup", (event) => {
     if (pressPointerId !== null && event.pointerId !== pressPointerId) return;
