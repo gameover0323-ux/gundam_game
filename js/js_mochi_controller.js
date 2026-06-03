@@ -844,9 +844,12 @@ function bindWorldFollowEvents() {
   let latestX = 0;
   let latestY = 0;
   let moved = false;
+  let preLayerTimer = null;
+
+  const PRE_LAYER_MS = 180;
 
   document.addEventListener("contextmenu", (event) => {
-    if (pressing || isFollowing) {
+    if (pressing || isFollowing || followLayer) {
       event.preventDefault();
     }
   }, true);
@@ -865,6 +868,12 @@ function bindWorldFollowEvents() {
     latestY = event.clientY;
 
     clearTimeout(followHoldTimer);
+    clearTimeout(preLayerTimer);
+
+    preLayerTimer = setTimeout(() => {
+      if (!pressing || moved || isFollowing) return;
+      createFollowLayer();
+    }, PRE_LAYER_MS);
 
     followHoldTimer = setTimeout(() => {
       if (!pressing || moved) return;
@@ -886,8 +895,13 @@ function bindWorldFollowEvents() {
     if (!isFollowing && dist > FOLLOW_MOVE_CANCEL_DISTANCE) {
       moved = true;
       pressing = false;
+
+      clearTimeout(preLayerTimer);
       clearTimeout(followHoldTimer);
+      preLayerTimer = null;
       followHoldTimer = null;
+
+      removeFollowLayer();
       return;
     }
 
@@ -910,10 +924,14 @@ function bindWorldFollowEvents() {
 
     pressing = false;
     pressPointerId = null;
+
+    clearTimeout(preLayerTimer);
     clearTimeout(followHoldTimer);
+    preLayerTimer = null;
     followHoldTimer = null;
 
     stopFollowing();
+    removeFollowLayer();
   }, true);
 
   document.addEventListener("pointercancel", (event) => {
@@ -921,13 +939,16 @@ function bindWorldFollowEvents() {
 
     pressing = false;
     pressPointerId = null;
+
+    clearTimeout(preLayerTimer);
     clearTimeout(followHoldTimer);
+    preLayerTimer = null;
     followHoldTimer = null;
 
     stopFollowing();
+    removeFollowLayer();
   }, true);
 }
-
 function clickElementUnderMochiFoot() {
   if (!root) return;
 
