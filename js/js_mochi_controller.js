@@ -2,9 +2,32 @@ const MOCHI_STORAGE_KEY = "gbs_mochi_state_v1";
 const MOCHI_BASE_PATH = "assets/mochi/";
 const MOCHI_FRAME_MS = 1000 / 60;
 
-const MOCHI_ANIMS = {
-  normal: [{ file: "mochi_nomal.png", frames: 1 }],
+const MOCHI_SIZE = 72;
+const HOLD_MS = 420;
+const FOLLOW_HOLD_MS = 1000;
+const STEP_DISTANCE = MOCHI_SIZE / 3;
+const ARRIVE_DISTANCE = STEP_DISTANCE;
 
+const MOCHI_TAP_TEXTS = ["なんなのだ？", "みかんほしーのだ", "よーちゃんどこなのだ？", "ひまなのだ", "のだ〜"];
+const MOCHI_IDLE_TEXTS = ["さんぽするのだ", "みかんどこなのだ", "のだ〜", "ひとやすみなのだ", "あそぶのだ"];
+
+const MOCHI_FOLLOW_TEXTS = [
+  "まつのだ",
+  "うおーなのだ",
+  "エデンはそこにあるのだ",
+  "いまいくのだー",
+  "はしるのだ"
+];
+
+const MOCHI_ARRIVE_TEXTS = [
+  "ゴールなのだ",
+  "やったのだ",
+  "ちかのかちなのだ",
+  "みかんくれるのだ？",
+  "よっしゃーなのだ"
+];
+
+const MOCHI_ANIMS = {
   idleBlink: [
     { file: "mochi_idol1.png", frames: 4 },
     { file: "mochi_idol2.png", frames: 4 },
@@ -52,11 +75,130 @@ const MOCHI_ANIMS = {
   ]
 };
 
-const MOCHI_TAP_TEXTS = ["なんなのだ？", "みかんほしーのだ", "よーちゃんどこなのだ？", "ひまなのだ", "のだ〜"];
-const MOCHI_IDLE_TEXTS = ["さんぽするのだ", "みかんどこなのだ", "のだ〜", "ひとやすみなのだ", "あそぶのだ"];
+const DIR_DATA = {
+  down: { normal: "sita_nomal.png" },
+  downRight: { normal: "msita_nomal.png" },
+  downLeft: { normal: "hsita_nomal.png" },
+  left: { normal: "hidari_nomal.png" },
+  right: { normal: "migi_nomal.png" },
+  upRight: { normal: "mue_nomal.png" },
+  upLeft: { normal: "hue_nomal.png" },
+  up: { normal: "ue_nomal.png" }
+};
 
-const MOCHI_SIZE = 72;
-const HOLD_MS = 420;
+const TURN_FROM_NORMAL = {
+  down: [{ file: "sita_nomal.png", frames: 30 }],
+  downRight: [{ file: "msita_nomal.png", frames: 30 }],
+  downLeft: [{ file: "hsita_nomal.png", frames: 30 }],
+  left: [
+    { file: "hsita_nomal.png", frames: 3 },
+    { file: "hidari_nomal.png", frames: 30 }
+  ],
+  right: [
+    { file: "msita_nomal.png", frames: 3 },
+    { file: "migi_nomal.png", frames: 30 }
+  ],
+  upRight: [
+    { file: "msita_nomal.png", frames: 3 },
+    { file: "migi_nomal.png", frames: 3 },
+    { file: "mue_nomal.png", frames: 30 }
+  ],
+  upLeft: [
+    { file: "hsita_nomal.png", frames: 3 },
+    { file: "hidari_nomal.png", frames: 3 },
+    { file: "hue_nomal.png", frames: 30 }
+  ],
+  up: () => {
+    if (Math.random() < 0.5) {
+      return [
+        { file: "msita_nomal.png", frames: 3 },
+        { file: "migi_nomal.png", frames: 3 },
+        { file: "mue_nomal.png", frames: 3 },
+        { file: "ue_nomal.png", frames: 30 }
+      ];
+    }
+
+    return [
+      { file: "hsita_nomal.png", frames: 3 },
+      { file: "hidari_nomal.png", frames: 3 },
+      { file: "hue_nomal.png", frames: 3 },
+      { file: "ue_nomal.png", frames: 30 }
+    ];
+  }
+};
+
+const WALK_ANIMS = {
+  down: [
+    { file: "sita_1.png", frames: 4 },
+    { file: "sita_2.png", frames: 4, move: true },
+    { file: "sita_3.png", frames: 4, move: true },
+    { file: "sita_1.png", frames: 4 },
+    { file: "sita_nomal.png", frames: 10 }
+  ],
+  downRight: [
+    { file: "msita_1.png", frames: 4 },
+    { file: "msita_2.png", frames: 4 },
+    { file: "msita_3.png", frames: 4, move: true },
+    { file: "msita_4.png", frames: 4, move: true },
+    { file: "msita_2.png", frames: 4 },
+    { file: "msita_1.png", frames: 4 },
+    { file: "msita_nomal.png", frames: 10 }
+  ],
+  downLeft: [
+    { file: "hsita_1.png", frames: 4 },
+    { file: "hsita_4.png", frames: 4 },
+    { file: "hsita_2.png", frames: 4, move: true },
+    { file: "hsita_3.png", frames: 4, move: true },
+    { file: "hsita_4.png", frames: 4 },
+    { file: "hsita_1.png", frames: 4 },
+    { file: "hsita_nomal.png", frames: 10 }
+  ],
+  left: [
+    { file: "hidari_1.png", frames: 4 },
+    { file: "hidari_2.png", frames: 4 },
+    { file: "hidari_3.png", frames: 6, move: true },
+    { file: "hidari_2.png", frames: 2, move: true },
+    { file: "hidari_2.png", frames: 4 },
+    { file: "hidari_1.png", frames: 4 },
+    { file: "hidari_nomal.png", frames: 10 }
+  ],
+  right: [
+    { file: "migi_1.png", frames: 4 },
+    { file: "migi_2.png", frames: 4 },
+    { file: "migi_3.png", frames: 6, move: true },
+    { file: "migi_2.png", frames: 2, move: true },
+    { file: "migi_2.png", frames: 4 },
+    { file: "migi_1.png", frames: 4 },
+    { file: "migi_nomal.png", frames: 10 }
+  ],
+  upRight: [
+    { file: "mue_1.png", frames: 4 },
+    { file: "mue_2.png", frames: 4 },
+    { file: "mue_3.png", frames: 6, move: true },
+    { file: "mue_2.png", frames: 2, move: true },
+    { file: "mue_2.png", frames: 4 },
+    { file: "mue_1.png", frames: 4 },
+    { file: "mue_nomal.png", frames: 10 }
+  ],
+  upLeft: [
+    { file: "hue_1.png", frames: 4 },
+    { file: "hue_2.png", frames: 4 },
+    { file: "hue_3.png", frames: 6, move: true },
+    { file: "hue_2.png", frames: 2, move: true },
+    { file: "hue_2.png", frames: 4 },
+    { file: "hue_1.png", frames: 4 },
+    { file: "hue_nomal.png", frames: 10 }
+  ],
+  up: [
+    { file: "ue_1.png", frames: 4 },
+    { file: "ue_2.png", frames: 4 },
+    { file: "ue_3.png", frames: 6, move: true },
+    { file: "ue_2.png", frames: 2, move: true },
+    { file: "ue_2.png", frames: 4 },
+    { file: "ue_1.png", frames: 4 },
+    { file: "ue_nomal.png", frames: 10 }
+  ]
+};
 
 let state = loadState();
 let root = null;
@@ -64,14 +206,24 @@ let img = null;
 let bubble = null;
 let enabled = state.enabled === true;
 let mode = "idle";
+let currentDir = "normal";
+
 let frameTimer = null;
 let holdTimer = null;
 let idleMotionTimer = null;
 let idleTextTimer = null;
+let followHoldTimer = null;
+let followTalkTimer = null;
+let arriveJumpTimer = null;
+
 let dragging = false;
 let lifted = false;
 let canTap = true;
 let idleJumpLooped = false;
+let isFollowing = false;
+let isWalking = false;
+let arrived = false;
+let followTarget = null;
 let pointerOffset = { x: 0, y: 0 };
 let lastActiveScreenId = getActiveScreenId();
 
@@ -95,6 +247,13 @@ function getDefaultPosition() {
   return {
     x: window.scrollX + Math.floor(window.innerWidth / 2 - MOCHI_SIZE / 2),
     y: window.scrollY + Math.floor(window.innerHeight / 2 - MOCHI_SIZE / 2)
+  };
+}
+
+function getCenter() {
+  return {
+    x: Number(state.x || 0) + MOCHI_SIZE / 2,
+    y: Number(state.y || 0) + MOCHI_SIZE / 2
   };
 }
 
@@ -124,6 +283,344 @@ function applyPosition() {
   root.style.top = `${Number(state.y || 0)}px`;
 }
 
+function setFrameFile(file) {
+  if (!img) return;
+  img.src = MOCHI_BASE_PATH + file;
+}
+
+function clearMotionTimers() {
+  clearInterval(frameTimer);
+  frameTimer = null;
+}
+
+function stopIdleTimers() {
+  clearInterval(idleMotionTimer);
+  idleMotionTimer = null;
+  clearInterval(idleTextTimer);
+  idleTextTimer = null;
+}
+
+function stopFollowTimers() {
+  clearTimeout(followHoldTimer);
+  followHoldTimer = null;
+  clearInterval(followTalkTimer);
+  followTalkTimer = null;
+  clearInterval(arriveJumpTimer);
+  arriveJumpTimer = null;
+}
+
+function showNormal() {
+  clearMotionTimers();
+  mode = "idle";
+  currentDir = "normal";
+  setFrameFile("mochi_nomal.png");
+}
+
+function playSteps(steps, onStep, onEnd) {
+  clearMotionTimers();
+
+  if (!Array.isArray(steps) || steps.length <= 0) {
+    if (typeof onEnd === "function") onEnd();
+    return;
+  }
+
+  let stepIndex = 0;
+  let frameRemain = Number(steps[0].frames || 1);
+
+  setFrameFile(steps[0].file);
+  if (typeof onStep === "function") onStep(steps[0], stepIndex);
+
+  frameTimer = setInterval(() => {
+    frameRemain--;
+
+    if (frameRemain > 0) return;
+
+    stepIndex++;
+
+    if (stepIndex >= steps.length) {
+      clearMotionTimers();
+      if (typeof onEnd === "function") onEnd();
+      return;
+    }
+
+    const step = steps[stepIndex];
+    frameRemain = Number(step.frames || 1);
+    setFrameFile(step.file);
+
+    if (typeof onStep === "function") onStep(step, stepIndex);
+  }, MOCHI_FRAME_MS);
+}
+
+function playAnim(animName, onStep, onEnd) {
+  playSteps(MOCHI_ANIMS[animName], onStep, onEnd);
+}
+
+function startIdleMode() {
+  if (!root || isFollowing) return;
+
+  canTap = true;
+  idleJumpLooped = false;
+  arrived = false;
+  showNormal();
+  stopIdleTimers();
+
+  idleMotionTimer = setInterval(() => {
+    if (!root || dragging || lifted || isFollowing || mode !== "idle") return;
+
+    const r = Math.random();
+
+    if (r < 0.3) {
+      canTap = false;
+      playAnim("idleBlink", null, () => {
+        canTap = true;
+        showNormal();
+      });
+      return;
+    }
+
+    if (r < 0.6) {
+      canTap = false;
+      playIdleJumpSequence(false);
+    }
+  }, 5000);
+
+  idleTextTimer = setInterval(() => {
+    if (!root || dragging || lifted || isFollowing || mode !== "idle") return;
+
+    if (Math.random() < 0.3) {
+      showRandomText(MOCHI_IDLE_TEXTS, 2000);
+    }
+  }, 10000);
+}
+
+function playIdleJumpSequence(singleLoop = false) {
+  playAnim("idleJump", null, () => {
+    if (singleLoop) {
+      showNormal();
+      return;
+    }
+
+    if (!idleJumpLooped && Math.random() < 0.5) {
+      idleJumpLooped = true;
+      playIdleJumpSequence(false);
+      return;
+    }
+
+    idleJumpLooped = false;
+    canTap = true;
+    showNormal();
+  });
+}
+
+function showRandomText(textList = MOCHI_TAP_TEXTS, durationMs = 2000) {
+  if (!bubble || !Array.isArray(textList) || textList.length <= 0) return;
+
+  bubble.textContent = textList[Math.floor(Math.random() * textList.length)];
+  bubble.classList.add("show");
+
+  setTimeout(() => {
+    if (bubble) bubble.classList.remove("show");
+  }, durationMs);
+}
+
+function chooseDirectionToTarget() {
+  if (!followTarget) return "down";
+
+  const center = getCenter();
+  const dx = followTarget.x - center.x;
+  const dy = followTarget.y - center.y;
+  const absX = Math.abs(dx);
+  const absY = Math.abs(dy);
+
+  if (absX < 8 && dy < 0) return "up";
+  if (absX < 8 && dy > 0) return "down";
+  if (absY < 8 && dx < 0) return "left";
+  if (absY < 8 && dx > 0) return "right";
+
+  if (dx > 0 && dy > 0) return "downRight";
+  if (dx < 0 && dy > 0) return "downLeft";
+  if (dx > 0 && dy < 0) return "upRight";
+  if (dx < 0 && dy < 0) return "upLeft";
+
+  return "down";
+}
+
+function getTurnSteps(nextDir) {
+  if (currentDir === nextDir) return [];
+
+  if (currentDir === "up") {
+    if (nextDir === "upRight") return [{ file: "mue_nomal.png", frames: 3 }];
+    if (nextDir === "upLeft") return [{ file: "hue_nomal.png", frames: 3 }];
+  }
+
+  if (currentDir === "upRight" && nextDir === "up") {
+    return [{ file: "ue_nomal.png", frames: 3 }];
+  }
+
+  if (currentDir === "upLeft" && nextDir === "up") {
+    return [{ file: "ue_nomal.png", frames: 3 }];
+  }
+
+  if (currentDir === "normal") {
+    const path = TURN_FROM_NORMAL[nextDir];
+    return typeof path === "function" ? path() : (path || []);
+  }
+
+  const currentNormal = DIR_DATA[currentDir]?.normal;
+  const nextNormal = DIR_DATA[nextDir]?.normal;
+
+  if (currentNormal && nextNormal) {
+    return [
+      { file: currentNormal, frames: 3 },
+      { file: nextNormal, frames: 3 }
+    ];
+  }
+
+  const path = TURN_FROM_NORMAL[nextDir];
+  return typeof path === "function" ? path() : (path || []);
+}
+
+function moveOneStep() {
+  if (!followTarget) return;
+
+  const center = getCenter();
+  let dx = followTarget.x - center.x;
+  let dy = followTarget.y - center.y;
+  const dist = Math.hypot(dx, dy);
+
+  if (dist <= ARRIVE_DISTANCE) {
+    arriveAtTarget();
+    return;
+  }
+
+  const amount = Math.min(STEP_DISTANCE, dist);
+  dx /= dist;
+  dy /= dist;
+
+  state.x = Number(state.x || 0) + dx * amount;
+  state.y = Number(state.y || 0) + dy * amount;
+  applyPosition();
+  saveState();
+}
+
+function walkTowardTarget() {
+  if (!isFollowing || isWalking || !followTarget) return;
+
+  const center = getCenter();
+  const dist = Math.hypot(followTarget.x - center.x, followTarget.y - center.y);
+
+  if (dist <= ARRIVE_DISTANCE) {
+    arriveAtTarget();
+    return;
+  }
+
+  isWalking = true;
+  mode = "walk";
+
+  const dir = chooseDirectionToTarget();
+  const turnSteps = getTurnSteps(dir);
+  const walkSteps = WALK_ANIMS[dir] || [];
+  const fullSteps = [...turnSteps, ...walkSteps];
+
+  currentDir = dir;
+
+  playSteps(fullSteps, (step) => {
+    if (step.move === true) {
+      moveOneStep();
+    }
+  }, () => {
+    isWalking = false;
+
+    if (isFollowing) {
+      walkTowardTarget();
+    } else {
+      returnToNormalFromCurrentDir();
+    }
+  });
+}
+
+function arriveAtTarget() {
+  if (arrived) return;
+
+  arrived = true;
+  isWalking = false;
+  clearMotionTimers();
+
+  showRandomText(MOCHI_ARRIVE_TEXTS, 2500);
+
+  arriveJumpTimer = setInterval(() => {
+    if (!isFollowing || !arrived || dragging || lifted) return;
+
+    playAnim("idleJump", null, () => {
+      if (isFollowing && arrived) {
+        const normal = currentDir !== "normal" ? DIR_DATA[currentDir]?.normal : "mochi_nomal.png";
+        setFrameFile(normal || "mochi_nomal.png");
+      }
+    });
+  }, 2000);
+}
+
+function returnToNormalFromCurrentDir() {
+  clearMotionTimers();
+
+  const normalFile = currentDir !== "normal"
+    ? DIR_DATA[currentDir]?.normal
+    : "mochi_nomal.png";
+
+  const steps = normalFile && normalFile !== "mochi_nomal.png"
+    ? [
+        { file: normalFile, frames: 3 },
+        { file: "mochi_nomal.png", frames: 3 }
+      ]
+    : [{ file: "mochi_nomal.png", frames: 1 }];
+
+  playSteps(steps, null, () => {
+    currentDir = "normal";
+    startIdleMode();
+  });
+}
+
+function startFollowing(clientX, clientY) {
+  if (!enabled || !root || dragging || lifted) return;
+
+  stopIdleTimers();
+  stopFollowTimers();
+  clearMotionTimers();
+
+  isFollowing = true;
+  isWalking = false;
+  arrived = false;
+  canTap = false;
+  followTarget = {
+    x: window.scrollX + clientX,
+    y: window.scrollY + clientY
+  };
+
+  followTalkTimer = setInterval(() => {
+    if (isFollowing && !arrived) {
+      showRandomText(MOCHI_FOLLOW_TEXTS, 2000);
+    }
+  }, 5000);
+
+  walkTowardTarget();
+}
+
+function stopFollowing() {
+  clearTimeout(followHoldTimer);
+  followHoldTimer = null;
+
+  if (!isFollowing) return;
+
+  isFollowing = false;
+  followTarget = null;
+  arrived = false;
+  stopFollowTimers();
+
+  if (!dragging && !lifted) {
+    returnToNormalFromCurrentDir();
+  }
+}
+
 function createMochi() {
   if (root) return;
 
@@ -151,6 +648,7 @@ function createMochi() {
 
   applyPosition();
   bindMochiEvents();
+  bindWorldFollowEvents();
   startIdleMode();
 }
 
@@ -159,6 +657,7 @@ function removeMochi() {
   clearTimeout(holdTimer);
   holdTimer = null;
   stopIdleTimers();
+  stopFollowTimers();
 
   if (root) root.remove();
 
@@ -168,6 +667,9 @@ function removeMochi() {
   dragging = false;
   lifted = false;
   canTap = true;
+  isFollowing = false;
+  isWalking = false;
+  arrived = false;
 }
 
 function setEnabled(value) {
@@ -185,129 +687,12 @@ function setEnabled(value) {
   updateMochiButtons();
 }
 
-function setFrameFile(file) {
-  if (!img) return;
-  img.src = MOCHI_BASE_PATH + file;
-}
-
-function clearMotionTimers() {
-  clearInterval(frameTimer);
-  frameTimer = null;
-}
-
-function stopIdleTimers() {
-  clearInterval(idleMotionTimer);
-  idleMotionTimer = null;
-  clearInterval(idleTextTimer);
-  idleTextTimer = null;
-}
-
-function showNormal() {
-  clearMotionTimers();
-  mode = "idle";
-  setFrameFile("mochi_nomal.png");
-}
-
-function playAnim(animName, onStep, onEnd) {
-  clearMotionTimers();
-
-  const anim = MOCHI_ANIMS[animName];
-  if (!anim) return;
-
-  mode = animName;
-
-  let stepIndex = 0;
-  let frameRemain = Number(anim[0].frames || 1);
-
-  setFrameFile(anim[0].file);
-  if (typeof onStep === "function") onStep(anim[0], stepIndex);
-
-  frameTimer = setInterval(() => {
-    frameRemain--;
-
-    if (frameRemain > 0) return;
-
-    stepIndex++;
-
-    if (stepIndex >= anim.length) {
-      clearMotionTimers();
-      if (typeof onEnd === "function") onEnd();
-      return;
-    }
-
-    const step = anim[stepIndex];
-    frameRemain = Number(step.frames || 1);
-    setFrameFile(step.file);
-
-    if (typeof onStep === "function") onStep(step, stepIndex);
-  }, MOCHI_FRAME_MS);
-}
-
-function startIdleMode() {
-  canTap = true;
-  idleJumpLooped = false;
-  showNormal();
-  stopIdleTimers();
-
-  idleMotionTimer = setInterval(() => {
-    if (!root || dragging || lifted || mode !== "idle") return;
-
-    const r = Math.random();
-
-    if (r < 0.3) {
-      canTap = false;
-      playAnim("idleBlink", null, () => {
-        canTap = true;
-        showNormal();
-      });
-      return;
-    }
-
-    if (r < 0.6) {
-      canTap = false;
-      playIdleJumpSequence();
-    }
-  }, 5000);
-
-  idleTextTimer = setInterval(() => {
-    if (!root || dragging || lifted || mode !== "idle") return;
-
-    if (Math.random() < 0.3) {
-      showRandomText(MOCHI_IDLE_TEXTS, 2000);
-    }
-  }, 10000);
-}
-
-function playIdleJumpSequence() {
-  playAnim("idleJump", null, () => {
-    if (!idleJumpLooped && Math.random() < 0.5) {
-      idleJumpLooped = true;
-      playIdleJumpSequence();
-      return;
-    }
-
-    idleJumpLooped = false;
-    canTap = true;
-    showNormal();
-  });
-}
-
-function showRandomText(textList = MOCHI_TAP_TEXTS, durationMs = 2000) {
-  if (!bubble) return;
-
-  bubble.textContent = textList[Math.floor(Math.random() * textList.length)];
-  bubble.classList.add("show");
-
-  setTimeout(() => {
-    if (bubble) bubble.classList.remove("show");
-  }, durationMs);
-}
-
 function bindMochiEvents() {
   root.addEventListener("pointerdown", (event) => {
     if (!canTap && mode !== "idle") return;
 
     event.preventDefault();
+    event.stopPropagation();
     root.setPointerCapture(event.pointerId);
 
     const rect = root.getBoundingClientRect();
@@ -316,9 +701,14 @@ function bindMochiEvents() {
 
     holdTimer = setTimeout(() => {
       stopIdleTimers();
+      stopFollowTimers();
+      clearMotionTimers();
+
       canTap = false;
       lifted = true;
       dragging = true;
+      isFollowing = false;
+      arrived = false;
 
       playAnim("lift", null, () => {
         setFrameFile("mochi_up5.png");
@@ -383,6 +773,41 @@ function bindMochiEvents() {
       startIdleMode();
     }
   });
+}
+
+function bindWorldFollowEvents() {
+  document.addEventListener("pointerdown", (event) => {
+    if (!enabled || !root) return;
+    if (root.contains(event.target)) return;
+
+    clearTimeout(followHoldTimer);
+
+    followHoldTimer = setTimeout(() => {
+      startFollowing(event.clientX, event.clientY);
+    }, FOLLOW_HOLD_MS);
+  }, true);
+
+  document.addEventListener("pointermove", (event) => {
+    if (!isFollowing || !followTarget) return;
+
+    followTarget.x = window.scrollX + event.clientX;
+    followTarget.y = window.scrollY + event.clientY;
+
+    if (arrived) {
+      arrived = false;
+      clearInterval(arriveJumpTimer);
+      arriveJumpTimer = null;
+      walkTowardTarget();
+    }
+  }, true);
+
+  document.addEventListener("pointerup", () => {
+    stopFollowing();
+  }, true);
+
+  document.addEventListener("pointercancel", () => {
+    stopFollowing();
+  }, true);
 }
 
 function clickElementUnderMochiFoot() {
