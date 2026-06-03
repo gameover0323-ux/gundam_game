@@ -5,6 +5,7 @@ const MOCHI_FRAME_MS = 1000 / 60;
 const MOCHI_SIZE = 72;
 const HOLD_MS = 420;
 const FOLLOW_HOLD_MS = 1000;
+const FOLLOW_MOVE_CANCEL_DISTANCE = 12;
 const STEP_DISTANCE = MOCHI_SIZE / 3;
 const ARRIVE_DISTANCE = STEP_DISTANCE;
 
@@ -204,7 +205,6 @@ let state = loadState();
 let root = null;
 let img = null;
 let bubble = null;
-let followLayer = null;
 let enabled = state.enabled === true;
 let mode = "idle";
 let currentDir = "normal";
@@ -224,6 +224,7 @@ let idleJumpLooped = false;
 let isFollowing = false;
 let isWalking = false;
 let arrived = false;
+let arriveMessageShown = false;
 let followTarget = null;
 let pointerOffset = { x: 0, y: 0 };
 let lastActiveScreenId = getActiveScreenId();
@@ -362,6 +363,7 @@ function startIdleMode() {
   canTap = true;
   idleJumpLooped = false;
   arrived = false;
+  arriveMessageShown = false;
   showNormal();
   stopIdleTimers();
 
@@ -397,7 +399,8 @@ function startIdleMode() {
 function playIdleJumpSequence(singleLoop = false) {
   playAnim("idleJump", null, () => {
     if (singleLoop) {
-      showNormal();
+      const normal = currentDir !== "normal" ? DIR_DATA[currentDir]?.normal : "mochi_nomal.png";
+      setFrameFile(normal || "mochi_nomal.png");
       return;
     }
 
@@ -505,7 +508,7 @@ function moveOneStep() {
 }
 
 function walkTowardTarget() {
-  if (!isFollowing || isWalking || !followTarget) return;
+  if (!isFollowing || isWalking || !followTarget || arrived) return;
 
   const center = getCenter();
   const dist = Math.hypot(followTarget.x - center.x, followTarget.y - center.y);
@@ -526,15 +529,15 @@ function walkTowardTarget() {
   currentDir = dir;
 
   playSteps(fullSteps, (step) => {
-    if (step.move === true) {
+    if (step.move === true && !arrived) {
       moveOneStep();
     }
   }, () => {
     isWalking = false;
 
-    if (isFollowing) {
+    if (isFollowing && !arrived) {
       walkTowardTarget();
-    } else {
+    } else if (!isFollowing) {
       returnToNormalFromCurrentDir();
     }
   });
@@ -547,17 +550,15 @@ function arriveAtTarget() {
   isWalking = false;
   clearMotionTimers();
 
-  showRandomText(MOCHI_ARRIVE_TEXTS, 2500);
+  if (!arriveMessageShown) {
+    arriveMessageShown = true;
+    showRandomText(MOCHI_ARRIVE_TEXTS, 2500);
+  }
 
+  clearInterval(arriveJumpTimer);
   arriveJumpTimer = setInterval(() => {
     if (!isFollowing || !arrived || dragging || lifted) return;
-
-    playAnim("idleJump", null, () => {
-      if (isFollowing && arrived) {
-        const normal = currentDir !== "normal" ? DIR_DATA[currentDir]?.normal : "mochi_nomal.png";
-        setFrameFile(normal || "mochi_nomal.png");
-      }
-    });
+    playIdleJumpSequence(true);
   }, 2000);
 }
 
@@ -591,6 +592,7 @@ function startFollowing(clientX, clientY) {
   isFollowing = true;
   isWalking = false;
   arrived = false;
+  arriveMessageShown = false;
   canTap = false;
   followTarget = {
     x: window.scrollX + clientX,
@@ -615,76 +617,14 @@ function stopFollowing() {
   isFollowing = false;
   followTarget = null;
   arrived = false;
+  arriveMessageShown = false;
   stopFollowTimers();
 
   if (!dragging && !lifted) {
     returnToNormalFromCurrentDir();
   }
 }
-function createFollowLayer() {
-  if (followLayer) return;
 
-  followLayer = document.createElement("div");
-  followLayer.id = "mochiFollowLayer";
-  followLayer.className = "mochi-follow-layer";
-  document.body.appendChild(followLayer);
-
-  followLayer.addEventListener("contextmenu", (event) => {
-    event.preventDefault();
-  });
-
-  followLayer.addEventListener("pointerdown", (event) => {
-    if (!enabled || !root) return;
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    clearTimeout(followHoldTimer);
-
-    const startClientX = event.clientX;
-    const startClientY = event.clientY;
-
-    followHoldTimer = setTimeout(() => {
-      startFollowing(startClientX, startClientY);
-    }, FOLLOW_HOLD_MS);
-  });
-
-  followLayer.addEventListener("pointermove", (event) => {
-    if (!isFollowing || !followTarget) return;
-
-    event.preventDefault();
-
-    followTarget.x = window.scrollX + event.clientX;
-    followTarget.y = window.scrollY + event.clientY;
-
-    if (arrived) {
-      arrived = false;
-      clearInterval(arriveJumpTimer);
-      arriveJumpTimer = null;
-      walkTowardTarget();
-    }
-  });
-
-  followLayer.addEventListener("pointerup", (event) => {
-    event.preventDefault();
-    clearTimeout(followHoldTimer);
-    followHoldTimer = null;
-    stopFollowing();
-  });
-
-  followLayer.addEventListener("pointercancel", (event) => {
-    event.preventDefault();
-    clearTimeout(followHoldTimer);
-    followHoldTimer = null;
-    stopFollowing();
-  });
-}
-
-function removeFollowLayer() {
-  if (!followLayer) return;
-  followLayer.remove();
-  followLayer = null;
-}
 function createMochi() {
   if (root) return;
 
@@ -711,9 +651,9 @@ function createMochi() {
   }
 
   applyPosition();
-createFollowLayer();
-bindMochiEvents();
-startIdleMode();
+  bindMochiEvents();
+  bindWorldFollowEvents();
+  startIdleMode();
 }
 
 function removeMochi() {
@@ -724,7 +664,7 @@ function removeMochi() {
   stopFollowTimers();
 
   if (root) root.remove();
-removeFollowLayer();
+
   root = null;
   img = null;
   bubble = null;
@@ -734,6 +674,7 @@ removeFollowLayer();
   isFollowing = false;
   isWalking = false;
   arrived = false;
+  arriveMessageShown = false;
 }
 
 function setEnabled(value) {
@@ -773,6 +714,7 @@ function bindMochiEvents() {
       dragging = true;
       isFollowing = false;
       arrived = false;
+      arriveMessageShown = false;
 
       playAnim("lift", null, () => {
         setFrameFile("mochi_up5.png");
@@ -840,54 +782,80 @@ function bindMochiEvents() {
 }
 
 function bindWorldFollowEvents() {
-  let worldPointerDown = false;
-  let worldPointerId = null;
-  let startClientX = 0;
-  let startClientY = 0;
+  let pressing = false;
+  let pressPointerId = null;
+  let startX = 0;
+  let startY = 0;
+  let latestX = 0;
+  let latestY = 0;
+  let moved = false;
+
+  document.addEventListener("contextmenu", (event) => {
+    if (pressing || isFollowing) {
+      event.preventDefault();
+    }
+  }, true);
 
   document.addEventListener("pointerdown", (event) => {
     if (!enabled || !root) return;
     if (root.contains(event.target)) return;
 
-    worldPointerDown = true;
-    worldPointerId = event.pointerId;
-    startClientX = event.clientX;
-    startClientY = event.clientY;
+    pressing = true;
+    moved = false;
+    pressPointerId = event.pointerId;
+    startX = event.clientX;
+    startY = event.clientY;
+    latestX = event.clientX;
+    latestY = event.clientY;
 
     clearTimeout(followHoldTimer);
 
     followHoldTimer = setTimeout(() => {
-      if (!worldPointerDown) return;
-
-      startFollowing(startClientX, startClientY);
+      if (!pressing || moved) return;
+      startFollowing(latestX, latestY);
     }, FOLLOW_HOLD_MS);
   }, true);
 
   document.addEventListener("pointermove", (event) => {
-    if (!worldPointerDown) return;
-    if (worldPointerId !== null && event.pointerId !== worldPointerId) return;
+    if (!pressing) return;
+    if (pressPointerId !== null && event.pointerId !== pressPointerId) return;
 
-    startClientX = event.clientX;
-    startClientY = event.clientY;
+    latestX = event.clientX;
+    latestY = event.clientY;
+
+    const dx = latestX - startX;
+    const dy = latestY - startY;
+    const dist = Math.hypot(dx, dy);
+
+    if (!isFollowing && dist > FOLLOW_MOVE_CANCEL_DISTANCE) {
+      moved = true;
+      pressing = false;
+      clearTimeout(followHoldTimer);
+      followHoldTimer = null;
+      return;
+    }
 
     if (!isFollowing || !followTarget) return;
 
-    followTarget.x = window.scrollX + event.clientX;
-    followTarget.y = window.scrollY + event.clientY;
+    event.preventDefault();
+
+    followTarget.x = window.scrollX + latestX;
+    followTarget.y = window.scrollY + latestY;
 
     if (arrived) {
       arrived = false;
+      arriveMessageShown = false;
       clearInterval(arriveJumpTimer);
       arriveJumpTimer = null;
       walkTowardTarget();
     }
-  }, true);
+  }, { capture: true, passive: false });
 
   document.addEventListener("pointerup", (event) => {
-    if (worldPointerId !== null && event.pointerId !== worldPointerId) return;
+    if (pressPointerId !== null && event.pointerId !== pressPointerId) return;
 
-    worldPointerDown = false;
-    worldPointerId = null;
+    pressing = false;
+    pressPointerId = null;
     clearTimeout(followHoldTimer);
     followHoldTimer = null;
 
@@ -895,10 +863,10 @@ function bindWorldFollowEvents() {
   }, true);
 
   document.addEventListener("pointercancel", (event) => {
-    if (worldPointerId !== null && event.pointerId !== worldPointerId) return;
+    if (pressPointerId !== null && event.pointerId !== pressPointerId) return;
 
-    worldPointerDown = false;
-    worldPointerId = null;
+    pressing = false;
+    pressPointerId = null;
     clearTimeout(followHoldTimer);
     followHoldTimer = null;
 
