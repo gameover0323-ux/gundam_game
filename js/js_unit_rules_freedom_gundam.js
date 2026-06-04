@@ -10,6 +10,8 @@ import {
 function ensureFreedomState(state) {
   if (!state) return;
   if (typeof state.freedomHalberdUsedTurn !== "number") state.freedomHalberdUsedTurn = -1;
+  if (typeof state.shieldCount !== "number") state.shieldCount = 3;
+  if (typeof state.shieldActive !== "boolean") state.shieldActive = false;
 }
 
 function getAdapter(context) {
@@ -32,9 +34,11 @@ function getRuleEvade(state, context = {}) {
 function consumeRuleEvade(state, amount, context = {}) {
   const adapter = getAdapter(context);
   const ownerPlayer = getOwnerPlayer(context);
+
   if (adapter?.consumeEvade && ownerPlayer) {
     return adapter.consumeEvade(ownerPlayer, state, amount);
   }
+
   if (!state || Number(state.evade || 0) < amount) return false;
   state.evade = Math.max(0, Number(state.evade || 0) - amount);
   return true;
@@ -43,9 +47,11 @@ function consumeRuleEvade(state, amount, context = {}) {
 function addRuleAction(state, amount, context = {}) {
   const adapter = getAdapter(context);
   const ownerPlayer = getOwnerPlayer(context);
+
   if (adapter?.addActionCount && ownerPlayer) {
     return adapter.addActionCount(ownerPlayer, state, amount);
   }
+
   state.actionCount = Math.max(0, Number(state.actionCount || 0)) + amount;
   return amount;
 }
@@ -97,6 +103,7 @@ function tickSeed(state) {
   }
 
   effect.turns -= 1;
+
   if (effect.turns <= 0) {
     exitSeed(state);
     return true;
@@ -106,7 +113,10 @@ function tickSeed(state) {
 }
 
 function applySeedAttackAttributes(slot) {
-  if (!slot?.effect || slot.effect.type !== "attack") return { ...slot, ex: true };
+  if (!slot?.effect || slot.effect.type !== "attack") {
+    return { ...slot, ex: true };
+  }
+
   return {
     ...slot,
     ex: true,
@@ -120,6 +130,7 @@ function applySeedAttackAttributes(slot) {
 
 function buildSeedSlot1(state, context = {}) {
   const evade = getRuleEvade(state, context);
+
   return {
     label: `1EX ラケルタ連撃 20ダメージ×${evade}回`,
     desc: `20ダメージ×${evade}回。格闘、ビーム属性、S.E.E.D.中は橙必中。`,
@@ -147,6 +158,10 @@ export function getFreedomDerivedState(state, context = {}) {
   };
 
   const seed = getSeedEffect(state);
+
+  result.status.push(`シールド残り:${Math.max(0, Number(state.shieldCount || 0))}/3`);
+  if (state.shieldActive) result.status.push("シールド展開中：被ダメージ半減");
+
   if (!seed) return result;
 
   result.name = "フリーダムガンダム(S.E.E.D.発動)";
@@ -154,10 +169,10 @@ export function getFreedomDerivedState(state, context = {}) {
 
   result.slots.slot1 = buildSeedSlot1(state, context);
 
-["slot2", "slot3", "slot4", "slot5", "slot6"].forEach((slotKey) => {
-  const baseSlot = state.slots?.[slotKey];
-  if (baseSlot) result.slots[slotKey] = applySeedAttackAttributes(baseSlot);
-});
+  ["slot2", "slot3", "slot4", "slot5", "slot6"].forEach((slotKey) => {
+    const baseSlot = state.slots?.[slotKey];
+    if (baseSlot) result.slots[slotKey] = applySeedAttackAttributes(baseSlot);
+  });
 
   return result;
 }
@@ -166,10 +181,17 @@ export function canUseFreedomSpecial(state, specialKey, context = {}) {
   ensureFreedomState(state);
 
   const special = state.specials?.[specialKey];
-  if (!special) return { allowed: false, message: "特殊行動データが見つかりません" };
+  if (!special) {
+    return { allowed: false, message: "特殊行動データが見つかりません" };
+  }
 
   const evade = getRuleEvade(state, context);
   const seed = getSeedEffect(state);
+
+  if (special.effectType === "freedom_shield") {
+    const allowed = Number(state.shieldCount || 0) > 0;
+    return { allowed, message: allowed ? null : "シールド残数がありません" };
+  }
 
   if (special.effectType === "freedom_halberd") {
     const turn = getCurrentTurn(context);
@@ -203,9 +225,26 @@ export function executeFreedomSpecial(state, specialKey, context = {}) {
     return { handled: true, redraw: false, message: "特殊行動データが見つかりません" };
   }
 
+  if (special.effectType === "freedom_shield") {
+    if (Number(state.shieldCount || 0) <= 0) {
+      return { handled: true, redraw: true, message: "シールド残数がありません" };
+    }
+
+    state.shieldCount = Math.max(0, Number(state.shieldCount || 0) - 1);
+    state.shieldActive = true;
+
+    return {
+      handled: true,
+      redraw: true,
+      message: "シールド発動：このターンの被ダメージを半減"
+    };
+  }
+
   if (special.effectType === "freedom_halberd") {
     const can = canUseFreedomSpecial(state, specialKey, context);
-    if (!can.allowed) return { handled: true, redraw: true, message: can.message };
+    if (!can.allowed) {
+      return { handled: true, redraw: true, message: can.message };
+    }
 
     state.freedomHalberdUsedTurn = getCurrentTurn(context);
 
@@ -221,30 +260,46 @@ export function executeFreedomSpecial(state, specialKey, context = {}) {
     if (!consumeRuleEvade(state, 6, context)) {
       return { handled: true, redraw: true, message: "回避が足りません" };
     }
+
     addRuleAction(state, 1, context);
     return { handled: true, redraw: true, message: "バレルロール：回避6消費、行動回数+1" };
   }
 
   if (special.effectType === "freedom_seed_chase") {
     const seed = getSeedEffect(state);
+
     if (!seed || Number(seed.turns || 0) < 1) {
       return { handled: true, redraw: true, message: "S.E.E.D.残りターンが足りません" };
     }
+
     seed.turns -= 1;
     addRuleAction(state, 1, context);
+
     if (seed.turns <= 0) exitSeed(state);
-    return { handled: true, redraw: true, message: "S.E.E.D.追撃：S.E.E.D.残り1ターン消費、行動回数+1" };
+
+    return {
+      handled: true,
+      redraw: true,
+      message: "S.E.E.D.追撃：S.E.E.D.残り1ターン消費、行動回数+1"
+    };
   }
 
   if (special.effectType === "freedom_seed_cancel") {
     const seed = getSeedEffect(state);
+
     if (!seed || Number(seed.turns || 0) < 2) {
       return { handled: true, redraw: true, message: "S.E.E.D.残りターンが足りません" };
     }
+
     exitSeed(state);
     doubleEvadeRedCap(state);
     normalizeEvadeCapState(state);
-    return { handled: true, redraw: true, message: "覚醒キャンセル：S.E.E.D.終了、回避数値を倍加" };
+
+    return {
+      handled: true,
+      redraw: true,
+      message: "覚醒キャンセル：S.E.E.D.終了、回避数値を倍加"
+    };
   }
 
   return { handled: false, redraw: false, message: null };
@@ -252,7 +307,13 @@ export function executeFreedomSpecial(state, specialKey, context = {}) {
 
 export function onFreedomTurnEnd(state, context = {}) {
   ensureFreedomState(state);
-  return { redraw: tickSeed(state), message: null };
+
+  const seedRedraw = tickSeed(state);
+  const shieldRedraw = state.shieldActive === true;
+
+  state.shieldActive = false;
+
+  return { redraw: seedRedraw || shieldRedraw, message: null };
 }
 
 export function onFreedomBeforeSlot(state, rolledSlotNumber, context = {}) {
@@ -303,24 +364,56 @@ export function onFreedomDamaged(defender, attacker, context = {}) {
 }
 
 export function modifyFreedomTakenDamage(defender, attacker, attack, damage, context = {}) {
+  ensureFreedomState(defender);
+
+  if (defender.shieldActive && !attack?.ignoreReduction) {
+    return {
+      damage: Math.floor(Number(damage || 0) / 2),
+      message: "シールド：ダメージ半減"
+    };
+  }
+
   return { damage, message: null };
 }
 
 export function modifyFreedomEvadeAttempt(defender, attacker, attack, context = {}) {
+  ensureFreedomState(defender);
+
   if (!isSeedActive(defender)) return { handled: false };
 
-  const evade = Number(defender?.evade || 0);
+  const evade = getRuleEvade(defender, context);
+  const isCannotEvadeAttack = attack?.cannotEvade === true;
 
-  if (attack?.cannotEvade && evade <= 0) {
-    return { handled: true, evade: false, message: "S.E.E.D.覚醒中だが、必中攻撃を回避する回避が足りない" };
+  if (isCannotEvadeAttack && evade <= 0) {
+    return {
+      handled: true,
+      ok: false,
+      message: "回避が足りない"
+    };
   }
 
   if (evade > 0) {
-    defender.evade = Math.max(0, evade - 1);
+    const consumed = consumeRuleEvade(defender, 1, context);
+
+    if (!consumed && isCannotEvadeAttack) {
+      return {
+        handled: true,
+        ok: false,
+        message: "回避が足りない"
+      };
+    }
+
+    return {
+      handled: true,
+      ok: true
+    };
   }
 
-  return { handled: true, evade: true, message: "S.E.E.D.覚醒：攻撃を回避" };
-}
+  return {
+    handled: true,
+    ok: true
+  };
+} 
 
 export function onFreedomResolveChoice(state, pendingChoice, selectedValue, context = {}) {
   return { handled: false, redraw: false, message: null };
