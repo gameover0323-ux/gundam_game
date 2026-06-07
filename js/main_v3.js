@@ -122,7 +122,7 @@ import { createGameSetup } from "./js_game_setup.js";
 import { createActionLayer } from "./js_action_layer.js";
 
 import { createFeedbackForm } from "./js_feedback_form.js";
-
+import { createSpecTutorialController } from "./js_spec_tutorial_controller.js";
 const screens = {
   title: document.getElementById("title"),
   select: document.getElementById("select"),
@@ -163,6 +163,7 @@ let isTestMode = false;
 let battleMode = "1v1";
 let playerStatsUi = null;
 let feedbackForm = null;
+let specTutorialController = null;
 let randomMatchController = null;
 let onlineBattleUi = null;
 let onlineActionSync = null;
@@ -526,10 +527,16 @@ function toggleTestMode() {
   showPopup(isTestMode ? "テストモードON" : "テストモードOFF");
 }
 function updateDebugButtonVisibility() {
-  const btn = document.getElementById("toggleTestModeBtn");
-  if (!btn) return;
+  const debugAllowed = canUseTestMode();
 
-  btn.style.display = canUseTestMode() ? "" : "none";
+  const btn = document.getElementById("toggleTestModeBtn");
+  if (btn) {
+    btn.style.display = debugAllowed ? "" : "none";
+  }
+
+  if (specTutorialController?.updateVisibility) {
+    specTutorialController.updateVisibility();
+  }
 }
 function updatePlayerCardUi() {
   return playerAccountUi.updatePlayerCardUi();
@@ -955,6 +962,13 @@ feedbackForm = createFeedbackForm({
 });
 
 feedbackForm.ensureFeedbackButton();
+specTutorialController = createSpecTutorialController({
+  canUseDebug: canUseTestMode,
+  getPlayerProfile: () => playerSession.profile,
+  showPopup
+});
+specTutorialController.ensureButton();
+specTutorialController.updateVisibility();
 playerAccountUi = createPlayerAccountUi({
   getPlayerProfile: () => playerSession.profile,
 
