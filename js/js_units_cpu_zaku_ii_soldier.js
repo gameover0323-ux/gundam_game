@@ -7,7 +7,7 @@ export const cpu_zaku_ii_soldier = {
     base: {
       name: "ザクⅡ(一般兵)",
       hp: 400,
-      evadeMax: 3,
+      evadeMax: 2,
       rollableSlotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"],
       ownedSlotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"],
       slots: {
@@ -32,14 +32,14 @@ export const cpu_zaku_ii_soldier = {
           effect: { type: "attack", attackType: "shoot", damage: 60, count: 1 }
         },
         slot5: {
-          label: "回避+3",
-          desc: "回避+3",
-          effect: { type: "evade", amount: 3 }
+          label: "回避+1",
+          desc: "回避+1",
+          effect: { type: "evade", amount: 1 }
         },
         slot6: {
-          label: "ヒートホーク連斬 20ダメージ×4回",
+          label: "ヒートホーク連斬 15ダメージ×4回",
           desc: "20ダメージ×4回。格闘",
-          effect: { type: "attack", attackType: "melee", damage: 20, count: 4 }
+          effect: { type: "attack", attackType: "melee", damage: 15, count: 4 }
         }
       },
       specials: [
