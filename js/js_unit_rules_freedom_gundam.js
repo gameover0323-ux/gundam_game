@@ -9,7 +9,7 @@ import {
 
 function ensureFreedomState(state) {
   if (!state) return;
-  if (typeof state.freedomHalberdUsedTurn !== "number") state.freedomHalberdUsedTurn = -1;
+  if (typeof state.freedomHalberdUsedThisTurn !== "boolean") state.freedomHalberdUsedThisTurn = false;
   if (typeof state.shieldCount !== "number") state.shieldCount = 3;
   if (typeof state.shieldActive !== "boolean") state.shieldActive = false;
 }
@@ -34,11 +34,9 @@ function getRuleEvade(state, context = {}) {
 function consumeRuleEvade(state, amount, context = {}) {
   const adapter = getAdapter(context);
   const ownerPlayer = getOwnerPlayer(context);
-
   if (adapter?.consumeEvade && ownerPlayer) {
     return adapter.consumeEvade(ownerPlayer, state, amount);
   }
-
   if (!state || Number(state.evade || 0) < amount) return false;
   state.evade = Math.max(0, Number(state.evade || 0) - amount);
   return true;
@@ -47,17 +45,11 @@ function consumeRuleEvade(state, amount, context = {}) {
 function addRuleAction(state, amount, context = {}) {
   const adapter = getAdapter(context);
   const ownerPlayer = getOwnerPlayer(context);
-
   if (adapter?.addActionCount && ownerPlayer) {
     return adapter.addActionCount(ownerPlayer, state, amount);
   }
-
   state.actionCount = Math.max(0, Number(state.actionCount || 0)) + amount;
   return amount;
-}
-
-function getCurrentTurn(context = {}) {
-  return Number(context.turn || context.turnCount || context.currentTurn || 0);
 }
 
 function getSeedEffect(state) {
@@ -194,8 +186,7 @@ export function canUseFreedomSpecial(state, specialKey, context = {}) {
   }
 
   if (special.effectType === "freedom_halberd") {
-    const turn = getCurrentTurn(context);
-    const allowed = evade >= Number(state.evadeMax || 0) && state.freedomHalberdUsedTurn !== turn;
+    const allowed = evade >= Number(state.evadeMax || 0) && state.freedomHalberdUsedThisTurn !== true;
     return { allowed, message: allowed ? null : "条件未達" };
   }
 
@@ -233,11 +224,7 @@ export function executeFreedomSpecial(state, specialKey, context = {}) {
     state.shieldCount = Math.max(0, Number(state.shieldCount || 0) - 1);
     state.shieldActive = true;
 
-    return {
-      handled: true,
-      redraw: true,
-      message: "シールド発動：このターンの被ダメージを半減"
-    };
+    return { handled: true, redraw: true, message: "シールド発動：このターンの被ダメージを半減" };
   }
 
   if (special.effectType === "freedom_halberd") {
@@ -246,14 +233,14 @@ export function executeFreedomSpecial(state, specialKey, context = {}) {
       return { handled: true, redraw: true, message: can.message };
     }
 
-    state.freedomHalberdUsedTurn = getCurrentTurn(context);
+    state.freedomHalberdUsedThisTurn = true;
 
     if (Math.random() < 0.2) {
       addRuleAction(state, 1, context);
-      return { handled: true, redraw: true, message: "アンビデクストラスハルバード成功：行動回数+1" };
+      return { handled: true, redraw: true, message: "成功：行動回数+1" };
     }
 
-    return { handled: true, redraw: true, message: "アンビデクストラスハルバード失敗" };
+    return { handled: true, redraw: true, message: "失敗" };
   }
 
   if (special.effectType === "freedom_barrel_roll") {
@@ -267,7 +254,6 @@ export function executeFreedomSpecial(state, specialKey, context = {}) {
 
   if (special.effectType === "freedom_seed_chase") {
     const seed = getSeedEffect(state);
-
     if (!seed || Number(seed.turns || 0) < 1) {
       return { handled: true, redraw: true, message: "S.E.E.D.残りターンが足りません" };
     }
@@ -277,16 +263,11 @@ export function executeFreedomSpecial(state, specialKey, context = {}) {
 
     if (seed.turns <= 0) exitSeed(state);
 
-    return {
-      handled: true,
-      redraw: true,
-      message: "S.E.E.D.追撃：S.E.E.D.残り1ターン消費、行動回数+1"
-    };
+    return { handled: true, redraw: true, message: "S.E.E.D.追撃：S.E.E.D.残り1ターン消費、行動回数+1" };
   }
 
   if (special.effectType === "freedom_seed_cancel") {
     const seed = getSeedEffect(state);
-
     if (!seed || Number(seed.turns || 0) < 2) {
       return { handled: true, redraw: true, message: "S.E.E.D.残りターンが足りません" };
     }
@@ -295,11 +276,7 @@ export function executeFreedomSpecial(state, specialKey, context = {}) {
     doubleEvadeRedCap(state);
     normalizeEvadeCapState(state);
 
-    return {
-      handled: true,
-      redraw: true,
-      message: "覚醒キャンセル：S.E.E.D.終了、回避数値を倍加"
-    };
+    return { handled: true, redraw: true, message: "覚醒キャンセル：S.E.E.D.終了、回避数値を倍加" };
   }
 
   return { handled: false, redraw: false, message: null };
@@ -312,6 +289,7 @@ export function onFreedomTurnEnd(state, context = {}) {
   const shieldRedraw = state.shieldActive === true;
 
   state.shieldActive = false;
+  state.freedomHalberdUsedThisTurn = false;
 
   return { redraw: seedRedraw || shieldRedraw, message: null };
 }
@@ -385,35 +363,21 @@ export function modifyFreedomEvadeAttempt(defender, attacker, attack, context = 
   const isCannotEvadeAttack = attack?.cannotEvade === true;
 
   if (isCannotEvadeAttack && evade <= 0) {
-    return {
-      handled: true,
-      ok: false,
-      message: "回避が足りない"
-    };
+    return { handled: true, ok: false, message: "回避が足りない" };
   }
 
   if (evade > 0) {
     const consumed = consumeRuleEvade(defender, 1, context);
 
     if (!consumed && isCannotEvadeAttack) {
-      return {
-        handled: true,
-        ok: false,
-        message: "回避が足りない"
-      };
+      return { handled: true, ok: false, message: "回避が足りない" };
     }
 
-    return {
-      handled: true,
-      ok: true
-    };
+    return { handled: true, ok: true };
   }
 
-  return {
-    handled: true,
-    ok: true
-  };
-} 
+  return { handled: true, ok: true };
+}
 
 export function onFreedomResolveChoice(state, pendingChoice, selectedValue, context = {}) {
   return { handled: false, redraw: false, message: null };
