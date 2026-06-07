@@ -95,14 +95,14 @@ function getStatusLineHtml(text) {
   if (typeof text !== "string") return "";
 
   if (text.startsWith("NT-D覚醒 残")) {
-    return `<div style="color:#ffcc00;">${text}</div>`;
+    return `<div style="color:#66ff22;">${text}</div>`;
   }
 
   if (text.startsWith("NT-D 残")) {
-    return `<div style="color:#ff4444;">${text}</div>`;
+    return `<div style="color:#ff2222;">${text}</div>`;
   }
 
-  return `<div style="color:#d8b4ff;">${text}</div>`;
+  return `<div>${text}</div>`;
 }
 
 function getEvadeDisplayHtml(state) {
