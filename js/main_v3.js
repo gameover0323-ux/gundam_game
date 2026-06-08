@@ -90,7 +90,11 @@ import {
   executeUnitActionResolved,
   executeUnitOnDamaged,
   executeUnitModifyTakenDamage,
-  executeUnitModifyEvadeAttempt
+  executeUnitModifyEvadeAttempt,
+  getCriticalRate,
+  spendEvadeForCritical,
+  tickCriticalBoosts,
+  rollCritical
 } from "./js_unit_runtime.js";
 
 import {
@@ -588,7 +592,14 @@ function build1v1RenderHandlers(playerKey) {
     onSlotClick: (slot) => showPopup(slot.desc),
     onSpecialDesc: (special) => showPopup(special.desc),
     onSpecialExec: (specialKey) => executeSpecial(playerKey, specialKey),
-    canExecuteSpecial: (special) => canExecuteSpecialForPlayer(playerKey, special)
+    canExecuteSpecial: (special) => canExecuteSpecialForPlayer(playerKey, special),
+
+    getCriticalRate: (state) => getCriticalRate(state),
+    onCriticalBoost: (state) => {
+      if (!state) return;
+      spendEvadeForCritical(state);
+      redrawBattleBoards();
+    }
   };
 }
 
@@ -599,7 +610,8 @@ function build2v2RenderHandlers(playerKey) {
     currentPlayer,
     playerKey,
     canChangeFocus: isBossSide ? false : canChangeFocus(playerKey),
-  onToggleTeamMode: () => {
+
+    onToggleTeamMode: () => {
       if (currentPlayer !== playerKey) {
         showPopup("型変更は自分ターン中のみ可能");
         return;
@@ -607,6 +619,7 @@ function build2v2RenderHandlers(playerKey) {
 
       toggleTeamMode(playerKey);
     },
+
     onSwitchActiveUnit: (unitKey) => {
       const team = getTeam(playerKey);
       if (!team || !team[unitKey]) return;
@@ -614,6 +627,7 @@ function build2v2RenderHandlers(playerKey) {
       setActiveUnit(playerKey, unitKey);
       redrawBattleBoards();
     },
+
     onSwitchFocusUnit: (unitKey) => {
       const team = getTeam(playerKey);
       if (!team || !team[unitKey]) return;
@@ -626,10 +640,18 @@ function build2v2RenderHandlers(playerKey) {
       setFocusUnit(playerKey, unitKey);
       redrawBattleBoards();
     },
+
     onSlotClick: (slot) => showPopup(slot.desc),
     onSpecialDesc: (special) => showPopup(special.desc),
     onSpecialExec: (specialKey) => executeSpecial(playerKey, specialKey),
-    canExecuteSpecial: (special) => canExecuteSpecialForPlayer(playerKey, special)
+    canExecuteSpecial: (special) => canExecuteSpecialForPlayer(playerKey, special),
+
+    getCriticalRate: (state) => getCriticalRate(state),
+    onCriticalBoost: (state) => {
+      if (!state) return;
+      spendEvadeForCritical(state);
+      redrawBattleBoards();
+    }
   };
 }
 
@@ -1270,7 +1292,8 @@ attackResolution = createAttackResolution({
   getCurrentAttack: () => currentAttack,
   getCurrentAttackContext: () => currentAttackContext,
   getCurrentAttackContexts: () => currentAttackContexts,
-twoVtwoAdapter,
+  twoVtwoAdapter,
+
   setCurrentAttack: (v) => currentAttack = v,
   setCurrentAttackContext: (v) => currentAttackContext = v,
   setCurrentAttackContexts: (v) => currentAttackContexts = v,
@@ -1294,7 +1317,9 @@ twoVtwoAdapter,
   executeUnitModifyEvadeAttempt,
 
   resolveTakeHit,
-  resolveEvadeAttack
+  resolveEvadeAttack,
+
+  rollCritical
 });
 qteController = createQteController({
   isOnlineEnabled: () => onlineState.enabled,
@@ -1487,7 +1512,7 @@ setCurrentAttackContexts,
   getPredictableSlotKeys,
 
   executeUnitTurnEnd,
-
+tickCriticalBoosts,
   showPopup,
   getCurrentAttack,
 renderAttackChoices
