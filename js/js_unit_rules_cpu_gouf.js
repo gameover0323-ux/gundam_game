@@ -35,12 +35,7 @@ function resolveExtraSlot(state, slotKey, context = {}) {
 
   if (!slot) return { appendAttacks, appendMessages };
 
-  const result = resolveSlotEffect({
-    slot,
-    actor: state,
-    context
-  });
-
+  const result = resolveSlotEffect({ slot, actor: state, context });
   const slotNumber = Number(String(slotKey).replace(/^slot/, ""));
 
   appendMessages.push(`グフ特性：追加行動 ${slotNumber}.${slot.label}`);
@@ -59,7 +54,7 @@ export function getCpuGoufDerivedState(state) {
 
   const status = [
     "難易度☆☆",
-    "特性：相手が攻撃しなかった次のターン、連続行動しやすい"
+    "特性：相手が攻撃しなかった次のターン、最大2回まで行動"
   ];
 
   if (state.cpuGoufSureHitNextAttack) {
@@ -75,7 +70,7 @@ export function getCpuGoufDerivedState(state) {
         effectType: "cpu_gouf_traits",
         timing: "auto",
         actionType: "auto",
-        desc: "相手が攻撃行動をしなかった次のターン、追加でスロット行動を行う。ヒートロッドが命中すると相手の回避を崩し、次の攻撃を必中にすることがある。"
+        desc: "相手が攻撃行動をしなかった次のターン、追加でスロット行動を1回行う。ヒートロッドが命中すると相手の回避を崩し、次の攻撃を必中にすることがある。"
       }
     }
   };
@@ -103,14 +98,15 @@ export function onCpuGoufBeforeSlot(state, slotNumber, context = {}) {
   const messages = [];
 
   if (state.cpuGoufEnemyTurnObserved && !state.cpuGoufEnemyTurnHadAttack) {
-    state.cpuGoufExtraSlotCount = Math.floor(Math.random() * 2) + 1;
-    messages.push(`グフ特性：相手が攻撃行動をしなかったため、追加スロット${state.cpuGoufExtraSlotCount}回`);
+    state.cpuGoufExtraSlotCount = 1;
+    messages.push("グフ特性：相手が攻撃行動をしなかったため、追加スロット1回");
   }
 
   state.cpuGoufEnemyTurnObserved = false;
   state.cpuGoufEnemyTurnHadAttack = false;
 
   const slot = context.slot;
+
   if (state.cpuGoufSureHitNextAttack && slot?.effect?.type === "attack") {
     slot.effect.cannotEvade = true;
     slot.effect.addedCannotEvade = true;
