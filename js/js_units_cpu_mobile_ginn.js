@@ -24,9 +24,9 @@ export const cpu_mobile_ginn = {
           effect: { type: "evade", amount: 2 }
         },
         slot3: {
-          label: "重斬刀 30ダメージ×2回",
-          desc: "30ダメージ×2回。格闘",
-          effect: { type: "attack", attackType: "melee", damage: 30, count: 2 }
+          label: "重斬刀 25ダメージ×2回",
+          desc: "25ダメージ×2回。格闘",
+          effect: { type: "attack", attackType: "melee", damage: 25, count: 2 }
         },
         slot4: {
           label: "回復 40",
@@ -34,14 +34,14 @@ export const cpu_mobile_ginn = {
           effect: { type: "heal", amount: 40 }
         },
         slot5: {
-          label: "強襲突撃銃 20ダメージ×3回",
-          desc: "20ダメージ×3回。射撃",
-          effect: { type: "attack", attackType: "shoot", damage: 20, count: 3 }
+          label: "強襲突撃銃 15ダメージ×3回",
+          desc: "15ダメージ×3回。射撃",
+          effect: { type: "attack", attackType: "shoot", damage: 15, count: 3 }
         },
         slot6: {
-          label: "強襲重斬刀 120ダメージ",
-          desc: "120ダメージ。格闘、軽減不可",
-          effect: { type: "attack", attackType: "melee", damage: 120, count: 1, ignoreReduction: true }
+          label: "強襲重斬刀 90ダメージ",
+          desc: "90ダメージ。格闘、軽減不可",
+          effect: { type: "attack", attackType: "melee", damage: 90, count: 1, ignoreReduction: true }
         }
       },
 
