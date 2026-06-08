@@ -84,8 +84,16 @@ function applyAttackOnHitSpecial({ attacker, defender, attack }) {
   return null;
 }
 
-export function takeHit({ attacker, defender, currentAttack, attackIndex, modifyTakenDamage }) {
+export function takeHit({
+  attacker,
+  defender,
+  currentAttack,
+  attackIndex,
+  modifyTakenDamage,
+  rollCritical
+}) {
   const attack = currentAttack[attackIndex];
+
   if (!attacker || !defender || !attack) {
     return null;
   }
@@ -93,10 +101,13 @@ export function takeHit({ attacker, defender, currentAttack, attackIndex, modify
   if (attacker.isConfusedTurn) {
     if (attacker.confuseHits > 0) {
       attacker.confuseHits--;
+
       currentAttack.splice(attackIndex, 1);
+
       if (attacker.confuseHits === 0) {
         attacker.isConfusedTurn = false;
       }
+
       return {
         defender,
         attacker,
@@ -107,6 +118,7 @@ export function takeHit({ attacker, defender, currentAttack, attackIndex, modify
         damageMessage: null
       };
     }
+
     attacker.isConfusedTurn = false;
   }
 
@@ -135,6 +147,7 @@ export function takeHit({ attacker, defender, currentAttack, attackIndex, modify
     if (modified.cancelled) {
       defender.lastDamageTaken = 0;
       currentAttack.splice(attackIndex, 1);
+
       return {
         defender,
         attacker,
@@ -154,10 +167,19 @@ export function takeHit({ attacker, defender, currentAttack, attackIndex, modify
     damageMessage = modified.message || null;
   }
 
+  if (typeof rollCritical === "function" && rollCritical(defender, attacker, attack)) {
+    finalDamage *= 2;
+    damageMessage = damageMessage
+      ? `${damageMessage}\n会心！ダメージ2倍`
+      : "会心！ダメージ2倍";
+  }
+
   defender.hp -= finalDamage;
+
   if (defender.hp < 0) defender.hp = 0;
 
   const onHitMessage = applyAttackOnHitSpecial({ attacker, defender, attack });
+
   if (onHitMessage) {
     damageMessage = damageMessage ? `${damageMessage}\n${onHitMessage}` : onHitMessage;
   }
