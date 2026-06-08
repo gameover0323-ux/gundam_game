@@ -575,82 +575,101 @@ export function hasStateEffect(state, effectId) {
 
 export function createBattleState(unit) {
   const { forms, formOrder } = normalizeForms(unit);
-
-  const defaultFormId =
-    unit.defaultFormId && forms[unit.defaultFormId]
-      ? unit.defaultFormId
-      : formOrder[0];
-
+  const defaultFormId = unit.defaultFormId && forms[unit.defaultFormId] ? unit.defaultFormId : formOrder[0];
   const defaultForm = forms[defaultFormId];
-
   const initialSlots = cloneSlots(defaultForm.slots);
   const initialSpecials = cloneSpecials(defaultForm.specials, defaultForm.specialOrder);
 
   return {
     unitId: unit.id,
-
     forms,
     formOrder,
     formId: defaultFormId,
-
     baseName: defaultForm.name,
     name: defaultForm.name,
-
     hp: defaultForm.hp,
     maxHp: defaultForm.hp,
-
     evade: defaultForm.evadeMax,
     evadeMax: defaultForm.evadeMax,
-
     overEvadeMode: false,
     overEvadeCap: defaultForm.evadeMax,
     overEvadeBaseMax: defaultForm.evadeMax,
     overEvadeAbsoluteMax: EVADE_OVER_CAP_LIMIT,
-
     evadeGoldCap: defaultForm.evadeMax,
     evadeRedCap: defaultForm.evadeMax,
 
+    criticalBoosts: [],
+
     actionCount: 1,
     baseActionCount: 1,
-
     shieldCount: 3,
     shieldActive: false,
-
     slots: initialSlots,
     ownedSlotOrder: [...defaultForm.ownedSlotOrder],
     rollableSlotOrder: [...defaultForm.rollableSlotOrder],
     baseSlots: cloneSlots(defaultForm.slots),
-
     specials: initialSpecials,
     specialOrder: [...defaultForm.specialOrder],
     baseSpecials: cloneSpecials(defaultForm.specials, defaultForm.specialOrder),
-
     lastSlotKey: null,
-
     dualMode: false,
-
     ntTimer: 0,
     ntGuessSlotKey: null,
-
     lastDamageTaken: 0,
-
     confuseHits: 0,
     confuseStock: 0,
     isConfusedTurn: false,
-
     z_exRifle: false,
     z_hyperMega: false,
     z_usedExRifleThisAction: false,
     z_usedHyperMegaThisAction: false,
-
     z_bioSlot3Ex: false,
     z_usedBio3ExThisAction: false,
-
     stateEffects: {},
     statusList: []
   };
 }
+export function getCriticalRate(state) {
+  if (!state) return 5;
 
+  const boosts = Array.isArray(state.criticalBoosts)
+    ? state.criticalBoosts
+    : [];
+
+  return 5 + boosts.length * 4;
+}
+
+export function spendEvadeForCritical(state) {
+  if (!state) return false;
+
+  normalizeEvadeCapState(state);
+
+  if (Number(state.evade || 0) <= 0) return false;
+
+  reduceEvade(state, 1);
+
+  if (!Array.isArray(state.criticalBoosts)) {
+    state.criticalBoosts = [];
+  }
+
+  state.criticalBoosts.push({ turns: 3 });
+  return true;
+}
+
+export function tickCriticalBoosts(state) {
+  if (!state || !Array.isArray(state.criticalBoosts)) return;
+
+  state.criticalBoosts = state.criticalBoosts
+    .map((boost) => ({
+      ...boost,
+      turns: Number(boost.turns || 0) - 1
+    }))
+    .filter((boost) => boost.turns > 0);
+}
+
+export function rollCritical(state) {
+  return Math.random() * 100 < getCriticalRate(state);
+}
 export function applyUnitDerivedState(state) {
   setBaseFromCurrentForm(state);
 
