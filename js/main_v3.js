@@ -588,6 +588,24 @@ function getPlayerStateRaw(playerKey) {
 }
 
 function build1v1RenderHandlers(playerKey) {
+  function canOperateCriticalBoost() {
+    if (isOnlineSpectator()) return false;
+
+    if (onlineState.enabled && onlineState.myPlayer !== playerKey) {
+      return false;
+    }
+
+    if (currentPlayer !== playerKey) {
+      return false;
+    }
+
+    if (isChallengeMode() && playerKey === "B") {
+      return false;
+    }
+
+    return true;
+  }
+
   return {
     onSlotClick: (slot) => showPopup(slot.desc),
     onSpecialDesc: (special) => showPopup(special.desc),
@@ -595,8 +613,15 @@ function build1v1RenderHandlers(playerKey) {
     canExecuteSpecial: (special) => canExecuteSpecialForPlayer(playerKey, special),
 
     getCriticalRate: (state) => getCriticalRate(state),
+
     onCriticalBoost: (state) => {
+      if (!canOperateCriticalBoost()) {
+        showPopup("自機のみ操作可能");
+        return;
+      }
+
       if (!state) return;
+
       spendEvadeForCritical(state);
       redrawBattleBoards();
     }
@@ -605,6 +630,24 @@ function build1v1RenderHandlers(playerKey) {
 
 function build2v2RenderHandlers(playerKey) {
   const isBossSide = isChallengeMode() && playerKey === "B";
+
+  function canOperateCriticalBoost() {
+    if (isOnlineSpectator()) return false;
+
+    if (onlineState.enabled && onlineState.myPlayer !== playerKey) {
+      return false;
+    }
+
+    if (currentPlayer !== playerKey) {
+      return false;
+    }
+
+    if (isBossSide) {
+      return false;
+    }
+
+    return true;
+  }
 
   return {
     currentPlayer,
@@ -647,8 +690,15 @@ function build2v2RenderHandlers(playerKey) {
     canExecuteSpecial: (special) => canExecuteSpecialForPlayer(playerKey, special),
 
     getCriticalRate: (state) => getCriticalRate(state),
+
     onCriticalBoost: (state) => {
+      if (!canOperateCriticalBoost()) {
+        showPopup("自機のみ操作可能");
+        return;
+      }
+
       if (!state) return;
+
       spendEvadeForCritical(state);
       redrawBattleBoards();
     }
