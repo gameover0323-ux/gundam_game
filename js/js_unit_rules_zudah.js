@@ -1,4 +1,4 @@
-import { reduceEvade, normalizeEvadeCapState } from "./js_unit_runtime.js";
+import { normalizeEvadeCapState } from "./js_unit_runtime.js";
 
 function ensureZudahState(state) {
   if (!state) return;
@@ -12,6 +12,53 @@ function heal(state, amount) {
 function addAction(state, amount) {
   if (typeof state.actionCount !== "number") state.actionCount = 1;
   state.actionCount += amount;
+}
+
+function setZudahAccelEvadeDouble(state) {
+  normalizeEvadeCapState(state);
+
+  const beforeEvade = Math.max(0, Number(state.evade || 0));
+  const nextEvade = beforeEvade * 2;
+
+  state.evade = nextEvade;
+  state.overEvadeMode = true;
+  state.overEvadeCap = nextEvade;
+  state.evadeGoldCap = nextEvade;
+  state.evadeRedCap = nextEvade;
+
+  normalizeEvadeCapState(state);
+}
+
+function consumeZudahEvadeKeepCap(state, amount) {
+  normalizeEvadeCapState(state);
+
+  const beforeCap = Math.max(
+    Number(state.overEvadeCap || 0),
+    Number(state.evadeRedCap || 0),
+    Number(state.evadeGoldCap || 0),
+    Number(state.evadeMax || 0)
+  );
+
+  state.evade = Math.max(0, Number(state.evade || 0) - Math.max(0, Number(amount || 0)));
+
+  state.overEvadeMode = beforeCap > Number(state.evadeMax || 0);
+  state.overEvadeCap = beforeCap;
+  state.evadeGoldCap = beforeCap;
+  state.evadeRedCap = beforeCap;
+
+  normalizeEvadeCapState(state);
+}
+
+function resetZudahAccelEvadeCap(state) {
+  const baseMax = Number(state.evadeMax || 0);
+
+  state.overEvadeMode = false;
+  state.overEvadeCap = baseMax;
+  state.evadeGoldCap = baseMax;
+  state.evadeRedCap = baseMax;
+  state.evade = Math.min(Math.max(0, Number(state.evade || 0)), baseMax);
+
+  normalizeEvadeCapState(state);
 }
 
 function isTurnStartForZudah(state, context = {}) {
@@ -29,6 +76,7 @@ function isTurnStartForZudah(state, context = {}) {
 
   return actionCount === expectedStartActionCount;
 }
+
 export function getZudahDerivedState(state) {
   ensureZudahState(state);
 
@@ -84,7 +132,9 @@ export function executeZudahSpecial(state, specialKey, context = {}) {
   ensureZudahState(state);
 
   const special = state.specials?.[specialKey];
-  if (!special) return { handled: true, redraw: false, message: "特殊行動データが見つからない" };
+  if (!special) {
+    return { handled: true, redraw: false, message: "特殊行動データが見つからない" };
+  }
 
   if (special.effectType === "zudah_engine_cut") {
     if (state.zudahAccelStack < 2) {
@@ -96,11 +146,13 @@ export function executeZudahSpecial(state, specialKey, context = {}) {
     }
 
     const healAmount = state.zudahAccelStack * 10;
+
     state.zudahAccelStack = 0;
     state.baseActionCount = 1;
     state.actionCount = 1;
+
     heal(state, healAmount);
-    normalizeEvadeCapState(state);
+    resetZudahAccelEvadeCap(state);
 
     return {
       handled: true,
@@ -114,7 +166,7 @@ export function executeZudahSpecial(state, specialKey, context = {}) {
       return { handled: true, redraw: false, message: "回避が足りない" };
     }
 
-    reduceEvade(state, 5);
+    consumeZudahEvadeKeepCap(state, 5);
     addAction(state, 1);
 
     return { handled: true, redraw: true, message: "突撃：現在ターンの行動回数+1" };
@@ -158,6 +210,7 @@ export function onZudahAfterSlotResolved(state, slotNumber, context = {}) {
   ensureZudahState(state);
 
   const resolveResult = context.resolveResult || null;
+
   if (
     slotNumber === 5 &&
     resolveResult &&
@@ -172,10 +225,8 @@ export function onZudahAfterSlotResolved(state, slotNumber, context = {}) {
     }
 
     state.baseActionCount = 1 + state.zudahAccelStack;
-    state.evadeMax = Number(state.evadeMax || 0) * 2;
-    state.evade = Number(state.evade || 0) * 2;
+    setZudahAccelEvadeDouble(state);
     heal(state, 60);
-    normalizeEvadeCapState(state);
 
     return {
       redraw: true,
