@@ -1419,7 +1419,9 @@ bossQteAutoResolver = createBossQteAutoResolver({
   executeUnitOnDamaged,
 
   resolveTakeHit,
-  resolveEvadeAttack
+  resolveEvadeAttack,
+
+  rollCritical
 });
 specialActionController = createSpecialActionController({
   isOnlineEnabled: () => onlineState.enabled,
