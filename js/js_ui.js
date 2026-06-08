@@ -108,19 +108,28 @@ function getStatusLineHtml(text) {
 function getEvadeDisplayHtml(state) {
   if (!state) return "回避:-";
 
-  const current = typeof state.evade === "number" ? state.evade : 0;
-  const baseMax = typeof state.evadeMax === "number" ? state.evadeMax : 0;
-  const overCap = typeof state.overEvadeCap === "number" ? state.overEvadeCap : baseMax;
-  const absoluteMax = typeof state.overEvadeAbsoluteMax === "number" ? state.overEvadeAbsoluteMax : 50;
+  const current = Math.max(0, Number(state.evade || 0));
+  const baseMax = Math.max(0, Number(state.evadeMax || 0));
+  const absoluteMax =
+    typeof state.overEvadeAbsoluteMax === "number"
+      ? Math.max(0, Number(state.overEvadeAbsoluteMax))
+      : 50;
+
+  const overCap =
+    typeof state.overEvadeCap === "number"
+      ? Math.max(0, Number(state.overEvadeCap))
+      : baseMax;
 
   if (current <= baseMax) {
     return `回避:${current}/${baseMax}`;
   }
 
-  const displayCap = Math.min(Math.max(overCap, current, baseMax), absoluteMax);
-  const color = displayCap >= absoluteMax ? "#ffd700" : "#ff4444";
+  if (current > absoluteMax || overCap >= absoluteMax) {
+    return `回避:<span style="color:#ffd700;">${current}/${absoluteMax}</span>`;
+  }
 
-  return `回避:<span style="color:${color};">${current}/${displayCap}</span>`;
+  const displayCap = Math.max(baseMax, overCap, current);
+  return `回避:<span style="color:#ff4444;">${current}/${displayCap}</span>`;
 }
 
 function getHpLineHtml(state, unified = false) {
