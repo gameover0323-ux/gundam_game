@@ -107,7 +107,7 @@ export function createSpecTutorialController(ctx = {}) {
     btn = document.createElement("button");
     btn.id = BUTTON_ID;
     btn.type = "button";
-    btn.textContent = "仕様説明コラム";
+    btn.textContent = "もっとくわしくコラム";
     btn.style.display = "";
     btn.addEventListener("click", openPanel);
 
