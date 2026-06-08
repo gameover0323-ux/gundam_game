@@ -77,13 +77,18 @@ export function createBossQteAutoResolver(ctx) {
       }
 
       const hitResult = ctx.resolveTakeHit({
-        attacker,
-        defender,
-        currentAttack,
-        attackIndex: 0,
-        modifyTakenDamage: (d, a, atk, dmg) =>
-          ctx.executeUnitModifyTakenDamage(d, a, atk, dmg)
-      });
+  attacker,
+  defender,
+  currentAttack,
+  attackIndex: 0,
+  modifyTakenDamage: (d, a, atk, dmg) =>
+    ctx.executeUnitModifyTakenDamage(d, a, atk, dmg),
+  rollCritical: (defenderState) => {
+    return typeof ctx.rollCritical === "function"
+      ? ctx.rollCritical(defenderState)
+      : false;
+  }
+});
 
       if (!hitResult || !hitResult.cancelled) {
         const finalDamage =
