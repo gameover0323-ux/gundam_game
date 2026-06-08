@@ -1,23 +1,46 @@
-export function createSpecTutorialController(ctx) {
+export function createSpecTutorialController(ctx = {}) {
   const BUTTON_ID = "specTutorialBtn";
   const PANEL_ID = "specTutorialPanel";
 
   const pages = [
     {
-      title: "スロット行動の仕組み",
+      title: "各モードの仕様",
       body: `
-        <p>スロット行動は、機体ごとに用意されたスロット1〜6からランダムに1つを実行する基本行動です。</p>
-        <p>攻撃、回復、回避増加、強化、換装など、出目によって処理が変わります。</p>
-        <p>スロットの説明文はプレイヤー向け表示であり、実際の挙動は内部データと機体ルールで決まります。</p>
+        <p>1on1、2on2モードは端末1画面で2人対戦できるモードです。</p>
+        <p>一人で二機操作して、戦闘シミュレーションをしたりも出来ます。</p>
+        <p>使用回数も増えて称号も貰えるので、知りたい機体を知り尽くすのにも利用できます。活用してみましょう。</p>
+
+        <p>vsボスモードは、専用の行動を行う非プレイアブルのボスと戦うチャレンジモードです。</p>
+        <p>勝利すると、撃破証明となるボストロフィーが機体の名称の横にセットできます。オンライン対戦やお気に入り機体にも表示されます。</p>
+        <p>専用の称号もあるので、腕試しにトライしましょう！</p>
+
+        <p>vsCPUモードでは、プレイアブル機体の自動操作機体と戦闘することができます。多少仕様が違いますが、勝利すると回数によって称号が手に入ります。</p>
+        <p>初心者向けCPUはその名の通り、初心者でも勝ちやすいように作成したやられ役の機体です。抵抗はもちろんそこそこ激しいですが、システムが分かれば大したことはありません。初めて触る機体の試し斬りにもいいかも。</p>
+
+        <p>オンライン対戦は、離れた友人やランダムマッチで抽選したオンラインプレイヤーと戦えるモードです。</p>
+        <p>ルームIDを共有すれば専用の部屋を作れます。</p>
+        <p>ランダムマッチは同じようにランダムマッチを押したプレイヤーと戦えます。プレイヤーカードから通知をオンにしている人はどこからでも通知を受け取って駆けつけられます。</p>
+        <p>チャットも出来、戦闘がなかったことになる和平交渉や、降伏も可能。</p>
+        <p>観戦モードもあり、戦闘中の部屋に入室して様子を見ることもできます。</p>
+        <p>戦ったプレイヤーはプレイヤーカードに登録され、相手のプレイヤーカードと遭遇回数を保存して閲覧することができるようになります。</p>
       `
     },
     {
-      title: "QTE処理",
+      title: "HPの仕様",
       body: `
-        <p>攻撃が発生すると、攻撃1発ごとに防御側が対応を選びます。</p>
-        <p>基本は「被弾」または「回避」です。</p>
-        <p>2on2分散型では、条件を満たすと援護防御も選べます。</p>
-        <p>多段攻撃は1発ずつ処理されるため、どの攻撃を受け、どの攻撃を避けるかが重要です。</p>
+        <p>あらかじめ決められた各種機体の最大値からスタートします。</p>
+        <p>回復で上限値まで行くと端数は無効になります。</p>
+        <p>0になると撃墜扱いになり、戦闘不能になります。</p>
+      `
+    },
+    {
+      title: "回避所持数の仕様",
+      body: `
+        <p>HPの下に〇/〇と書いてある値です。</p>
+        <p>基本的にあらかじめ決められた最大値以上を保有している場合は次のターンでカットされます。</p>
+        <p>ただし、変形機など回避ストック最大値が多い形態から変化した場合は、ターン終了しても保持されます。その場合、使用して即座に最大値が減っていきます。この状態の所持数限界は50です。</p>
+        <p>回避可能な攻撃を1回につき1消費して回避し、無効化できます。</p>
+        <p>また、会心率が表示されたボタンを押すと、1消費につき4%の会心率を上昇させることができます。持続は3ターンです。</p>
       `
     },
     {
@@ -29,6 +52,7 @@ export function createSpecTutorialController(ctx) {
         <p><b>[不]</b> 軽減不可。通常のダメージ軽減では減らせません。</p>
         <p><b>[ビ]</b> ビーム。ビーム軽減・ビーム対策効果の対象になります。</p>
         <p>特殊行動や強化で後から付与された属性は、黄色表示で区別します。</p>
+        <p>主な属性は上記ですが、他にも月光蝶属性やサイコミュ属性など、固有の属性が存在します。</p>
       `
     },
     {
@@ -41,30 +65,27 @@ export function createSpecTutorialController(ctx) {
       `
     },
     {
-      title: "回避上限",
+      title: "会心の仕様",
       body: `
-        <p>回避は、攻撃1発を無効化するためのストックです。</p>
-        <p>通常は機体ごとの回避上限まで保持します。</p>
-        <p>ターン終了や形態変化のタイミングで、現在の上限に合わせて整理される場合があります。</p>
-        <p>回避をリソースとして消費する特殊行動もあるため、攻撃回避だけに使うとは限りません。</p>
+        <p>全機体、開始時は5%の確率で会心が出ます。</p>
+        <p>会心が出た攻撃はダメージ数値が倍になります。</p>
+        <p>被弾を押した時に会心の抽選が発生します。</p>
+        <p>回避所持数の下にある会心率表示ボタンを押して回避所持数を消費すると、3ターン持続する会心率＋4%効果が発動します。重複可能です。</p>
       `
     },
     {
-      title: "赤上限",
+      title: "スロット行動について",
       body: `
-        <p>赤上限は、通常上限を超えた回避を一時的に保持している状態です。</p>
-        <p>例：回避上限3の機体が、効果によって回避6を持っている場合などに赤表示になります。</p>
-        <p>赤上限中の回避は、消費されるまでは保持されます。</p>
-        <p>変形等で回避ストック最大値が一時的に上昇していたところから、回避ストック最大値が低い形態に移行する際も発動します。</p>
+        <p>各機体に6つ割り当てられているランダム行動です。基本的にこの中の行動で戦うことになります。</p>
+        <p>スロット行動の効果はざっくり表示されており、タップすると詳しい効果が見れます。特殊な効果が付与されている場合が多く、相手のものもよく確認していないと甚大な被害を受けます。</p>
+        <p>スロット行動はスロット行動ボタンを押すと自動で発動し、それぞれの効果が画面下部のログで反映されます。</p>
+        <p>その後に出る攻撃に対し、「被弾」「回避」で受けるのが基本です。</p>
+        <p>あえてスロット行動をせずにターンを回すこともできますが、しっかりと画面中央上の行動欄を確認して、行動回数が残っているかを確認しましょう。行動数がある限りスロット行動が可能です。</p>
       `
     }
   ];
 
   let currentIndex = 0;
-
-  function canUse() {
-    return typeof ctx.canUseDebug === "function" && ctx.canUseDebug();
-  }
 
   function ensureButton() {
     let btn = document.getElementById(BUTTON_ID);
@@ -72,17 +93,25 @@ export function createSpecTutorialController(ctx) {
 
     btn = document.createElement("button");
     btn.id = BUTTON_ID;
-    btn.textContent = "仕様説明チュートリアル";
-    btn.style.display = "none";
+    btn.type = "button";
+    btn.textContent = "仕様説明コラム";
+    btn.style.display = "";
     btn.addEventListener("click", openPanel);
 
-    const statsBtn = document.getElementById("playerStatsBtn");
-    if (statsBtn) {
-      statsBtn.insertAdjacentElement("afterend", btn);
-    } else {
-      document.body.appendChild(btn);
+    const howToSummary = document.querySelector("summary.howToButton");
+
+    if (howToSummary) {
+      howToSummary.insertAdjacentElement("afterend", btn);
+      return btn;
     }
 
+    const playerStatsBtn = document.getElementById("playerStatsBtn");
+    if (playerStatsBtn) {
+      playerStatsBtn.insertAdjacentElement("afterend", btn);
+      return btn;
+    }
+
+    document.body.appendChild(btn);
     return btn;
   }
 
@@ -112,8 +141,8 @@ export function createSpecTutorialController(ctx) {
         line-height:1.6;
       ">
         <div style="display:flex; justify-content:space-between; gap:8px; align-items:center;">
-          <h2 id="specTutorialTitle" style="margin:0;">仕様説明チュートリアル</h2>
-          <button id="specTutorialCloseBtn">閉じる</button>
+          <h2 id="specTutorialTitle" style="margin:0;">仕様説明コラム</h2>
+          <button id="specTutorialCloseBtn" type="button">閉じる</button>
         </div>
 
         <div id="specTutorialStepList" style="
@@ -132,8 +161,8 @@ export function createSpecTutorialController(ctx) {
         "></div>
 
         <div style="display:flex; justify-content:space-between; margin-top:12px;">
-          <button id="specTutorialPrevBtn">前へ</button>
-          <button id="specTutorialNextBtn">次へ</button>
+          <button id="specTutorialPrevBtn" type="button">前へ</button>
+          <button id="specTutorialNextBtn" type="button">次へ</button>
         </div>
       </div>
     `;
@@ -150,6 +179,10 @@ export function createSpecTutorialController(ctx) {
       renderPanel();
     });
 
+    panel.addEventListener("click", event => {
+      if (event.target === panel) closePanel();
+    });
+
     return panel;
   }
 
@@ -158,13 +191,14 @@ export function createSpecTutorialController(ctx) {
     const page = pages[currentIndex];
 
     panel.querySelector("#specTutorialTitle").textContent =
-      `仕様説明チュートリアル ${currentIndex + 1}/${pages.length}`;
+      `仕様説明コラム ${currentIndex + 1}/${pages.length}`;
 
     const stepList = panel.querySelector("#specTutorialStepList");
     stepList.innerHTML = "";
 
     pages.forEach((p, index) => {
       const btn = document.createElement("button");
+      btn.type = "button";
       btn.textContent = `${index + 1}. ${p.title}`;
       btn.disabled = index === currentIndex;
       btn.addEventListener("click", () => {
@@ -184,13 +218,6 @@ export function createSpecTutorialController(ctx) {
   }
 
   function openPanel() {
-    if (!canUse()) {
-      if (typeof ctx.showPopup === "function") {
-        ctx.showPopup("仕様説明チュートリアルはデバッグ権限専用です");
-      }
-      return;
-    }
-
     ensurePanel().style.display = "";
     renderPanel();
   }
@@ -202,7 +229,7 @@ export function createSpecTutorialController(ctx) {
 
   function updateVisibility() {
     const btn = ensureButton();
-    btn.style.display = canUse() ? "" : "none";
+    btn.style.display = "";
   }
 
   return {
