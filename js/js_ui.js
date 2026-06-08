@@ -130,11 +130,19 @@ function getHpLineHtml(state, unified = false) {
   return `HP:${state.hp}/${state.maxHp}`;
 }
 
-function getEvadeLineHtml(state, unified = false) {
+function getEvadeLineHtml(state, unified = false, handlers = null) {
   if (!state) return "回避:-";
   if (unified) return "回避:[統合中]";
   if (isUnitDefeated(state)) return "回避:[撃墜]";
-  return getEvadeDisplayHtml(state);
+
+  const criticalRate =
+    handlers && typeof handlers.getCriticalRate === "function"
+      ? handlers.getCriticalRate(state)
+      : 5;
+
+  const disabled = Number(state.evade || 0) <= 0 ? "disabled" : "";
+
+  return `${getEvadeDisplayHtml(state)} <button class="criticalBoostBtn" ${disabled}>会心${criticalRate}%</button>`;
 }
 
 export function renderPlayerState(state, container, label, handlers) {
@@ -142,23 +150,19 @@ export function renderPlayerState(state, container, label, handlers) {
 
   const confuseText =
     state.isConfusedTurn && state.confuseHits > 0
-      ? `<div>攻撃無効蓄積:${state.confuseHits}</div>`
+      ? `<div class="stateLine">攻撃無効蓄積:${state.confuseHits}</div>`
       : "";
-
-  const nameStyle = state.formId === "bio"
-    ? 'style="color:#bb66ff;font-weight:bold;"'
-    : "";
 
   const statusHtml =
     Array.isArray(state.statusList) && state.statusList.length > 0
-      ? `<div>${state.statusList.map((text) => getStatusLineHtml(text)).join("")}</div>`
+      ? `<div class="statusList">${state.statusList.map((text) => getStatusLineHtml(text)).join("")}</div>`
       : "";
 
   container.innerHTML = `
     <h3>${label}</h3>
-    <div ${nameStyle}>${state.name}${state.displaySuffix || ""}${defeated ? " [撃墜]" : ""}</div>
+    <div class="unitName">${state.name}${state.displaySuffix || ""}${defeated ? " [撃墜]" : ""}</div>
     <div>${getHpLineHtml(state)}</div>
-    <div>${getEvadeLineHtml(state)}</div>
+    <div>${getEvadeLineHtml(state, false, handlers)}</div>
     ${statusHtml}
     ${confuseText}
     <h3>スロット</h3>
@@ -167,11 +171,18 @@ export function renderPlayerState(state, container, label, handlers) {
     <div class="specialArea"></div>
   `;
 
+  const criticalBoostBtn = container.querySelector(".criticalBoostBtn");
+  if (criticalBoostBtn) {
+    criticalBoostBtn.addEventListener("click", () => {
+      if (handlers.onCriticalBoost) handlers.onCriticalBoost(state);
+    });
+  }
+
   const slotArea = container.querySelector(".slotArea");
   const specialArea = container.querySelector(".specialArea");
 
   if (defeated) {
-    slotArea.innerHTML = `<div style="color:#ff6666;font-weight:bold;">[撃墜] スロット行動不可</div>`;
+    slotArea.innerHTML = `<div>[撃墜] スロット行動不可</div>`;
   } else {
     renderSlots(state.slots, state.rollableSlotOrder, slotArea, handlers.onSlotClick);
   }
