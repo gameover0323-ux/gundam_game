@@ -224,11 +224,11 @@ function startCounterAttackFromHitResult(hitResult, defenderPlayer, attackerPlay
       currentTotalDamage
     }),
 
-    rollCritical: (defenderState) => {
-      return typeof ctx.rollCritical === "function"
-        ? ctx.rollCritical(defenderState)
-        : false;
-    }
+    rollCritical: () => {
+  return typeof ctx.rollCritical === "function"
+    ? ctx.rollCritical(attacker)
+    : false;
+}
   });
 
   if (hitResult && hitResult.cancelled) {
