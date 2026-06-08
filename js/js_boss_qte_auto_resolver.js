@@ -83,10 +83,9 @@ export function createBossQteAutoResolver(ctx) {
   attackIndex: 0,
   modifyTakenDamage: (d, a, atk, dmg) =>
     ctx.executeUnitModifyTakenDamage(d, a, atk, dmg),
-  rollCritical: (defenderState) => {
-    return typeof ctx.rollCritical === "function"
-      ? ctx.rollCritical(defenderState)
-      : false;
+  rollCritical: () => {
+    const rate = Math.max(0, Number(attacker?.criticalRate || 0));
+    return Math.random() * 100 < rate;
   }
 });
 
