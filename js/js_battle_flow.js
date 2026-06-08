@@ -208,108 +208,119 @@ if (Number(attacker.pendingActionPenalty || 0) > 0) {
   }
 
   function endTurn() {
-    if (ctx.hasPendingChoice()) {
-      ctx.renderPendingChoice();
-      return;
-    }
-
-    if (ctx.getCurrentAttack && ctx.getCurrentAttack().length > 0) {
-      ctx.renderAttackChoices();
-      ctx.showPopup("QTEを解決してからターン終了してください");
-      return;
-    }
-
-    const actorPlayer = ctx.getCurrentPlayer();
-    const enemyPlayer = ctx.getOpponentPlayer(actorPlayer);
-    const actor = ctx.getPlayerState(actorPlayer);
-    const enemyState = ctx.getPlayerState(enemyPlayer);
-
-    if (!actor || !enemyState) return;
-
-    actor.shieldActive = false;
-    enemyState.shieldActive = false;
-
-    clampEvadeToMax(actor);
-    actor.lastSlotKey = null;
-
-    const turnEndResult = ctx.executeUnitTurnEnd(actor, {
-      ownerPlayer: actorPlayer,
-      enemyPlayer,
-      enemyPlayerLabel: `PLAYER ${enemyPlayer}`,
-      enemyPredictableSlotKeys: ctx.getPredictableSlotKeys(enemyState)
-    });
-
-    actor.isConfusedTurn = false;
-    actor.confuseHits = 0;
-
-    ctx.clearBattleNotice();
-    ctx.clearCurrentAction();
-    ctx.clearPendingChoice();
-
-    ctx.setCurrentAttack([]);
-    ctx.setCurrentAttackContext(null);
-    ctx.setCurrentAttackContexts([]);
-
-    ctx.setCurrentPlayer(enemyPlayer);
-
-    if (ctx.getCurrentPlayer() === "A") {
-      ctx.setCurrentTurn(ctx.getCurrentTurn() + 1);
-    }
-
-if (ctx.isTeamBattleMode()) {
-  const nextTeam = ctx.getTeam(ctx.getCurrentPlayer());
-  if (nextTeam) {
-    nextTeam.activeUnitKey = nextTeam.focusUnitKey || "unit1";
-
-    resetActionCount(nextTeam.unit1);
-    if (nextTeam.unit2) resetActionCount(nextTeam.unit2);
-
-    if (
-      ctx.twoVtwoAdapter &&
-      typeof ctx.twoVtwoAdapter.resetUnifiedActionCount === "function"
-    ) {
-      ctx.twoVtwoAdapter.resetUnifiedActionCount(nextTeam);
-    }
-
-    if (nextTeam.mode === "unified") {
-      if (nextTeam.unit1) nextTeam.unit1.actionCount = 0;
-      if (nextTeam.unit2) nextTeam.unit2.actionCount = 0;
-    }
-        if (ctx.getBattleMode && ctx.getBattleMode() === "vscpu2v2" && ctx.getCurrentPlayer() === "B") {
-  const cpuTeam = ctx.getTeam("B");
-  if (cpuTeam) {
-    cpuTeam.focusUnitKey = Math.random() < 0.5 ? "unit1" : "unit2";
-    cpuTeam.activeUnitKey = cpuTeam.focusUnitKey;
-  }
-}
-      }
-    } else {
-      const nextActor = ctx.getPlayerState(ctx.getCurrentPlayer());
-      resetActionCount(nextActor);
-    }
-
-    const attackLog = document.getElementById("attackLog");
-    if (attackLog) {
-      attackLog.textContent = turnEndResult.message || "バトル開始待機中";
-    }
-
-    ctx.redrawBattleBoards();
-
-    if (turnEndResult.requestChoice) {
-      ctx.handleChoiceRequest(turnEndResult.requestChoice);
-      return;
-    }
-
-    if (ctx.isChallengeMode && ctx.isChallengeMode() && ctx.getCurrentPlayer() === "B") {
-  if (ctx.isTeamBattleMode && ctx.isTeamBattleMode() && ctx.executeTeamSlot) {
-    ctx.executeTeamSlot();
+  if (ctx.hasPendingChoice()) {
+    ctx.renderPendingChoice();
     return;
   }
 
-  executeSlot();
-  return;
-}
+  if (ctx.getCurrentAttack && ctx.getCurrentAttack().length > 0) {
+    ctx.renderAttackChoices();
+    ctx.showPopup("QTEを解決してからターン終了してください");
+    return;
   }
+
+  const actorPlayer = ctx.getCurrentPlayer();
+  const enemyPlayer = ctx.getOpponentPlayer(actorPlayer);
+  const actor = ctx.getPlayerState(actorPlayer);
+  const enemyState = ctx.getPlayerState(enemyPlayer);
+
+  if (!actor || !enemyState) return;
+
+  actor.shieldActive = false;
+  enemyState.shieldActive = false;
+
+  clampEvadeToMax(actor);
+
+  if (typeof ctx.tickCriticalBoosts === "function") {
+    ctx.tickCriticalBoosts(actor);
+  }
+
+  actor.lastSlotKey = null;
+
+  const turnEndResult = ctx.executeUnitTurnEnd(actor, {
+    ownerPlayer: actorPlayer,
+    enemyPlayer,
+    enemyPlayerLabel: `PLAYER ${enemyPlayer}`,
+    enemyPredictableSlotKeys: ctx.getPredictableSlotKeys(enemyState)
+  });
+
+  actor.isConfusedTurn = false;
+  actor.confuseHits = 0;
+
+  ctx.clearBattleNotice();
+  ctx.clearCurrentAction();
+  ctx.clearPendingChoice();
+
+  ctx.setCurrentAttack([]);
+  ctx.setCurrentAttackContext(null);
+  ctx.setCurrentAttackContexts([]);
+
+  ctx.setCurrentPlayer(enemyPlayer);
+
+  if (ctx.getCurrentPlayer() === "A") {
+    ctx.setCurrentTurn(ctx.getCurrentTurn() + 1);
+  }
+
+  if (ctx.isTeamBattleMode()) {
+    const nextTeam = ctx.getTeam(ctx.getCurrentPlayer());
+
+    if (nextTeam) {
+      nextTeam.activeUnitKey = nextTeam.focusUnitKey || "unit1";
+
+      resetActionCount(nextTeam.unit1);
+      if (nextTeam.unit2) resetActionCount(nextTeam.unit2);
+
+      if (
+        ctx.twoVtwoAdapter &&
+        typeof ctx.twoVtwoAdapter.resetUnifiedActionCount === "function"
+      ) {
+        ctx.twoVtwoAdapter.resetUnifiedActionCount(nextTeam);
+      }
+
+      if (nextTeam.mode === "unified") {
+        if (nextTeam.unit1) nextTeam.unit1.actionCount = 0;
+        if (nextTeam.unit2) nextTeam.unit2.actionCount = 0;
+      }
+
+      if (
+        ctx.getBattleMode &&
+        ctx.getBattleMode() === "vscpu2v2" &&
+        ctx.getCurrentPlayer() === "B"
+      ) {
+        const cpuTeam = ctx.getTeam("B");
+        if (cpuTeam) {
+          cpuTeam.focusUnitKey = Math.random() < 0.5 ? "unit1" : "unit2";
+          cpuTeam.activeUnitKey = cpuTeam.focusUnitKey;
+        }
+      }
+    }
+  } else {
+    const nextActor = ctx.getPlayerState(ctx.getCurrentPlayer());
+    resetActionCount(nextActor);
+  }
+
+  const attackLog = document.getElementById("attackLog");
+  if (attackLog) {
+    attackLog.textContent = turnEndResult.message || "バトル開始待機中";
+  }
+
+  ctx.redrawBattleBoards();
+
+  if (turnEndResult.requestChoice) {
+    ctx.handleChoiceRequest(turnEndResult.requestChoice);
+    return;
+  }
+
+  if (ctx.isChallengeMode && ctx.isChallengeMode() && ctx.getCurrentPlayer() === "B") {
+    if (ctx.isTeamBattleMode && ctx.isTeamBattleMode() && ctx.executeTeamSlot) {
+      ctx.executeTeamSlot();
+      return;
+    }
+
+    executeSlot();
+    return;
+  }
+}
   
 return {
     ensureActionState,
