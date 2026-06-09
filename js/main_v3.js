@@ -637,7 +637,8 @@ function build1v1RenderHandlers(playerKey) {
     onSlotClick: (slot) => showPopup(slot.desc),
     onSpecialDesc: (special) => showPopup(special.desc),
     onSpecialExec: (specialKey) => executeSpecial(playerKey, specialKey),
-    canExecuteSpecial: (special) => canExecuteSpecialForPlayer(playerKey, special),
+    canExecuteSpecial: (special, specialKey, stateOverride = null) =>
+      canExecuteSpecialForPlayer(playerKey, special, stateOverride),
 
     getCriticalRate: (state) => getCriticalRate(state),
 
@@ -714,7 +715,8 @@ function build2v2RenderHandlers(playerKey) {
     onSlotClick: (slot) => showPopup(slot.desc),
     onSpecialDesc: (special) => showPopup(special.desc),
     onSpecialExec: (specialKey) => executeSpecial(playerKey, specialKey),
-    canExecuteSpecial: (special) => canExecuteSpecialForPlayer(playerKey, special),
+    canExecuteSpecial: (special, specialKey, stateOverride = null) =>
+      canExecuteSpecialForPlayer(playerKey, special, stateOverride),
 
     getCriticalRate: (state) => getCriticalRate(state),
 
