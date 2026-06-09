@@ -623,34 +623,25 @@ export function modifyWingZeroEvadeAttempt(defender, attacker, attack, context =
     return { handled: false };
   }
 
+  const defenderPlayer = context.defenderPlayer || context.ownerPlayer || context.enemyPlayer;
   const defenderEvade = getRuleEvade(defender, {
     ...context,
-    ownerPlayer: context.enemyPlayer || context.defenderPlayer
+    ownerPlayer: defenderPlayer
   });
 
-  if (attack.cannotEvade) {
-    if (defenderEvade <= 0) {
-      return {
-        handled: true,
-        ok: false,
-        reason: "noEvade",
-        message: "回避が足りない"
-      };
-    }
-
+  if (defenderEvade <= 0) {
     return {
       handled: true,
-      ok: true,
-      consumeEvade: 1,
-      consumeByAdapter: true,
-      message: null
+      ok: false,
+      reason: "noEvade",
+      message: "回避が足りない"
     };
   }
 
   return {
     handled: true,
     ok: true,
-    consumeEvade: defenderEvade > 0 ? 1 : 0,
+    consumeEvade: 1,
     consumeByAdapter: true,
     message: null
   };
