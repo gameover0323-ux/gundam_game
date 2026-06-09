@@ -438,13 +438,40 @@ function setFocusUnit(playerKey, unitKey) {
 }
 
 function toggleTeamMode(playerKey) {
-  const result = twoVtwoCore.toggleTeamMode(playerKey);
+  const team = getTeam(playerKey);
+  if (!team || !twoVtwoHelpers) return;
+
+  if (pendingChoice || currentAttack.length > 0) {
+    showPopup("QTE中・選択中は型を切り替えられません");
+    return;
+  }
+
+  if (team.mode === "unified") {
+    twoVtwoHelpers.exitUnified(team);
+  } else {
+    twoVtwoHelpers.enterUnified(team);
+  }
+
   redrawBattleBoards();
-  return result;
 }
 
 function createTeam(unit1, unit2) {
-  return twoVtwoCore.createTeam(unit1, unit2);
+  return {
+    unit1: createBattleState(unit1),
+    unit2: createBattleState(unit2),
+    mode: "split",
+    activeUnitKey: "unit1",
+    focusUnitKey: "unit1",
+    unified: {
+      baseHpA: 0,
+      baseHpB: 0,
+      totalDamage: 0,
+      healA: 0,
+      healB: 0,
+      baseActionCount: 1,
+      actionCount: 1
+    }
+  };
 }
 function isUnifiedTeam(playerKey) {
   return twoVtwoHelpers.isUnifiedTeam(playerKey);
@@ -776,7 +803,22 @@ function checkBattleEnd() {
 }
 
 function renderAttackChoices() {
-  return qteController.renderAttackChoices();
+  const context = currentAttackContext || currentAttackContexts?.[0] || null;
+  const defenderPlayer = context?.enemyPlayer || getOpponentPlayer(currentPlayer);
+  const defenderTeam = battleMode === "2v2" ? getTeam(defenderPlayer) : null;
+
+  renderAttackChoicesUI({
+    currentAttack,
+    battleNotice,
+    currentActionHeader,
+    currentActionLabel,
+    onHit: (index) => takeHit(index),
+    onEvade: (index) => evadeAttack(index),
+    onSupportDefense: (index) => supportDefenseAttack(index),
+    canSupportDefense: battleMode === "2v2" && defenderTeam?.mode === "split"
+  });
+
+  clearBattleNotice();
 }
 function canOperateQteDefender() {
   return qteController.canOperateQteDefender();
@@ -1136,6 +1178,18 @@ twoVtwoCore = create2v2Core({
   createBattleState,
   showPopup
 });
+twoVtwoHelpers = create2v2Helpers({
+  getBattleMode: () => battleMode,
+  getTeam
+});
+
+twoVtwoAdapter = create2v2Adapter({
+  isTeamBattleMode,
+  getTeam,
+  getUnifiedEvade,
+  consumeUnifiedEvade,
+  zeroUnifiedEvade
+});
 onlineSpectatorController = createOnlineSpectatorController({
   getBattleMode: () => battleMode,
   setBattleMode: value => {
@@ -1269,6 +1323,8 @@ buildOnlineBattleSnapshot,
   finishBattle,
   endTurnRaw: () => battleFlow.endTurn()
 });
+
+
 uiController = createUiController({
   screens,
 
@@ -1276,7 +1332,7 @@ uiController = createUiController({
   playerBBox,
 
   getBattleMode: () => battleMode,
-isTeamBattleMode,
+  isTeamBattleMode,
 
   getCurrentPlayer: () => currentPlayer,
   getCurrentTurn: () => currentTurn,
@@ -1297,7 +1353,9 @@ isTeamBattleMode,
 
   getSlotNumberFromKey,
 
-ensureActionState,
+  ensureActionState,
+
+  twoVtwoAdapter,
 
   applyUnitDerivedState,
   renderPlayerState,
@@ -1524,13 +1582,16 @@ battleRuntimeAccessors = createBattleRuntimeAccessors({
 });
 battleFlow = createBattleFlow({
   getBattleMode: () => battleMode,
-isTeamBattleMode,
-isChallengeMode,
-executeTeamSlot: () => twoVtwoActions.executeTeamSlot(),
-executeCpuAutoSlotBatch,
+  isTeamBattleMode,
+  isChallengeMode,
+  executeTeamSlot: () => twoVtwoActions.executeTeamSlot(),
+  executeCpuAutoSlotBatch,
+
   getCurrentPlayer: () => currentPlayer,
   setCurrentPlayer: (value) => { currentPlayer = value; },
-twoVtwoAdapter,
+
+  twoVtwoAdapter,
+
   getCurrentTurn: () => currentTurn,
   setCurrentTurn: (value) => { currentTurn = value; },
 
@@ -2003,17 +2064,7 @@ onSelectUnit: (unit) => {
   }
 });
 
-twoVtwoHelpers = create2v2Helpers({
-  getBattleMode: () => battleMode,
-  getTeam
-});
-twoVtwoAdapter = create2v2Adapter({
-  isTeamBattleMode,
-  getTeam,
-  getUnifiedEvade,
-  consumeUnifiedEvade,
-  zeroUnifiedEvade
-});
+
 twoVtwoActions = create2v2Actions({
   getBattleMode: () => battleMode,
 isTeamBattleMode,
