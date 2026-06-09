@@ -242,7 +242,11 @@ function tickModeEffect(state, effectId, previousCap) {
 }
 
 function buildModeStatus(text, color) {
-  return `${text}`;
+  return {
+    text,
+    color,
+    bold: true
+  };
 }
 
 export function getShiningDerivedState(state) {
@@ -276,7 +280,7 @@ export function getShiningDerivedState(state) {
 
     const superEffect = getSuperEffect(state);
     if (superEffect && typeof superEffect.turns === "number") {
-      result.status.push(buildModeStatus(`スーパーモード 残${superEffect.turns}ターン`, "#ff4d4d"));
+      result.status.push(buildModeStatus(`スーパーモード 残${superEffect.turns}ターン`, "gold"));
     }
 
     if (state.shiningMeditationExReady) {
