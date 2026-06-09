@@ -53,7 +53,7 @@ export function renderSpecialsStateToArea(state, area, handlers) {
     }
 
     const canExecute = handlers.canExecuteSpecial
-      ? handlers.canExecuteSpecial(sp, specialKey)
+      ? handlers.canExecuteSpecial(sp, specialKey, state)
       : false;
 
     const execButtonHtml =
