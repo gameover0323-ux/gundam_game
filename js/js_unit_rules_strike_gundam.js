@@ -3,7 +3,11 @@ import {
   setForm,
   getStateEffect,
   setStateEffect,
-  clearStateEffect
+  clearStateEffect,
+  addEvade,
+  reduceEvade,
+  normalizeEvadeCapState,
+  doubleEvadeRedCapWithContext
 } from "./js_unit_runtime.js";
 
 const PACK_FORM_IDS = ["base", "aile", "sword", "launcher"];
@@ -69,50 +73,46 @@ function getEnemyRuleEvade(defender, context = {}) {
 function consumeRuleEvade(state, amount, context = {}) {
   const adapter = getAdapter(context);
   const ownerPlayer = getOwnerPlayer(context);
-
   if (adapter?.consumeEvade && ownerPlayer) {
     return adapter.consumeEvade(ownerPlayer, state, amount);
   }
-
   if (!state || Number(state.evade || 0) < amount) return false;
-  state.evade = Math.max(0, Number(state.evade || 0) - amount);
+  reduceEvade(state, amount);
   return true;
 }
 
 function consumeEnemyRuleEvade(defender, amount, context = {}) {
   const adapter = getAdapter(context);
   const enemyPlayer = getEnemyPlayer(context);
-
   if (adapter?.consumeEvade && enemyPlayer) {
     return adapter.consumeEvade(enemyPlayer, defender, amount);
   }
-
-  if (!defender) return false;
-  defender.evade = Math.max(0, Number(defender.evade || 0) - amount);
+  if (!defender || Number(defender.evade || 0) < amount) return false;
+  reduceEvade(defender, amount);
   return true;
 }
 
 function zeroRuleEvade(state, context = {}) {
   const adapter = getAdapter(context);
   const ownerPlayer = getOwnerPlayer(context);
-
   if (adapter?.zeroEvade && ownerPlayer) {
     return adapter.zeroEvade(ownerPlayer, state);
   }
-
-  if (state) state.evade = 0;
+  if (state) {
+    state.evade = 0;
+    normalizeEvadeCapState(state);
+  }
   return true;
 }
 
 function addRuleEvade(state, amount, context = {}) {
   const adapter = getAdapter(context);
   const ownerPlayer = getOwnerPlayer(context);
-
   if (adapter?.addTeamEvade && ownerPlayer) {
     return adapter.addTeamEvade(ownerPlayer, state, amount);
   }
 
-  state.evade = Math.max(0, Number(state.evade || 0)) + amount;
+  addEvade(state, amount);
   return amount;
 }
 
@@ -165,21 +165,7 @@ function healRuleHp(state, amount, context = {}) {
 }
 
 function doubleRuleEvadeWithOverCap(state, context = {}) {
-  const adapter = getAdapter(context);
-  const ownerPlayer = getOwnerPlayer(context);
-
-  const applyDouble = unit => {
-    unit.evade = Math.max(0, Number(unit.evade || 0)) * 2;
-    applyStrikeOverEvadeState(unit);
-  };
-
-  if (adapter?.applyToUnifiedPartners && ownerPlayer && adapter.isUnifiedOwner?.(ownerPlayer)) {
-    adapter.applyToUnifiedPartners(ownerPlayer, applyDouble);
-    return true;
-  }
-
-  applyDouble(state);
-  return true;
+  return doubleEvadeRedCapWithContext(state, context);
 }
 
 function getSeedEffect(state) {
@@ -211,17 +197,7 @@ function clampSwordNoEvade(state) {
 }
 
 function applyStrikeOverEvadeState(state) {
-  if (state.evade > state.evadeMax) {
-    state.overEvadeMode = true;
-    state.overEvadeCap = state.evade;
-    state.overEvadeBaseMax = state.evadeMax;
-    state.overEvadeAbsoluteMax = state.evade;
-  } else {
-    state.overEvadeMode = false;
-    state.overEvadeCap = 0;
-    state.overEvadeBaseMax = state.evadeMax;
-    state.overEvadeAbsoluteMax = 0;
-  }
+  normalizeEvadeCapState(state);
 }
 
 function tickStrikeEffect(state, effectId) {
