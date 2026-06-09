@@ -215,7 +215,11 @@ export function getZGundamDerivedState(state) {
     result.name = "Zガンダム(バイオセンサー)";
 
     if (bioEffect && typeof bioEffect.turns === "number") {
-      result.status.push(`バイオセンサー残り行動ターン:${bioEffect.turns}`);
+      result.status.push({
+  text: `バイオセンサー残ターン:${bioEffect.turns}`,
+  color: "#bb66ff",
+  bold: true
+});
     }
 
     if (nextSureHit) {
