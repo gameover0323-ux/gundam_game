@@ -147,51 +147,28 @@ function getAbsoluteEvadeCap(state) {
     : EVADE_OVER_CAP_LIMIT;
 }
 
-function getCurrentEvadeLimit(state) {
-  const current = Math.max(0, Number(state.evade || 0));
-  const baseMax = Math.max(0, Number(state.evadeMax || 0));
-  const absoluteMax = getAbsoluteEvadeCap(state);
-
-  if (current > absoluteMax) return current;
-  if (current > baseMax) return current;
-  return baseMax;
-}
-
 export function normalizeEvadeCapState(state) {
   if (!state) return;
 
   const baseMax = Math.max(0, Number(state.evadeMax || 0));
   const absoluteMax = getAbsoluteEvadeCap(state);
 
-  if (typeof state.evade !== "number") {
-    state.evade = baseMax;
-  }
+  if (typeof state.evade !== "number") state.evade = baseMax;
 
   state.evade = Math.max(0, Number(state.evade || 0));
-
-  const current = Math.max(0, Number(state.evade || 0));
-
   state.overEvadeBaseMax = baseMax;
   state.overEvadeAbsoluteMax = absoluteMax;
   state.evadeGoldCap = absoluteMax;
 
-  if (current > absoluteMax) {
-    state.overEvadeCap = absoluteMax;
-    state.evadeRedCap = absoluteMax;
-    state.overEvadeMode = true;
-    return;
-  }
+  const savedCap = Math.max(
+    baseMax,
+    Number(state.overEvadeCap || baseMax),
+    Number(state.evadeRedCap || baseMax)
+  );
 
-  if (current > baseMax) {
-    state.overEvadeCap = current;
-    state.evadeRedCap = current;
-    state.overEvadeMode = true;
-    return;
-  }
-
-  state.overEvadeCap = baseMax;
-  state.evadeRedCap = baseMax;
-  state.overEvadeMode = false;
+  state.overEvadeCap = Math.min(savedCap, absoluteMax);
+  state.evadeRedCap = state.overEvadeCap;
+  state.overEvadeMode = state.overEvadeCap > baseMax;
 }
 
 function clampGoldEvadeAtTurnEnd(state) {
@@ -199,11 +176,12 @@ function clampGoldEvadeAtTurnEnd(state) {
 
   normalizeEvadeCapState(state);
 
-  const absoluteMax = getAbsoluteEvadeCap(state);
+  const cap = Math.max(
+    Number(state.evadeMax || 0),
+    Number(state.overEvadeCap || 0)
+  );
 
-  if (Number(state.evade || 0) > absoluteMax) {
-    state.evade = absoluteMax;
-  }
+  state.evade = Math.min(Number(state.evade || 0), cap);
 
   normalizeEvadeCapState(state);
 }
@@ -214,10 +192,7 @@ export function addEvade(state, amount) {
   normalizeEvadeCapState(state);
 
   const add = Math.max(0, Number(amount || 0));
-  const current = Math.max(0, Number(state.evade || 0));
-  const limit = getCurrentEvadeLimit(state);
-
-  state.evade = Math.min(current + add, limit);
+  state.evade = Math.max(0, Number(state.evade || 0) + add);
 
   normalizeEvadeCapState(state);
 }
@@ -227,8 +202,14 @@ export function doubleEvadeRedCap(state) {
 
   normalizeEvadeCapState(state);
 
-  const current = Math.max(0, Number(state.evade || 0));
-  state.evade = current * 2;
+  const absoluteMax = getAbsoluteEvadeCap(state);
+  const nextEvade = Math.max(0, Number(state.evade || 0)) * 2;
+  const nextCap = Math.min(nextEvade, absoluteMax);
+
+  state.evade = nextEvade;
+  state.overEvadeCap = nextCap;
+  state.evadeRedCap = nextCap;
+  state.overEvadeMode = true;
 
   normalizeEvadeCapState(state);
 }
@@ -240,6 +221,14 @@ export function reduceEvade(state, amount = 1) {
 
   const consume = Math.max(0, Number(amount || 0));
   state.evade = Math.max(0, Number(state.evade || 0) - consume);
+
+  const baseMax = Math.max(0, Number(state.evadeMax || 0));
+
+  if (Number(state.overEvadeCap || baseMax) > baseMax) {
+    const nextCap = Math.max(baseMax, Math.min(Number(state.evade || 0), Number(state.overEvadeCap || baseMax)));
+    state.overEvadeCap = nextCap;
+    state.evadeRedCap = nextCap;
+  }
 
   normalizeEvadeCapState(state);
 }
