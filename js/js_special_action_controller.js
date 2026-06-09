@@ -1,5 +1,5 @@
 export function createSpecialActionController(ctx) {
-  function canExecuteSpecialForPlayer(playerKey, special) {
+  function canExecuteSpecialForPlayer(playerKey, special, stateOverride = null) {
     if (!special || special.actionType === "auto") {
       return false;
     }
@@ -15,16 +15,16 @@ export function createSpecialActionController(ctx) {
       ctx.getCurrentAttack().length > 0 &&
       playerKey !== ctx.getCurrentPlayer()
     ) {
-      const actor = ctx.getPlayerState(playerKey);
+      const actor = stateOverride || ctx.getPlayerState(playerKey);
       if (!actor) return false;
 
       const availability = ctx.executeUnitCanUseSpecial(actor, special.key, {
-  ownerPlayer: playerKey,
-  enemyPlayer: ctx.getOpponentPlayer(playerKey),
-  currentAttackContext: ctx.getCurrentAttackContext(),
-  currentAttack: ctx.getCurrentAttack(),
-  twoVtwoAdapter: ctx.twoVtwoAdapter || null
-});
+        ownerPlayer: playerKey,
+        enemyPlayer: ctx.getOpponentPlayer(playerKey),
+        currentAttackContext: ctx.getCurrentAttackContext(),
+        currentAttack: ctx.getCurrentAttack(),
+        twoVtwoAdapter: ctx.twoVtwoAdapter || null
+      });
 
       return availability.allowed !== false;
     }
@@ -32,35 +32,31 @@ export function createSpecialActionController(ctx) {
     let timingAllowed = false;
 
     if (timing === "self") {
-      timingAllowed =
-        playerKey === ctx.getCurrentPlayer() &&
-        ctx.getCurrentAttack().length === 0;
+      timingAllowed = playerKey === ctx.getCurrentPlayer() && ctx.getCurrentAttack().length === 0;
     } else if (timing === "reaction") {
-      timingAllowed =
-        playerKey !== ctx.getCurrentPlayer() &&
-        ctx.getCurrentAttack().length > 0;
+      timingAllowed = playerKey !== ctx.getCurrentPlayer() && ctx.getCurrentAttack().length > 0;
     } else if (timing === "attack") {
-      timingAllowed =
-        playerKey === ctx.getCurrentPlayer() &&
-        ctx.getCurrentAttack().length > 0;
+      timingAllowed = playerKey === ctx.getCurrentPlayer() && ctx.getCurrentAttack().length > 0;
     }
 
     if (!timingAllowed) {
       return false;
     }
 
-    const actor = ctx.getPlayerState(playerKey);
+    const actor = stateOverride || ctx.getPlayerState(playerKey);
     if (!actor) return false;
 
-    const availability = ctx.withUnifiedEvadeForCheck(playerKey, actor, () =>
-  ctx.executeUnitCanUseSpecial(actor, special.key, {
-    ownerPlayer: playerKey,
-    enemyPlayer: ctx.getOpponentPlayer(playerKey),
-    currentAttackContext: ctx.getCurrentAttackContext(),
-    currentAttack: ctx.getCurrentAttack(),
-    twoVtwoAdapter: ctx.twoVtwoAdapter || null
-  })
-);
+    const availability = ctx.withUnifiedEvadeForCheck(
+      playerKey,
+      actor,
+      () => ctx.executeUnitCanUseSpecial(actor, special.key, {
+        ownerPlayer: playerKey,
+        enemyPlayer: ctx.getOpponentPlayer(playerKey),
+        currentAttackContext: ctx.getCurrentAttackContext(),
+        currentAttack: ctx.getCurrentAttack(),
+        twoVtwoAdapter: ctx.twoVtwoAdapter || null
+      })
+    );
 
     return availability.allowed !== false;
   }
