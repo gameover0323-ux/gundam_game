@@ -1,4 +1,8 @@
-import { normalizeEvadeCapState } from "./js_unit_runtime.js";
+import {
+  normalizeEvadeCapState,
+  reduceEvade,
+  doubleEvadeRedCap
+} from "./js_unit_runtime.js";
 
 function ensureZudahState(state) {
   if (!state) return;
@@ -15,47 +19,24 @@ function addAction(state, amount) {
 }
 
 function setZudahAccelEvadeDouble(state) {
-  normalizeEvadeCapState(state);
-
-  const beforeEvade = Math.max(0, Number(state.evade || 0));
-  const nextEvade = beforeEvade * 2;
-
-  state.evade = nextEvade;
-  state.overEvadeMode = true;
-  state.overEvadeCap = nextEvade;
-  state.evadeGoldCap = nextEvade;
-  state.evadeRedCap = nextEvade;
-
-  normalizeEvadeCapState(state);
+  doubleEvadeRedCap(state);
 }
 
 function consumeZudahEvadeKeepCap(state, amount) {
-  normalizeEvadeCapState(state);
-
-  const beforeCap = Math.max(
-    Number(state.overEvadeCap || 0),
-    Number(state.evadeRedCap || 0),
-    Number(state.evadeGoldCap || 0),
-    Number(state.evadeMax || 0)
-  );
-
-  state.evade = Math.max(0, Number(state.evade || 0) - Math.max(0, Number(amount || 0)));
-
-  state.overEvadeMode = beforeCap > Number(state.evadeMax || 0);
-  state.overEvadeCap = beforeCap;
-  state.evadeGoldCap = beforeCap;
-  state.evadeRedCap = beforeCap;
-
-  normalizeEvadeCapState(state);
+  reduceEvade(state, amount);
 }
 
 function resetZudahAccelEvadeCap(state) {
-  const baseMax = Number(state.evadeMax || 0);
+  const baseMax = Math.max(0, Number(state.evadeMax || 0));
 
   state.overEvadeMode = false;
   state.overEvadeCap = baseMax;
-  state.evadeGoldCap = baseMax;
   state.evadeRedCap = baseMax;
+  state.evadeGoldCap = Math.max(
+    baseMax,
+    Number(state.overEvadeAbsoluteMax || 50)
+  );
+
   state.evade = Math.min(Math.max(0, Number(state.evade || 0)), baseMax);
 
   normalizeEvadeCapState(state);
