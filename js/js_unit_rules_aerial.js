@@ -56,7 +56,11 @@ export function getAerialDerivedState(state) {
   const slots = {};
 
   if (state.formId === "score_six") {
-    status.push(`スコアシックス:${Math.max(0, Number(state.aerialScoreSixTurns || 0))}ターン`);
+    status.push({
+  text: `スコアシックス:${Math.max(0, Number(state.aerialScoreSixTurns || 0))}ターン`,
+  color: "#44aaff",
+  bold: true
+});
     status.push(`ビットオン軽減:${Math.max(0, Number(state.aerialBitOnReduction || 0))}`);
 
     if (state.aerialOrbitalActiveThisTurn) {
