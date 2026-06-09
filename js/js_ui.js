@@ -246,24 +246,25 @@ export function renderPlayerState2v2(team, container, label, handlers) {
     Math.max(0, Number(team.unit1?.maxHp || 0)) +
     Math.max(0, Number(team.unit2?.maxHp || 0));
 
-  const unifiedEvade = Math.floor(
-  (
+  const unifiedEvadeCurrent =
     Math.max(0, Number(team.unit1?.evade || 0)) +
-    Math.max(0, Number(team.unit2?.evade || 0))
-  ) / 2
-);
+    Math.max(0, Number(team.unit2?.evade || 0));
 
-const unifiedHpPercent = unifiedMaxHp > 0
-  ? Math.max(0, Math.min(100, Math.floor((unifiedHp / unifiedMaxHp) * 100)))
-  : 0;
+  const unifiedEvadeMax =
+    Math.max(0, Number(team.unit1?.evadeMax || 0)) +
+    Math.max(0, Number(team.unit2?.evadeMax || 0));
 
-const teamStatusHtml = team.mode === "unified" ? `
+  const unifiedHpPercent = unifiedMaxHp > 0
+    ? Math.max(0, Math.min(100, Math.floor((unifiedHp / unifiedMaxHp) * 100)))
+    : 0;
+
+  const teamStatusHtml = team.mode === "unified" ? `
 <div class="unifiedHpBox">
   <div>統合HP:${unifiedHp}/${unifiedMaxHp}</div>
   <div style="width:100%;height:14px;border:1px solid #fff;background:#222;margin:4px 0;">
     <div style="height:100%;width:${unifiedHpPercent}%;background:#ff4040;"></div>
   </div>
-  <div>統合回避:${unifiedEvade}</div>
+  <div>統合回避:${unifiedEvadeCurrent}/${unifiedEvadeMax}</div>
 </div>
 ` : "";
 
