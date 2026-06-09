@@ -91,18 +91,22 @@ function isUnitDefeated(state) {
   return !state || Number(state.hp || 0) <= 0 || state.isDefeated === true;
 }
 
-function getStatusLineHtml(text) {
-  if (typeof text !== "string") return "";
+function getStatusLineHtml(status) {
+  if (!status) return "";
 
-  if (text.startsWith("NT-D覚醒 残")) {
-    return `<div style="color:#66ff22;">${text}</div>`;
+  if (typeof status === "object") {
+    const text = typeof status.text === "string" ? status.text : "";
+    if (!text) return "";
+
+    const color = typeof status.color === "string" ? status.color : "";
+    const fontWeight = status.bold ? "font-weight:bold;" : "";
+
+    return `<div style="${color ? `color:${color};` : ""}${fontWeight}">${text}</div>`;
   }
 
-  if (text.startsWith("NT-D 残")) {
-    return `<div style="color:#ff2222;">${text}</div>`;
-  }
+  if (typeof status !== "string") return "";
 
-  return `<div>${text}</div>`;
+  return `<div>${status}</div>`;
 }
 
 function getEvadeDisplayHtml(state) {
