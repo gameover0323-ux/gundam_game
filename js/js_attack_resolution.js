@@ -329,17 +329,33 @@ function startCounterAttackFromHitResult(hitResult, defenderPlayer, attackerPlay
     const ctxAtk = ctx.getCurrentAttackContext();
     const attackerPlayer = ctxAtk?.ownerPlayer || ctx.getCurrentPlayer();
     const defenderPlayer = ctxAtk?.enemyPlayer || ctx.getOpponentPlayer(attackerPlayer);
+
     const attacker = ctx.getPlayerState(attackerPlayer);
     const defender = ctx.getCombatTargetState(defenderPlayer);
     const currentAttack = ctx.getCurrentAttack();
     const attack = currentAttack[index];
-recordResolvedAttack(ctxAtk, attack);
-    const customEvade = ctx.executeUnitModifyEvadeAttempt(defender, attacker, attack, {
+
+    recordResolvedAttack(ctxAtk, attack);
+
+    const evadeContext = {
       attacker,
       defender,
       currentAttack,
-      attackIndex: index
-    });
+      attackIndex: index,
+      attackerPlayer,
+      defenderPlayer,
+      ownerPlayer: defenderPlayer,
+      enemyPlayer: attackerPlayer,
+      currentAttackContext: ctxAtk,
+      twoVtwoAdapter: ctx.twoVtwoAdapter || null
+    };
+
+    const customEvade = ctx.executeUnitModifyEvadeAttempt(
+      defender,
+      attacker,
+      attack,
+      evadeContext
+    );
 
     if (customEvade && customEvade.handled) {
       if (!customEvade.ok) {
@@ -373,11 +389,36 @@ recordResolvedAttack(ctxAtk, attack);
       return;
     }
 
-    const result = ctx.resolveEvadeAttack({
-      defender,
-      currentAttack,
-      attackIndex: index
-    });
+    if (ctx.twoVtwoAdapter && defenderPlayer) {
+      if (attack?.cannotEvade) {
+        ctx.appendBattleNotice("回避不可");
+        ctx.redrawBattleBoards();
+        ctx.renderAttackChoices();
+        return;
+      }
+
+      if (!ctx.twoVtwoAdapter.consumeEvade(defenderPlayer, defender, 1)) {
+        ctx.appendBattleNotice("回避失敗");
+        ctx.redrawBattleBoards();
+        ctx.renderAttackChoices();
+        return;
+      }
+
+      currentAttack.splice(index, 1);
+
+      if (ctxAtk) ctxAtk.evadeCount++;
+
+      if (currentAttack.length === 0) {
+        finishCurrentAttackResolution();
+        return;
+      }
+
+      ctx.redrawBattleBoards();
+      ctx.renderAttackChoices();
+      return;
+    }
+
+    const result = ctx.resolveEvadeAttack({ defender, currentAttack, attackIndex: index });
 
     if (!result.ok) {
       ctx.appendBattleNotice("回避失敗");
