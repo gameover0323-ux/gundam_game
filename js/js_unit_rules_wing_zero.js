@@ -188,11 +188,19 @@ export function getWingZeroDerivedState(state) {
   const evadeEffect = getStateEffect(state, "wing_zero_evade");
 
   if (evadeEffect && typeof evadeEffect.turns === "number") {
-    result.status.push(`ゼロシステム(回避)残り行動ターン:${evadeEffect.turns}`);
+    result.status.push({
+  text: `ゼロシステム(回避)残り行動ターン:${evadeEffect.turns}`,
+  color: "#44aaff",
+  bold: true
+});
   }
 
   if (hitEffect && typeof hitEffect.turns === "number") {
-    result.status.push(`ゼロシステム(命中)残り行動ターン:${hitEffect.turns}`);
+    result.status.push({
+  text: `ゼロシステム(命中)残り行動ターン:${hitEffect.turns}`,
+  color: "#ff4444",
+  bold: true
+});
   }
 
   if (state.formId === "ms") {
