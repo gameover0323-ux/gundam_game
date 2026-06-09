@@ -246,18 +246,26 @@ export function renderPlayerState2v2(team, container, label, handlers) {
     Math.max(0, Number(team.unit1?.maxHp || 0)) +
     Math.max(0, Number(team.unit2?.maxHp || 0));
 
-  const unifiedEvade =
+  const unifiedEvade = Math.floor(
+  (
     Math.max(0, Number(team.unit1?.evade || 0)) +
-    Math.max(0, Number(team.unit2?.evade || 0));
+    Math.max(0, Number(team.unit2?.evade || 0))
+  ) / 2
+);
 
-  const teamStatusHtml =
-    team.mode === "unified"
-      ? `
-        <div>統合HP:${unifiedHp}/${unifiedMaxHp}</div>
-        <div class="hpBar"><div style="width:${unifiedMaxHp > 0 ? (unifiedHp / unifiedMaxHp) * 100 : 0}%;"></div></div>
-        <div>統合回避:${unifiedEvade}</div>
-      `
-      : "";
+const unifiedHpPercent = unifiedMaxHp > 0
+  ? Math.max(0, Math.min(100, Math.floor((unifiedHp / unifiedMaxHp) * 100)))
+  : 0;
+
+const teamStatusHtml = team.mode === "unified" ? `
+<div class="unifiedHpBox">
+  <div>統合HP:${unifiedHp}/${unifiedMaxHp}</div>
+  <div style="width:100%;height:14px;border:1px solid #fff;background:#222;margin:4px 0;">
+    <div style="height:100%;width:${unifiedHpPercent}%;background:#ff4040;"></div>
+  </div>
+  <div>統合回避:${unifiedEvade}</div>
+</div>
+` : "";
 
   const unit1Focused = team.mode === "unified" || team.focusUnitKey === "unit1";
   const unit2Focused = team.mode === "unified" || team.focusUnitKey === "unit2";
