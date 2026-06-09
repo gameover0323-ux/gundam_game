@@ -147,7 +147,7 @@ export function create2v2Helpers({ getBattleMode, getTeam }) {
     const ev1 = Math.max(0, Number(team.unit1?.evade || 0));
     const ev2 = Math.max(0, Number(team.unit2?.evade || 0));
 
-    return Math.floor((ev1 + ev2) / 2);
+    return ev1 + ev2;
   }
 
   function consumeUnifiedEvade(team, amount) {
@@ -160,13 +160,10 @@ export function create2v2Helpers({ getBattleMode, getTeam }) {
       const ev1 = Math.max(0, Number(team.unit1?.evade || 0));
       const ev2 = Math.max(0, Number(team.unit2?.evade || 0));
 
-      if (ev1 > 0 && ev2 > 0) {
-        team.unit1.evade -= 1;
-        team.unit2.evade -= 1;
-      } else if (ev1 >= 2) {
-        team.unit1.evade -= 2;
-      } else if (ev2 >= 2) {
-        team.unit2.evade -= 2;
+      if (ev1 >= ev2 && ev1 > 0) {
+        team.unit1.evade = ev1 - 1;
+      } else if (ev2 > 0) {
+        team.unit2.evade = ev2 - 1;
       } else {
         return false;
       }
