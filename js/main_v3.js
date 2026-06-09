@@ -579,8 +579,8 @@ function getUnitNameById(unitId) {
 function ensureAccountListButton() {
   return playerAccountUi.ensureAccountListButton();
 }
-function canExecuteSpecialForPlayer(playerKey, special) {
-  return specialActionController.canExecuteSpecialForPlayer(playerKey, special);
+function canExecuteSpecialForPlayer(playerKey, special, stateOverride = null) {
+  return specialActionController.canExecuteSpecialForPlayer(playerKey, special, stateOverride);
 }
 function loadUnitButtons() {
   return gameSetup.loadUnitButtons();
@@ -805,22 +805,7 @@ function checkBattleEnd() {
 }
 
 function renderAttackChoices() {
-  const context = currentAttackContext || currentAttackContexts?.[0] || null;
-  const defenderPlayer = context?.enemyPlayer || getOpponentPlayer(currentPlayer);
-  const defenderTeam = battleMode === "2v2" ? getTeam(defenderPlayer) : null;
-
-  renderAttackChoicesUI({
-    currentAttack,
-    battleNotice,
-    currentActionHeader,
-    currentActionLabel,
-    onHit: (index) => takeHit(index),
-    onEvade: (index) => evadeAttack(index),
-    onSupportDefense: (index) => supportDefenseAttack(index),
-    canSupportDefense: battleMode === "2v2" && defenderTeam?.mode === "split"
-  });
-
-  clearBattleNotice();
+  return qteController.renderAttackChoices();
 }
 function canOperateQteDefender() {
   return qteController.canOperateQteDefender();
@@ -1490,6 +1475,7 @@ specialActionController = createSpecialActionController({
   getCurrentPlayer: () => currentPlayer,
   getCurrentAttack: () => currentAttack,
   getCurrentAttackContext: () => currentAttackContext,
+  getCurrentAttackContexts: () => currentAttackContexts,
 
   getPendingChoice: () => pendingChoice,
   setPendingChoice: (value) => {
