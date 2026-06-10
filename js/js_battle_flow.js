@@ -93,7 +93,17 @@ export function createBattleFlow(ctx) {
   state.evadeGoldCap = state.overEvadeCap;
   state.evadeRedCap = state.overEvadeCap;
   }
+function clampTeamEvadeToMax(team) {
+    if (!team) return;
 
+    if (team.unit1) {
+      clampEvadeToMax(team.unit1);
+    }
+
+    if (team.unit2) {
+      clampEvadeToMax(team.unit2);
+    }
+}
   function executeSlot() {
   if (ctx.hasPendingChoice()) {
     ctx.renderPendingChoice();
@@ -229,7 +239,17 @@ if (Number(attacker.pendingActionPenalty || 0) > 0) {
   actor.shieldActive = false;
   enemyState.shieldActive = false;
 
-  clampEvadeToMax(actor);
+  if (ctx.isTeamBattleMode && ctx.isTeamBattleMode()) {
+    const actorTeam = ctx.getTeam ? ctx.getTeam(actorPlayer) : null;
+
+    if (actorTeam) {
+      clampTeamEvadeToMax(actorTeam);
+    } else {
+      clampEvadeToMax(actor);
+    }
+  } else {
+    clampEvadeToMax(actor);
+  }
 
   if (typeof ctx.tickCriticalBoosts === "function") {
     ctx.tickCriticalBoosts(actor);
@@ -328,6 +348,7 @@ return {
     canConsumeAction,
     consumeActionCount,
     clampEvadeToMax,
+  clampTeamEvadeToMax,
     executeSlot,
     simulateSlot,
     endTurn
