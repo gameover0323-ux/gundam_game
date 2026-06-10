@@ -142,7 +142,7 @@ function getHpLineHtml(state, unified = false) {
   return `HP:${state.hp}/${state.maxHp}`;
 }
 
-function getEvadeLineHtml(state, unified = false, handlers = null) {
+function getEvadeLineHtml(state, unified = false, handlers = null, unitKey = "") {
   if (!state) return "回避:-";
   if (unified) return "回避:[統合中]";
   if (isUnitDefeated(state)) return "回避:[撃墜]";
@@ -154,9 +154,9 @@ function getEvadeLineHtml(state, unified = false, handlers = null) {
 
   const disabled = Number(state.evade || 0) <= 0 ? "disabled" : "";
 
-  return `${getEvadeDisplayHtml(state)} <button class="criticalBoostBtn" ${disabled}>会心${criticalRate}%</button>`;
+ const unitKeyAttr = unitKey ? ` data-unit-key="${unitKey}"` : "";
+  return `${getEvadeDisplayHtml(state)} <button class="criticalBoostBtn"${unitKeyAttr} ${disabled}>会心${criticalRate}%</button>`;
 }
-
 export function renderPlayerState(state, container, label, handlers) {
   const defeated = isUnitDefeated(state);
 
@@ -311,11 +311,11 @@ export function renderPlayerState2v2(team, container, label, handlers) {
 
     <div style="${unit1NameStyle}">1. ${team.unit1.name}${unit1Defeated ? " [撃墜]" : ""}</div>
     <div>${getHpLineHtml(team.unit1, team.mode === "unified")}</div>
-    <div>${getEvadeLineHtml(team.unit1, team.mode === "unified")}</div>
+ <div>${getEvadeLineHtml(team.unit1, team.mode === "unified", handlers, "unit1")}</div>
 
     <div style="${unit2NameStyle}">2. ${team.unit2 ? team.unit2.name : "空き"}${unit2Defeated ? " [撃墜]" : ""}</div>
     <div>${team.unit2 ? getHpLineHtml(team.unit2, team.mode === "unified") : "HP:-"}</div>
-    <div>${team.unit2 ? getEvadeLineHtml(team.unit2, team.mode === "unified") : "回避:-"}</div>
+    <div>${team.unit2 ? getEvadeLineHtml(team.unit2, team.mode === "unified", handlers, "unit2") : "回避:-"}</div>
 
     <div>ステータス表示</div>
     <button class="switchUnitBtn" data-unit-key="unit1" ${unit1Defeated ? "disabled" : ""}>[1]</button>
@@ -331,7 +331,7 @@ export function renderPlayerState2v2(team, container, label, handlers) {
 
     <div ${nameStyle}>${activeState.name}${activeState.displaySuffix || ""}${activeDefeated ? " [撃墜]" : ""}</div>
     <div>${getHpLineHtml(activeState, team.mode === "unified")}</div>
-    <div>${getEvadeLineHtml(activeState, team.mode === "unified")}</div>
+    <div>${getEvadeLineHtml(activeState, team.mode === "unified", handlers, team.activeUnitKey)}</div>
     ${statusHtml}
     ${confuseText}
 
@@ -368,6 +368,17 @@ if (teamModeBtn) {
   container.querySelectorAll(".focusUnitBtn").forEach((btn) => {
     btn.addEventListener("click", () => {
       if (handlers.onSwitchFocusUnit) handlers.onSwitchFocusUnit(btn.dataset.unitKey);
+    });
+  });
+
+  container.querySelectorAll(".criticalBoostBtn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (!handlers.onCriticalBoost) return;
+
+      const unitKey = btn.dataset.unitKey || team.activeUnitKey;
+      const targetState = team[unitKey];
+
+      handlers.onCriticalBoost(targetState);
     });
   });
 
