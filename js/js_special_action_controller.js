@@ -23,12 +23,15 @@ export function createSpecialActionController(ctx) {
       : [];
 
     const matchedContext = Array.isArray(contexts)
-      ? contexts.find(context =>
-          context &&
-          context.ownerPlayer === playerKey &&
-          context.ownerUnitKey === ownerUnitKey
-        )
-      : null;
+  ? contexts.find(context =>
+      context &&
+      context.ownerPlayer === playerKey &&
+      (
+        context.attacker === actor ||
+        (ownerUnitKey && context.ownerUnitKey === ownerUnitKey)
+      )
+    )
+  : null;
 
     if (!matchedContext?.groupId) {
       return {
