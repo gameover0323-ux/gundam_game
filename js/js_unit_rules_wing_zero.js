@@ -173,6 +173,7 @@ function isWingAttackSlot(slotKey, formId) {
   if (formId === "neo") return ["slot1", "slot4", "slot5", "slot6"].includes(slotKey);
   return false;
 }
+
 function contextHasSlotKey(context = {}, expectedSlotKey) {
   if (!expectedSlotKey) return false;
 
@@ -186,6 +187,7 @@ function contextHasSlotKey(context = {}, expectedSlotKey) {
     attack?.meta?.slotKey === expectedSlotKey
   );
 }
+
 export function getWingZeroDerivedState(state) {
   ensureWingZeroState(state);
 
@@ -201,18 +203,18 @@ export function getWingZeroDerivedState(state) {
 
   if (evadeEffect && typeof evadeEffect.turns === "number") {
     result.status.push({
-  text: `ゼロシステム(回避)残り行動ターン:${evadeEffect.turns}`,
-  color: "#44aaff",
-  bold: true
-});
+      text: `ゼロシステム(回避)残り行動ターン:${evadeEffect.turns}`,
+      color: "#44aaff",
+      bold: true
+    });
   }
 
   if (hitEffect && typeof hitEffect.turns === "number") {
     result.status.push({
-  text: `ゼロシステム(命中)残り行動ターン:${hitEffect.turns}`,
-  color: "#ff4444",
-  bold: true
-});
+      text: `ゼロシステム(命中)残り行動ターン:${hitEffect.turns}`,
+      color: "#ff4444",
+      bold: true
+    });
   }
 
   if (state.formId === "ms") {
@@ -302,16 +304,16 @@ export function canUseWingZeroSpecial(state, specialKey, context = {}) {
     };
   }
 
-if (special.effectType === "buster_unlock") {
-  const allowed =
-    contextHasSlotKey(context, "slot5") &&
-    Array.isArray(context.currentAttack) &&
-    context.currentAttack.length > 0 &&
-    getRuleEvade(state, context) >= 3 &&
-    !state.wingBusterUnlockUsedThisAction;
+  if (special.effectType === "buster_unlock") {
+    const allowed =
+      contextHasSlotKey(context, "slot5") &&
+      Array.isArray(context.currentAttack) &&
+      context.currentAttack.length > 0 &&
+      getRuleEvade(state, context) >= 3 &&
+      !state.wingBusterUnlockUsedThisAction;
 
-  return { allowed, message: allowed ? null : "条件未達" };
-}
+    return { allowed, message: allowed ? null : "条件未達" };
+  }
 
   if (special.effectType === "zero_berserk") {
     const allowed =
@@ -449,6 +451,7 @@ export function executeWingZeroSpecial(state, specialKey, context = {}) {
         effectType: "hp_cost_append_attack",
         ownerPlayer: context.ownerPlayer,
         enemyPlayer: context.enemyPlayer,
+        ownerUnitKey: context.ownerUnitKey || null,
         title: "消費HPを入力",
         digits: 3,
         currentValue: "",
@@ -587,6 +590,7 @@ export function onWingZeroActionResolved(attacker, defender, context = {}) {
         source: "wing_zero_chase",
         ownerPlayer: context.ownerPlayer,
         enemyPlayer: context.enemyPlayer,
+        ownerUnitKey: context.ownerUnitKey || null,
         title: `PLAYER ${context.ownerPlayer} ゼロシステム追撃`,
         slotKey: context.slotKey,
         choices: [
@@ -649,9 +653,10 @@ export function modifyWingZeroEvadeAttempt(defender, attacker, attack, context =
   if (defenderEvade <= 0) {
     return {
       handled: true,
-      ok: false,
-      reason: "noEvade",
-      message: "回避が足りない"
+      ok: true,
+      consumeEvade: 0,
+      consumeByAdapter: true,
+      message: null
     };
   }
 
@@ -696,41 +701,9 @@ export function onWingZeroResolveChoice(
       redraw: true,
       message: null,
       startSlotAction: {
-        slotKey: pendingChoice.slotKey
+        slotKey: pendingChoice.slotKey,
+        ownerUnitKey: pendingChoice.ownerUnitKey || context.ownerUnitKey || null
       }
-    };
-  }
-
-  if (pendingChoice.source === "extra_weapon") {
-    const slotKey = selectedValue;
-
-    if (getRuleEvade(state, context) < 2) {
-      return {
-        handled: true,
-        redraw: true,
-        message: "回避が足りない"
-      };
-    }
-
-    consumeRuleEvade(state, 2, context);
-
-    return {
-      handled: true,
-      redraw: true,
-      message: null,
-      startSlotAction: {
-        slotKey
-      }
-    };
-  }
-
-  if (pendingChoice.source === "nt_prediction") {
-    state.ntGuessSlotKey = selectedValue;
-
-    return {
-      handled: true,
-      redraw: true,
-      message: "予測を設定した"
     };
   }
 
