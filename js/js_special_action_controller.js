@@ -51,7 +51,7 @@ export function createSpecialActionController(ctx) {
     };
   }
 
-  function canExecuteSpecialForPlayer(playerKey, special, stateOverride = null) {
+  function canExecuteSpecialForPlayer(playerKey, special, specialKey = null, stateOverride = null) {
     if (!special || special.actionType === "auto") {
       return false;
     }
@@ -62,6 +62,9 @@ export function createSpecialActionController(ctx) {
 
     const actor = stateOverride || ctx.getPlayerState(playerKey);
     if (!actor) return false;
+
+    const resolvedSpecialKey = specialKey || special.key || null;
+    if (!resolvedSpecialKey) return false;
 
     const scope = getSpecialAttackScope(playerKey, actor);
     const scopedAttack = scope.currentAttack || [];
@@ -74,7 +77,7 @@ export function createSpecialActionController(ctx) {
       ctx.getCurrentAttack().length > 0 &&
       playerKey !== ctx.getCurrentPlayer()
     ) {
-      const availability = ctx.executeUnitCanUseSpecial(actor, special.key, {
+      const availability = ctx.executeUnitCanUseSpecial(actor, resolvedSpecialKey, {
         ownerPlayer: playerKey,
         enemyPlayer: ctx.getOpponentPlayer(playerKey),
         ownerUnitKey: scope.ownerUnitKey,
@@ -103,7 +106,7 @@ export function createSpecialActionController(ctx) {
     const availability = ctx.withUnifiedEvadeForCheck(
       playerKey,
       actor,
-      () => ctx.executeUnitCanUseSpecial(actor, special.key, {
+      () => ctx.executeUnitCanUseSpecial(actor, resolvedSpecialKey, {
         ownerPlayer: playerKey,
         enemyPlayer: ctx.getOpponentPlayer(playerKey),
         ownerUnitKey: scope.ownerUnitKey,
