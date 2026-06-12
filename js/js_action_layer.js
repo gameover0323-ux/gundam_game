@@ -79,43 +79,41 @@ export function createActionLayer(ctx) {
     return null;
   }
 
-  function getUnifiedSpecialAttackScope(ownerPlayer, actor) {
-    if (!ctx.twoVtwoAdapter?.isUnifiedOwner?.(ownerPlayer)) {
-      return null;
-    }
+ function getUnifiedSpecialAttackScope(ownerPlayer, actor) {
+  const ownerUnitKey = getActorUnitKey(ownerPlayer, actor);
 
-    const ownerUnitKey = getActorUnitKey(ownerPlayer, actor);
-    if (!ownerUnitKey) return null;
+  const contexts = typeof ctx.getCurrentAttackContexts === "function"
+    ? ctx.getCurrentAttackContexts()
+    : [];
 
-    const contexts = typeof ctx.getCurrentAttackContexts === "function"
-      ? ctx.getCurrentAttackContexts()
-      : [];
-
-    const matchedContext = Array.isArray(contexts)
-      ? contexts.find(context =>
-          context &&
-          context.ownerPlayer === ownerPlayer &&
-          context.ownerUnitKey === ownerUnitKey
+  const matchedContext = Array.isArray(contexts)
+    ? contexts.find(context =>
+        context &&
+        context.ownerPlayer === ownerPlayer &&
+        (
+          context.attacker === actor ||
+          (ownerUnitKey && context.ownerUnitKey === ownerUnitKey)
         )
-      : null;
+      )
+    : null;
 
-    if (!matchedContext?.groupId) return null;
+  if (!matchedContext?.groupId) return null;
 
-    const allAttacks = Array.isArray(ctx.getCurrentAttack?.())
-      ? ctx.getCurrentAttack()
-      : [];
+  const allAttacks = Array.isArray(ctx.getCurrentAttack?.())
+    ? ctx.getCurrentAttack()
+    : [];
 
-    const attacks = allAttacks.filter(attack => attack.groupId === matchedContext.groupId);
+  const attacks = allAttacks.filter(attack => attack.groupId === matchedContext.groupId);
 
-    if (attacks.length <= 0) return null;
+  if (attacks.length <= 0) return null;
 
-    return {
-      ownerUnitKey,
-      groupId: matchedContext.groupId,
-      currentAttackContext: matchedContext,
-      currentAttack: attacks
-    };
-  }
+  return {
+    ownerUnitKey: matchedContext.ownerUnitKey || ownerUnitKey || null,
+    groupId: matchedContext.groupId,
+    currentAttackContext: matchedContext,
+    currentAttack: attacks
+  };
+}
 
   function startReservedAction(action) {
     if (!action) return false;
