@@ -173,7 +173,19 @@ function isWingAttackSlot(slotKey, formId) {
   if (formId === "neo") return ["slot1", "slot4", "slot5", "slot6"].includes(slotKey);
   return false;
 }
+function contextHasSlotKey(context = {}, expectedSlotKey) {
+  if (!expectedSlotKey) return false;
 
+  const currentAttackContext = context.currentAttackContext || {};
+  if (currentAttackContext.slotKey === expectedSlotKey) return true;
+
+  const attacks = Array.isArray(context.currentAttack) ? context.currentAttack : [];
+  return attacks.some(attack =>
+    attack?.slotKey === expectedSlotKey ||
+    attack?.sourceSlotKey === expectedSlotKey ||
+    attack?.meta?.slotKey === expectedSlotKey
+  );
+}
 export function getWingZeroDerivedState(state) {
   ensureWingZeroState(state);
 
@@ -290,19 +302,16 @@ export function canUseWingZeroSpecial(state, specialKey, context = {}) {
     };
   }
 
-  if (special.effectType === "buster_unlock") {
-    const slotKey = context.currentAttackContext?.slotKey || null;
-    const allowed =
-      slotKey === "slot5" &&
-      context.currentAttack.length > 0 &&
-      getRuleEvade(state, context) >= 3 &&
-      !state.wingBusterUnlockUsedThisAction;
+if (special.effectType === "buster_unlock") {
+  const allowed =
+    contextHasSlotKey(context, "slot5") &&
+    Array.isArray(context.currentAttack) &&
+    context.currentAttack.length > 0 &&
+    getRuleEvade(state, context) >= 3 &&
+    !state.wingBusterUnlockUsedThisAction;
 
-    return {
-      allowed,
-      message: allowed ? null : "条件未達"
-    };
-  }
+  return { allowed, message: allowed ? null : "条件未達" };
+}
 
   if (special.effectType === "zero_berserk") {
     const allowed =
