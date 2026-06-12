@@ -271,14 +271,15 @@ export function onGundamMcResolveChoice(state, pendingChoice, selectedValue, con
       };
     }
 
-    return {
-      handled: true,
-      redraw: true,
-      message: null,
-      startSlotAction: {
-        slotKey: selectedValue
-      }
-    };
+ return {
+  handled: true,
+  redraw: true,
+  message: null,
+  startSlotAction: {
+    slotKey: selectedValue,
+    ownerUnitKey: pendingChoice.ownerUnitKey || context.ownerUnitKey || null
+  }
+};
   }
 
   if (pendingChoice.source === "nt_prediction") {
