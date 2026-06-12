@@ -621,7 +621,7 @@ if (special.effectType === "agni_output_unlock") {
         enemyPlayer: context.enemyPlayer,
         ownerUnitKey: context.ownerUnitKey || null,
         title: "消費HPを入力",
-        digits: Math.max(1, String(maxHpCost).length),
+        digits: 4,
         maxValue: maxHpCost,
         currentValue: "",
         params: {
