@@ -219,7 +219,28 @@ function tickStrikeEffect(state, effectId) {
 function isAttackSlot(slot) {
   return slot?.effect?.type === "attack";
 }
+function contextHasSlot(context = {}, expectedSlotKey, expectedSlotNumber = null) {
+  const currentAttackContext = context.currentAttackContext || {};
 
+  if (expectedSlotKey && currentAttackContext.slotKey === expectedSlotKey) return true;
+  if (
+    expectedSlotNumber !== null &&
+    Number(currentAttackContext.slotNumber || 0) === expectedSlotNumber
+  ) {
+    return true;
+  }
+
+  const attacks = Array.isArray(context.currentAttack) ? context.currentAttack : [];
+  return attacks.some(attack =>
+    attack?.slotKey === expectedSlotKey ||
+    attack?.sourceSlotKey === expectedSlotKey ||
+    attack?.meta?.slotKey === expectedSlotKey ||
+    (
+      expectedSlotNumber !== null &&
+      Number(attack?.slotNumber || attack?.sourceSlotNumber || attack?.meta?.slotNumber || 0) === expectedSlotNumber
+    )
+  );
+}
 function applySeedToSlot(slot) {
   if (!slot || !slot.effect || slot.effect.type !== "attack") return slot;
 
@@ -429,21 +450,17 @@ export function canUseStrikeSpecial(state, specialKey, context = {}) {
   }
 
   if (special.effectType === "agni_output_unlock") {
-    const currentAttackContext = context.currentAttackContext || {};
-    const slotKey = currentAttackContext.slotKey || null;
-    const slotNumber = currentAttackContext.slotNumber || null;
+  const allowed =
+    state.formId === "launcher" &&
+    contextHasSlot(context, "slot6", 6) &&
+    Array.isArray(context.currentAttack) &&
+    context.currentAttack.length > 0 &&
+    !state.strikeAgniOutputUsedThisAction;
 
-    const allowed =
-      state.formId === "launcher" &&
-      (slotKey === "slot6" || slotNumber === 6) &&
-      Array.isArray(context.currentAttack) &&
-      context.currentAttack.length > 0 &&
-      !state.strikeAgniOutputUsedThisAction;
-
-    return {
-      allowed,
-      message: allowed ? null : "ランチャーの6.アグニ(照射砲)選択中のみ実行可能"
-    };
+  return {
+    allowed,
+    message: allowed ? null : "ランチャーの6.アグニ(照射砲)選択中のみ実行可能"
+  };
   }
 
   return {
