@@ -70,7 +70,14 @@ export function createActionLayer(ctx) {
 
   return true;
 }
-
+function getActorUnitKey(ownerPlayer, actor) {
+  const team = ctx.getTeam?.(ownerPlayer);
+  if (!team || !actor) return null;
+  if (team.unit1 === actor) return "unit1";
+  if (team.unit2 === actor) return "unit2";
+  return null;
+}
+  
   function startReservedAction(action) {
     if (!action) return false;
 
@@ -858,10 +865,13 @@ if (ctx.twoVtwoAdapter && ctx.twoVtwoAdapter.isUnifiedOwner(ownerPlayer)) {
 }
 
     if (unitResult.handled) {
-      if (unitResult.requestChoice) {
-        ctx.handleChoiceRequest(unitResult.requestChoice);
-        return;
-      }
+   if (unitResult.requestChoice) {
+  ctx.handleChoiceRequest({
+    ...unitResult.requestChoice,
+    ownerUnitKey: unitResult.requestChoice.ownerUnitKey || getActorUnitKey(ownerPlayer, actor)
+  });
+  return;
+   }
 if (unitResult.reserveAction) {
   reserveAction(actor, unitResult.reserveAction);
 
@@ -996,7 +1006,10 @@ function resolvePendingChoice(selectedValue) {
   const ownerPlayer = choice.ownerPlayer;
   const enemyPlayer = choice.enemyPlayer || ctx.getOpponentPlayer(ownerPlayer);
 
-  const actor = ctx.getPlayerState(ownerPlayer);
+  const actor =
+  choice.ownerUnitKey && ctx.getTeam?.(ownerPlayer)
+    ? ctx.getTeam(ownerPlayer)?.[choice.ownerUnitKey]
+    : ctx.getPlayerState(ownerPlayer);
   const defender = ctx.getPlayerState(enemyPlayer);
 
   if (!actor) {
@@ -1038,8 +1051,13 @@ function resolvePendingChoice(selectedValue) {
   }
 
   if (ctx.isUnifiedTeam(ownerPlayer)) {
-    ctx.executeUnifiedSelectedSlot(ownerPlayer, result.startSlotAction.slotKey);
-    return;
+  ctx.executeUnifiedSelectedSlot(
+    ownerPlayer,
+    result.startSlotAction.slotKey,
+    result.startSlotAction.ownerUnitKey || choice.ownerUnitKey || null,
+    { skipActionCost: true }
+  );
+  return;
   }
 
   startSlotAction(
