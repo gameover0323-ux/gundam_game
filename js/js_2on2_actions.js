@@ -182,12 +182,19 @@ export function create2v2Actions(ctx) {
       });
 
       attacks.forEach((attack) => {
-        currentAttack.push({
-          ...attack,
-          groupId,
-          sourceLabel: actionLabel
-        });
-      });
+  currentAttack.push({
+    ...attack,
+    groupId,
+    ownerPlayer: currentPlayer,
+    ownerUnitKey: unitKey,
+    attacker: unit,
+    slotKey,
+    slotNumber,
+    sourceSlotKey: slotKey,
+    sourceSlotNumber: slotNumber,
+    sourceLabel: actionLabel
+  });
+});
 
       return true;
     }
