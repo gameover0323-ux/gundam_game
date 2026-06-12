@@ -440,7 +440,9 @@ export function executeWingZeroSpecial(state, specialKey, context = {}) {
     };
   }
 
-  if (special.effectType === "buster_unlock") {
+if (special.effectType === "buster_unlock") {
+    const maxHpCost = Math.max(0, Math.floor(Number(state.hp || 0)) - 1);
+
     return {
       handled: true,
       redraw: true,
@@ -453,7 +455,8 @@ export function executeWingZeroSpecial(state, specialKey, context = {}) {
         enemyPlayer: context.enemyPlayer,
         ownerUnitKey: context.ownerUnitKey || null,
         title: "消費HPを入力",
-        digits: 3,
+        digits: Math.max(1, String(maxHpCost).length),
+        maxValue: maxHpCost,
         currentValue: "",
         params: {
           damageRate: 0.5,
@@ -466,7 +469,7 @@ export function executeWingZeroSpecial(state, specialKey, context = {}) {
         }
       }
     };
-  }
+}
 
   return {
     handled: false,
