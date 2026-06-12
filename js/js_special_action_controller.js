@@ -1,4 +1,56 @@
 export function createSpecialActionController(ctx) {
+  function getActorUnitKey(playerKey, actor) {
+    const team = ctx.getTeam?.(playerKey);
+    if (!team || !actor) return null;
+    if (team.unit1 === actor) return "unit1";
+    if (team.unit2 === actor) return "unit2";
+    return null;
+  }
+
+  function getSpecialAttackScope(playerKey, actor) {
+    const ownerUnitKey = getActorUnitKey(playerKey, actor);
+
+    if (!ownerUnitKey) {
+      return {
+        ownerUnitKey: null,
+        currentAttackContext: ctx.getCurrentAttackContext(),
+        currentAttack: ctx.getCurrentAttack()
+      };
+    }
+
+    const contexts = typeof ctx.getCurrentAttackContexts === "function"
+      ? ctx.getCurrentAttackContexts()
+      : [];
+
+    const matchedContext = Array.isArray(contexts)
+      ? contexts.find(context =>
+          context &&
+          context.ownerPlayer === playerKey &&
+          context.ownerUnitKey === ownerUnitKey
+        )
+      : null;
+
+    if (!matchedContext?.groupId) {
+      return {
+        ownerUnitKey,
+        currentAttackContext: ctx.getCurrentAttackContext(),
+        currentAttack: ctx.getCurrentAttack()
+      };
+    }
+
+    const allAttacks = Array.isArray(ctx.getCurrentAttack?.())
+      ? ctx.getCurrentAttack()
+      : [];
+
+    const scopedAttacks = allAttacks.filter(attack => attack.groupId === matchedContext.groupId);
+
+    return {
+      ownerUnitKey,
+      currentAttackContext: matchedContext,
+      currentAttack: scopedAttacks.length > 0 ? scopedAttacks : allAttacks
+    };
+  }
+
   function canExecuteSpecialForPlayer(playerKey, special, stateOverride = null) {
     if (!special || special.actionType === "auto") {
       return false;
@@ -8,6 +60,13 @@ export function createSpecialActionController(ctx) {
       return false;
     }
 
+    const actor = stateOverride || ctx.getPlayerState(playerKey);
+    if (!actor) return false;
+
+    const scope = getSpecialAttackScope(playerKey, actor);
+    const scopedAttack = scope.currentAttack || [];
+    const scopedContext = scope.currentAttackContext || null;
+
     const timing = special.timing || "self";
 
     if (
@@ -15,14 +74,12 @@ export function createSpecialActionController(ctx) {
       ctx.getCurrentAttack().length > 0 &&
       playerKey !== ctx.getCurrentPlayer()
     ) {
-      const actor = stateOverride || ctx.getPlayerState(playerKey);
-      if (!actor) return false;
-
       const availability = ctx.executeUnitCanUseSpecial(actor, special.key, {
         ownerPlayer: playerKey,
         enemyPlayer: ctx.getOpponentPlayer(playerKey),
-        currentAttackContext: ctx.getCurrentAttackContext(),
-        currentAttack: ctx.getCurrentAttack(),
+        ownerUnitKey: scope.ownerUnitKey,
+        currentAttackContext: scopedContext,
+        currentAttack: scopedAttack,
         twoVtwoAdapter: ctx.twoVtwoAdapter || null
       });
 
@@ -43,17 +100,15 @@ export function createSpecialActionController(ctx) {
       return false;
     }
 
-    const actor = stateOverride || ctx.getPlayerState(playerKey);
-    if (!actor) return false;
-
     const availability = ctx.withUnifiedEvadeForCheck(
       playerKey,
       actor,
       () => ctx.executeUnitCanUseSpecial(actor, special.key, {
         ownerPlayer: playerKey,
         enemyPlayer: ctx.getOpponentPlayer(playerKey),
-        currentAttackContext: ctx.getCurrentAttackContext(),
-        currentAttack: ctx.getCurrentAttack(),
+        ownerUnitKey: scope.ownerUnitKey,
+        currentAttackContext: scopedContext,
+        currentAttack: scopedAttack,
         twoVtwoAdapter: ctx.twoVtwoAdapter || null
       })
     );
@@ -63,11 +118,7 @@ export function createSpecialActionController(ctx) {
 
   function handleChoiceRequest(requestChoice) {
     if (!requestChoice) return;
-
-    ctx.setPendingChoice({
-      ...requestChoice
-    });
-
+    ctx.setPendingChoice({ ...requestChoice });
     ctx.redrawBattleBoards();
     ctx.renderPendingChoice();
   }
@@ -86,9 +137,7 @@ export function createSpecialActionController(ctx) {
     }
 
     const result = ctx.executeSpecialRaw(ownerPlayer, specialKey);
-
     ctx.publishOnlineSpecialAction(ownerPlayer, specialKey);
-
     return result;
   }
 
@@ -103,7 +152,6 @@ export function createSpecialActionController(ctx) {
 
       if (choice) {
         const ownerPlayer = choice.ownerPlayer;
-
         if (ownerPlayer !== ctx.getOnlineMyPlayer()) {
           ctx.showPopup("選択権のあるプレイヤーのみ操作できます");
           return;
@@ -112,7 +160,6 @@ export function createSpecialActionController(ctx) {
     }
 
     ctx.publishOnlineChoiceAction(choice, selectedValue);
-
     return ctx.resolvePendingChoiceRaw(selectedValue);
   }
 
