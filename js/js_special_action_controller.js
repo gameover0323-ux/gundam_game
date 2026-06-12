@@ -51,7 +51,15 @@ export function createSpecialActionController(ctx) {
     };
   }
 
-  function canExecuteSpecialForPlayer(playerKey, special, specialKey = null, stateOverride = null) {
+  function normalizeCanExecuteArgs(special, thirdArg = null, fourthArg = null) {
+    const thirdIsSpecialKey = typeof thirdArg === "string";
+    return {
+      specialKey: thirdIsSpecialKey ? thirdArg : special?.key || null,
+      stateOverride: thirdIsSpecialKey ? fourthArg : thirdArg
+    };
+  }
+
+  function canExecuteSpecialForPlayer(playerKey, special, thirdArg = null, fourthArg = null) {
     if (!special || special.actionType === "auto") {
       return false;
     }
@@ -60,10 +68,11 @@ export function createSpecialActionController(ctx) {
       return false;
     }
 
-    const actor = stateOverride || ctx.getPlayerState(playerKey);
+    const args = normalizeCanExecuteArgs(special, thirdArg, fourthArg);
+    const actor = args.stateOverride || ctx.getPlayerState(playerKey);
     if (!actor) return false;
 
-    const resolvedSpecialKey = specialKey || special.key || null;
+    const resolvedSpecialKey = args.specialKey || special.key || null;
     if (!resolvedSpecialKey) return false;
 
     const scope = getSpecialAttackScope(playerKey, actor);
