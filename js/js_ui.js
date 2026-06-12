@@ -417,7 +417,15 @@ function buildAttackTags(attack) {
   return tags.join("");
 }
 
-export function renderPendingChoiceUI({ title, choices, choiceType, currentValue, digits, onChoose }) {
+export function renderPendingChoiceUI({
+  title,
+  choices,
+  choiceType,
+  currentValue,
+  digits,
+  maxValue,
+  onChoose
+}) {
   const attackLog = document.getElementById("attackLog");
   attackLog.innerHTML = "";
 
@@ -441,29 +449,59 @@ export function renderPendingChoiceUI({ title, choices, choiceType, currentValue
     for (let i = 0; i <= 9; i++) {
       const btn = document.createElement("button");
       btn.textContent = i;
+
       btn.addEventListener("click", () => {
         if (value.length >= digits) return;
+
         value += String(i);
-        renderPendingChoiceUI({ title, choiceType, currentValue: value, digits, onChoose });
+
+        renderPendingChoiceUI({
+          title,
+          choiceType,
+          currentValue: value,
+          digits,
+          maxValue,
+          onChoose
+        });
       });
+
       keypad.appendChild(btn);
     }
 
     const okBtn = document.createElement("button");
     okBtn.textContent = "決定";
+
     okBtn.addEventListener("click", () => {
-      onChoose(value);
+      let result = Number(value || 0);
+
+      if (
+        typeof maxValue === "number" &&
+        result > maxValue
+      ) {
+        result = maxValue;
+      }
+
+      onChoose(String(result));
     });
 
     const clearBtn = document.createElement("button");
     clearBtn.textContent = "クリア";
+
     clearBtn.addEventListener("click", () => {
-      renderPendingChoiceUI({ title, choiceType, currentValue: "", digits, onChoose });
+      renderPendingChoiceUI({
+        title,
+        choiceType,
+        currentValue: "",
+        digits,
+        maxValue,
+        onChoose
+      });
     });
 
     attackLog.appendChild(keypad);
     attackLog.appendChild(okBtn);
     attackLog.appendChild(clearBtn);
+
     return;
   }
 
@@ -471,16 +509,18 @@ export function renderPendingChoiceUI({ title, choices, choiceType, currentValue
 
   (choices || []).forEach((choice) => {
     const btn = document.createElement("button");
+
     btn.textContent = choice.label;
+
     btn.addEventListener("click", () => {
       onChoose(choice.value);
     });
+
     wrap.appendChild(btn);
   });
 
   attackLog.appendChild(wrap);
 }
-
 export function renderAttackChoicesUI({
   currentAttack,
   battleNotice,
