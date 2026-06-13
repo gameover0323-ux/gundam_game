@@ -10,6 +10,7 @@ import {
 function ensureFreedomState(state) {
   if (!state) return;
   if (typeof state.freedomHalberdUsedThisTurn !== "boolean") state.freedomHalberdUsedThisTurn = false;
+  if (typeof state.freedomBarrelRollUsedThisTurn !== "number") state.freedomBarrelRollUsedThisTurn = 0;
   if (typeof state.shieldCount !== "number") state.shieldCount = 3;
   if (typeof state.shieldActive !== "boolean") state.shieldActive = false;
 }
@@ -191,8 +192,14 @@ export function canUseFreedomSpecial(state, specialKey, context = {}) {
   }
 
   if (special.effectType === "freedom_barrel_roll") {
-    const allowed = evade >= 6;
-    return { allowed, message: allowed ? null : "回避が足りません" };
+  const used = Math.max(0, Number(state.freedomBarrelRollUsedThisTurn || 0));
+
+  if (used >= 2) {
+    return { allowed: false, message: "1ターンにつき2回までです" };
+  }
+
+  const allowed = evade >= 6;
+  return { allowed, message: allowed ? null : "回避が足りません" };
   }
 
   if (special.effectType === "freedom_seed_chase") {
@@ -235,7 +242,7 @@ export function executeFreedomSpecial(state, specialKey, context = {}) {
 
     state.freedomHalberdUsedThisTurn = true;
 
-    if (Math.random() < 0.2) {
+    if (Math.random() < 0.3) {
       addRuleAction(state, 1, context);
       return { handled: true, redraw: true, message: "成功：行動回数+1" };
     }
@@ -243,14 +250,26 @@ export function executeFreedomSpecial(state, specialKey, context = {}) {
     return { handled: true, redraw: true, message: "失敗" };
   }
 
-  if (special.effectType === "freedom_barrel_roll") {
-    if (!consumeRuleEvade(state, 6, context)) {
-      return { handled: true, redraw: true, message: "回避が足りません" };
-    }
+ if (special.effectType === "freedom_barrel_roll") {
+  const can = canUseFreedomSpecial(state, specialKey, context);
 
-    addRuleAction(state, 1, context);
-    return { handled: true, redraw: true, message: "バレルロール：回避6消費、行動回数+1" };
+  if (!can.allowed) {
+    return { handled: true, redraw: true, message: can.message };
   }
+
+  if (!consumeRuleEvade(state, 6, context)) {
+    return { handled: true, redraw: true, message: "回避が足りません" };
+  }
+
+  state.freedomBarrelRollUsedThisTurn = Math.max(0, Number(state.freedomBarrelRollUsedThisTurn || 0)) + 1;
+  addRuleAction(state, 1, context);
+
+  return {
+    handled: true,
+    redraw: true,
+    message: `バレルロール：回避6消費、行動回数+1（${state.freedomBarrelRollUsedThisTurn}/2）`
+  };
+ }
 
   if (special.effectType === "freedom_seed_chase") {
     const seed = getSeedEffect(state);
@@ -290,7 +309,7 @@ export function onFreedomTurnEnd(state, context = {}) {
 
   state.shieldActive = false;
   state.freedomHalberdUsedThisTurn = false;
-
+state.freedomBarrelRollUsedThisTurn = 0;
   return { redraw: seedRedraw || shieldRedraw, message: null };
 }
 
