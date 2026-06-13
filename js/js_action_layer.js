@@ -79,41 +79,41 @@ export function createActionLayer(ctx) {
     return null;
   }
 
- function getUnifiedSpecialAttackScope(ownerPlayer, actor) {
-  const ownerUnitKey = getActorUnitKey(ownerPlayer, actor);
+  function getUnifiedSpecialAttackScope(ownerPlayer, actor) {
+    const ownerUnitKey = getActorUnitKey(ownerPlayer, actor);
 
-  const contexts = typeof ctx.getCurrentAttackContexts === "function"
-    ? ctx.getCurrentAttackContexts()
-    : [];
+    const contexts = typeof ctx.getCurrentAttackContexts === "function"
+      ? ctx.getCurrentAttackContexts()
+      : [];
 
-  const matchedContext = Array.isArray(contexts)
-    ? contexts.find(context =>
-        context &&
-        context.ownerPlayer === ownerPlayer &&
-        (
-          context.attacker === actor ||
-          (ownerUnitKey && context.ownerUnitKey === ownerUnitKey)
+    const matchedContext = Array.isArray(contexts)
+      ? contexts.find(context =>
+          context &&
+          context.ownerPlayer === ownerPlayer &&
+          (
+            context.attacker === actor ||
+            (ownerUnitKey && context.ownerUnitKey === ownerUnitKey)
+          )
         )
-      )
-    : null;
+      : null;
 
-  if (!matchedContext?.groupId) return null;
+    if (!matchedContext?.groupId) return null;
 
-  const allAttacks = Array.isArray(ctx.getCurrentAttack?.())
-    ? ctx.getCurrentAttack()
-    : [];
+    const allAttacks = Array.isArray(ctx.getCurrentAttack?.())
+      ? ctx.getCurrentAttack()
+      : [];
 
-  const attacks = allAttacks.filter(attack => attack.groupId === matchedContext.groupId);
+    const attacks = allAttacks.filter(attack => attack.groupId === matchedContext.groupId);
 
-  if (attacks.length <= 0) return null;
+    if (attacks.length <= 0) return null;
 
-  return {
-    ownerUnitKey: matchedContext.ownerUnitKey || ownerUnitKey || null,
-    groupId: matchedContext.groupId,
-    currentAttackContext: matchedContext,
-    currentAttack: attacks
-  };
-}
+    return {
+      ownerUnitKey: matchedContext.ownerUnitKey || ownerUnitKey || null,
+      groupId: matchedContext.groupId,
+      currentAttackContext: matchedContext,
+      currentAttack: attacks
+    };
+  }
 
   function startReservedAction(action) {
     if (!action) return false;
@@ -824,33 +824,16 @@ export function createActionLayer(ctx) {
     const scopedCurrentAttackContext = unifiedScope?.currentAttackContext || ctx.getCurrentAttackContext();
     const scopedOwnerUnitKey = unifiedScope?.ownerUnitKey || getActorUnitKey(ownerPlayer, actor);
 
-    let availability;
+    const specialContextBase = {
+      ownerPlayer,
+      enemyPlayer: ctx.getOpponentPlayer(ownerPlayer),
+      ownerUnitKey: scopedOwnerUnitKey,
+      currentAttackContext: scopedCurrentAttackContext,
+      currentAttack: scopedCurrentAttack,
+      twoVtwoAdapter: ctx.twoVtwoAdapter || null
+    };
 
-    if (ctx.twoVtwoAdapter && ctx.twoVtwoAdapter.isUnifiedOwner(ownerPlayer)) {
-      const totalEvade = ctx.twoVtwoAdapter.getEvade(ownerPlayer, actor);
-      const backup = actor.evade;
-
-      actor.evade = totalEvade;
-
-      availability = executeUnitCanUseSpecial(actor, specialKey, {
-        ownerPlayer,
-        enemyPlayer: ctx.getOpponentPlayer(ownerPlayer),
-        ownerUnitKey: scopedOwnerUnitKey,
-        currentAttackContext: scopedCurrentAttackContext,
-        currentAttack: scopedCurrentAttack,
-        twoVtwoAdapter: ctx.twoVtwoAdapter || null
-      });
-
-      actor.evade = backup;
-    } else {
-      availability = executeUnitCanUseSpecial(actor, specialKey, {
-        ownerPlayer,
-        enemyPlayer: ctx.getOpponentPlayer(ownerPlayer),
-        currentAttackContext: ctx.getCurrentAttackContext(),
-        currentAttack: ctx.getCurrentAttack(),
-        twoVtwoAdapter: ctx.twoVtwoAdapter || null
-      });
-    }
+    const availability = executeUnitCanUseSpecial(actor, specialKey, specialContextBase);
 
     if (availability.allowed === false) {
       ctx.showPopup(availability.message || "このタイミングでは実行できない");
@@ -887,35 +870,12 @@ export function createActionLayer(ctx) {
     const currentAttack = scopedCurrentAttack;
     const currentAttackContext = scopedCurrentAttackContext;
 
-    let unitResult;
-
-    if (ctx.twoVtwoAdapter && ctx.twoVtwoAdapter.isUnifiedOwner(ownerPlayer)) {
-      const totalEvade = ctx.twoVtwoAdapter.getEvade(ownerPlayer, actor);
-      const backup = actor.evade;
-
-      actor.evade = totalEvade;
-
-      unitResult = executeUnitSpecial(actor, specialKey, {
-        ownerPlayer,
-        enemyPlayer: ctx.getOpponentPlayer(ownerPlayer),
-        enemyState: ctx.getPlayerState(ctx.getOpponentPlayer(ownerPlayer)),
-        ownerUnitKey: scopedOwnerUnitKey,
-        currentAttackContext,
-        currentAttack,
-        twoVtwoAdapter: ctx.twoVtwoAdapter || null
-      });
-
-      actor.evade = backup;
-    } else {
-      unitResult = executeUnitSpecial(actor, specialKey, {
-        ownerPlayer,
-        enemyPlayer: ctx.getOpponentPlayer(ownerPlayer),
-        enemyState: ctx.getPlayerState(ctx.getOpponentPlayer(ownerPlayer)),
-        currentAttackContext,
-        currentAttack,
-        twoVtwoAdapter: ctx.twoVtwoAdapter || null
-      });
-    }
+    const unitResult = executeUnitSpecial(actor, specialKey, {
+      ...specialContextBase,
+      enemyState: ctx.getPlayerState(ctx.getOpponentPlayer(ownerPlayer)),
+      currentAttackContext,
+      currentAttack
+    });
 
     if (unitResult.handled) {
       if (unitResult.requestChoice) {
