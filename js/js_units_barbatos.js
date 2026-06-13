@@ -16,9 +16,9 @@ export const barbatos = {
           effect: { type: "attack", attackType: "shoot", damage: 50, count: 1 }
         },
         slot2: {
-          label: "回避 +2",
-          desc: "回避ストック+2",
-          effect: { type: "evade", amount: 2 }
+          label: "回避 +3",
+          desc: "回避ストック+3",
+          effect: { type: "evade", amount: 3 }
         },
         slot3: {
           label: "メイス投擲 80ダメージ",
