@@ -7,7 +7,6 @@ import {
   clearStateEffect,
   normalizeEvadeCapState
 } from "./js_unit_runtime.js";
-
 import { createAttack } from "./js_battle_system.js";
 import { resolveSlotEffect } from "./js_slot_effects.js";
 
@@ -38,9 +37,121 @@ function isIgnoreReduction(attack) {
   return attack?.ignoreReduction === true || attack?.ignoreDefense === true;
 }
 
+function getAdapter(context) {
+  return context?.twoVtwoAdapter || null;
+}
+
+function getOwnerPlayer(context) {
+  return context?.ownerPlayer || null;
+}
+
+function getRuleHp(state, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.getHp && ownerPlayer) {
+    return Math.max(0, Number(adapter.getHp(ownerPlayer, state) || 0));
+  }
+
+  if (adapter?.getUnifiedHp && adapter?.getOwnerTeam && adapter?.isUnifiedOwner?.(ownerPlayer)) {
+    return Math.max(0, Number(adapter.getUnifiedHp(adapter.getOwnerTeam(ownerPlayer)) || 0));
+  }
+
+  return Math.max(0, Number(state?.hp || 0));
+}
+
+function consumeRuleHp(state, amount, context = {}) {
+  const cost = Math.max(0, Number(amount || 0));
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.consumeHp && ownerPlayer) {
+    return adapter.consumeHp(ownerPlayer, state, cost);
+  }
+
+  if (!state || Number(state.hp || 0) < cost) return false;
+  state.hp = Math.max(0, Number(state.hp || 0) - cost);
+  return true;
+}
+
+function getRuleEvade(state, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.getEvade && ownerPlayer) {
+    return Math.max(0, Number(adapter.getEvade(ownerPlayer, state) || 0));
+  }
+
+  return Math.max(0, Number(state?.evade || 0));
+}
+
+function consumeRuleEvade(state, amount, context = {}) {
+  const cost = Math.max(0, Number(amount || 0));
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.consumeEvade && ownerPlayer) {
+    return adapter.consumeEvade(ownerPlayer, state, cost);
+  }
+
+  if (!state || Number(state.evade || 0) < cost) return false;
+  reduceEvade(state, cost);
+  return true;
+}
+
+function addRuleEvade(state, amount, context = {}) {
+  const value = Math.max(0, Number(amount || 0));
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.addTeamEvade && ownerPlayer) {
+    return adapter.addTeamEvade(ownerPlayer, state, value);
+  }
+
+  addRedEvade(state, value);
+  return value;
+}
+
+function getRuleActionCount(state, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.getActionCount && ownerPlayer) {
+    return Math.max(0, Number(adapter.getActionCount(ownerPlayer, state) || 0));
+  }
+
+  return Math.max(0, Number(state?.actionCount || 0));
+}
+
+function consumeRuleAction(state, amount = 1, context = {}) {
+  const cost = Math.max(0, Number(amount || 0));
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.consumeAction && ownerPlayer) {
+    return adapter.consumeAction(ownerPlayer, state, cost);
+  }
+
+  return consumeAction(state, cost);
+}
+
+function addRuleAction(state, amount = 1, context = {}) {
+  const value = Math.max(0, Number(amount || 0));
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.addAction && ownerPlayer) {
+    return adapter.addAction(ownerPlayer, state, value);
+  }
+
+  state.actionCount = Math.max(0, Number(state.actionCount || 0)) + value;
+  return value;
+}
+
 function makeContextId(context = {}) {
   const ctxAtk = context.currentAttackContext;
   if (ctxAtk?.reservedActionId) return `reserved:${ctxAtk.reservedActionId}`;
+
   return [
     ctxAtk?.ownerPlayer || context.attackerPlayer || "",
     ctxAtk?.enemyPlayer || context.defenderPlayer || "",
@@ -53,6 +164,7 @@ function makeContextId(context = {}) {
 function pushReservedAction(state, action) {
   if (!state) return;
   if (!Array.isArray(state.pendingReservedActions)) state.pendingReservedActions = [];
+
   state.pendingReservedActions.push({
     id: action.id || `barbatos_reserved_${Date.now()}_${Math.random()}`,
     delay: Number(action.delay || 0),
@@ -67,8 +179,8 @@ function pushReservedAction(state, action) {
   });
 }
 
-function hpHalfCost(state) {
-  return Math.floor(Number(state.hp || 0) / 2);
+function hpHalfCost(state, context = {}) {
+  return Math.floor(getRuleHp(state, context) / 2);
 }
 
 function consumeAction(state, amount = 1) {
@@ -90,8 +202,10 @@ function addRedEvade(state, amount) {
 
 function getSlotAttackTemplate(slotKey, slot, result) {
   const attacks = Array.isArray(result?.attacks) ? result.attacks : [];
+
   if (attacks.length > 0) {
     const first = attacks[0];
+
     return {
       damage: Number(first.damage || 0),
       type: getAttackType(first) || slot?.effect?.attackType || "melee",
@@ -106,6 +220,7 @@ function getSlotAttackTemplate(slotKey, slot, result) {
 
 function buildComboAttackFromTemplate(template) {
   if (!template) return null;
+
   return {
     damage: Number(template.damage || 0),
     type: template.type || "melee",
@@ -151,37 +266,39 @@ export function getBarbatosDerivedState(state) {
 
 export function canUseBarbatosSpecial(state, specialKey, context = {}) {
   ensureBarbatosState(state);
+
   const special = state.specials?.[specialKey];
   if (!special) return { allowed: false, message: "特殊行動データが見つからない" };
 
   if (special.effectType === "barbatos_alaya_orbit") {
-    return {
-      allowed: Number(state.hp || 0) > 5,
-      message: Number(state.hp || 0) > 5 ? null : "HP5以下では使用できない"
-    };
+    const hp = getRuleHp(state, context);
+    return { allowed: hp > 5, message: hp > 5 ? null : "HP5以下では使用できない" };
   }
 
   if (special.effectType === "barbatos_alaya_cost") {
-    return {
-      allowed: Number(state.hp || 0) > 50,
-      message: Number(state.hp || 0) > 50 ? null : "HPが足りない"
-    };
+    const hp = getRuleHp(state, context);
+    return { allowed: hp > 50, message: hp > 50 ? null : "HPが足りない" };
   }
 
   if (special.effectType === "barbatos_form6") {
-    return {
-      allowed: Number(state.actionCount || 0) >= 1,
-      message: Number(state.actionCount || 0) >= 1 ? null : "行動権が足りない"
-    };
+    const actions = getRuleActionCount(state, context);
+    return { allowed: actions >= 1, message: actions >= 1 ? null : "行動権が足りない" };
   }
 
   if (special.effectType === "barbatos_combo") {
     if (Number(state.barbatosComboCountThisTurn || 0) >= 4) {
       return { allowed: false, message: "阿頼耶識軌道・連撃は1ターン4回まで" };
     }
-    if (Number(state.evade || 0) < 1) return { allowed: false, message: "回避が足りない" };
+
+    if (getRuleEvade(state, context) < 1) {
+      return { allowed: false, message: "回避が足りない" };
+    }
+
     const currentAttack = context.currentAttack || [];
-    if (Array.isArray(currentAttack) && currentAttack.length > 0) return { allowed: true, message: null };
+    if (Array.isArray(currentAttack) && currentAttack.length > 0) {
+      return { allowed: true, message: null };
+    }
+
     return {
       allowed: !!state.barbatosLastComboAttack,
       message: state.barbatosLastComboAttack ? null : "追撃対象の攻撃がない"
@@ -189,17 +306,18 @@ export function canUseBarbatosSpecial(state, specialKey, context = {}) {
   }
 
   if (special.effectType === "barbatos_decisive") {
+    const hp = getRuleHp(state, context);
+    const maxHp = Math.max(0, Number(state.maxHp || hp || 0));
+
     return {
-      allowed: state.formId === "form6" && Number(state.hp || 0) <= Math.floor(Number(state.maxHp || 0) / 2),
+      allowed: state.formId === "form6" && hp <= Math.floor(maxHp / 2),
       message: "HP半分以下で使用可能"
     };
   }
 
   if (special.effectType === "barbatos_full_open") {
-    return {
-      allowed: Number(state.evade || 0) >= 3,
-      message: Number(state.evade || 0) >= 3 ? null : "回避が足りない"
-    };
+    const ev = getRuleEvade(state, context);
+    return { allowed: ev >= 3, message: ev >= 3 ? null : "回避が足りない" };
   }
 
   return { allowed: true, message: null };
@@ -207,19 +325,35 @@ export function canUseBarbatosSpecial(state, specialKey, context = {}) {
 
 export function executeBarbatosSpecial(state, specialKey, context = {}) {
   ensureBarbatosState(state);
+
   const special = state.specials?.[specialKey];
   if (!special) return { handled: true, redraw: false, message: "特殊行動データが見つからない" };
 
   if (special.effectType === "barbatos_alaya_orbit") {
-    if (Number(state.hp || 0) <= 5) return { handled: true, redraw: false, message: "HP5以下では使用できない" };
-    const cost = hpHalfCost(state);
-    state.hp -= cost;
-    addRedEvade(state, 2);
-    return { handled: true, redraw: true, message: `阿頼耶識軌道：HP${cost}消費、回避+2` };
+    if (getRuleHp(state, context) <= 5) {
+      return { handled: true, redraw: false, message: "HP5以下では使用できない" };
+    }
+
+    const cost = hpHalfCost(state, context);
+
+    if (!consumeRuleHp(state, cost, context)) {
+      return { handled: true, redraw: false, message: "HPが足りない" };
+    }
+
+    addRuleEvade(state, 2, context);
+
+    return {
+      handled: true,
+      redraw: true,
+      message: `阿頼耶識軌道：HP${cost}消費、回避+2`
+    };
   }
 
   if (special.effectType === "barbatos_alaya_cost") {
-    if (Number(state.hp || 0) <= 50) return { handled: true, redraw: false, message: "HPが足りない" };
+    if (getRuleHp(state, context) <= 50) {
+      return { handled: true, redraw: false, message: "HPが足りない" };
+    }
+
     return {
       handled: true,
       requestChoice: {
@@ -227,31 +361,52 @@ export function executeBarbatosSpecial(state, specialKey, context = {}) {
         source: "barbatos_alaya_cost",
         ownerPlayer: context.ownerPlayer,
         enemyPlayer: context.enemyPlayer,
+        ownerUnitKey: context.ownerUnitKey || null,
         title: "阿頼耶識軌道・代償：スロット選択",
-        choices: [1, 2, 3, 4, 5, 6].map(n => ({ label: String(n), value: `slot${n}` }))
+        choices: [1, 2, 3, 4, 5, 6].map(n => ({
+          label: String(n),
+          value: `slot${n}`
+        }))
       }
     };
   }
 
   if (special.effectType === "barbatos_form6") {
-    if (!consumeAction(state, 1)) return { handled: true, redraw: false, message: "行動権が足りない" };
+    if (!consumeRuleAction(state, 1, context)) {
+      return { handled: true, redraw: false, message: "行動権が足りない" };
+    }
+
     setForm(state, "form6", { preserveHp: true, preserveEvade: true });
     state.barbatosExtraArmorCount = 3;
-    return { handled: true, redraw: true, message: "第6形態へ換装" };
+
+    return {
+      handled: true,
+      redraw: true,
+      message: "第6形態へ換装"
+    };
   }
 
   if (special.effectType === "barbatos_combo") {
-    if (Number(state.evade || 0) < 1) return { handled: true, redraw: false, message: "回避が足りない" };
+    if (Number(state.barbatosComboCountThisTurn || 0) >= 4) {
+      return { handled: true, redraw: false, message: "阿頼耶識軌道・連撃は1ターン4回まで" };
+    }
+
+    if (getRuleEvade(state, context) < 1) {
+      return { handled: true, redraw: false, message: "回避が足りない" };
+    }
 
     const currentAttack = context.currentAttack || [];
     let template = null;
 
     if (Array.isArray(currentAttack) && currentAttack.length > 0) {
       const base = currentAttack[0];
+
       template = {
-        damage: base?.source === "メイスギミック打突" || context.currentAttackContext?.slotKey === "slot6" && state.barbatosMaceExReady
-          ? 40
-          : Number(base?.damage || 0),
+        damage:
+          base?.source === "メイスギミック打突" ||
+          (context.currentAttackContext?.slotKey === "slot6" && state.barbatosMaceExReady)
+            ? 40
+            : Number(base?.damage || 0),
         type: getAttackType(base) || "melee",
         beam: !!base?.beam,
         ignoreReduction: !!base?.ignoreReduction,
@@ -262,10 +417,17 @@ export function executeBarbatosSpecial(state, specialKey, context = {}) {
     }
 
     const attack = buildComboAttackFromTemplate(template);
-    if (!attack) return { handled: true, redraw: false, message: "追撃対象の攻撃がない" };
 
-    reduceEvade(state, 1);
+    if (!attack) {
+      return { handled: true, redraw: false, message: "追撃対象の攻撃がない" };
+    }
+
+    if (!consumeRuleEvade(state, 1, context)) {
+      return { handled: true, redraw: false, message: "回避が足りない" };
+    }
+
     state.barbatosComboCountThisTurn += 1;
+
     return {
       handled: true,
       redraw: true,
@@ -275,28 +437,60 @@ export function executeBarbatosSpecial(state, specialKey, context = {}) {
   }
 
   if (special.effectType === "barbatos_decisive") {
-    if (state.formId !== "form6") return { handled: true, redraw: false, message: "第6形態のみ使用可能" };
-    if (Number(state.hp || 0) > Math.floor(Number(state.maxHp || 0) / 2)) {
+    if (state.formId !== "form6") {
+      return { handled: true, redraw: false, message: "第6形態のみ使用可能" };
+    }
+
+    const hp = getRuleHp(state, context);
+    const maxHp = Math.max(0, Number(state.maxHp || hp || 0));
+
+    if (hp > Math.floor(maxHp / 2)) {
       return { handled: true, redraw: false, message: "HP半分以下で使用可能" };
     }
+
     state.barbatosExtraArmorCount = 0;
     setForm(state, "decisive", { preserveHp: true, preserveEvade: true });
-    return { handled: true, redraw: true, message: "決戦形態へ移行" };
+
+    return {
+      handled: true,
+      redraw: true,
+      message: "決戦形態へ移行"
+    };
   }
 
   if (special.effectType === "barbatos_full_open") {
-    if (state.formId !== "decisive") return { handled: true, redraw: false, message: "決戦形態のみ使用可能" };
+    if (state.formId !== "decisive") {
+      return { handled: true, redraw: false, message: "決戦形態のみ使用可能" };
+    }
+
     const enemy = getOpponentState(context);
-    if (Number(state.evade || 0) >= 6 && enemy) {
-      state.evade = 0;
+    const ev = getRuleEvade(state, context);
+
+    if (ev >= 6 && enemy) {
+      consumeRuleEvade(state, ev, context);
       enemy.evade = 0;
-      return { handled: true, redraw: true, message: "阿頼耶識軌道・全開：全回避消費、相手回避0" };
+
+      return {
+        handled: true,
+        redraw: true,
+        message: "阿頼耶識軌道・全開：全回避消費、相手回避0"
+      };
     }
-    if (Number(state.evade || 0) >= 3) {
-      reduceEvade(state, 3);
-      state.actionCount = Number(state.actionCount || 0) + 1;
-      return { handled: true, redraw: true, message: "阿頼耶識軌道・全開：回避3消費、行動権+1" };
+
+    if (ev >= 3) {
+      if (!consumeRuleEvade(state, 3, context)) {
+        return { handled: true, redraw: false, message: "回避が足りない" };
+      }
+
+      addRuleAction(state, 1, context);
+
+      return {
+        handled: true,
+        redraw: true,
+        message: "阿頼耶識軌道・全開：回避3消費、行動権+1"
+      };
     }
+
     return { handled: true, redraw: false, message: "回避が足りない" };
   }
 
@@ -312,7 +506,12 @@ export function onBarbatosBeforeSlot(state, rolledSlotNumber, context = {}) {
     }
 
     state.barbatosSkipNextTurn = false;
-    return { redraw: true, cancelSlot: true, message: `${state.name} は行動不能` };
+
+    return {
+      redraw: true,
+      cancelSlot: true,
+      message: `${state.name} は行動不能`
+    };
   }
 
   return { redraw: false, message: null };
@@ -323,17 +522,32 @@ export function onBarbatosEnemyBeforeSlot(state, rolledSlotNumber, context = {})
 
   const enemy = context.enemyState;
   const enemySlot = enemy?.slots?.[context.enemyRolledSlotKey];
-  const kind = enemySlot ? resolveSlotEffect({ slot: enemySlot, actor: enemy, ownerPlayer: context.enemyPlayer }).kind : null;
+  const kind = enemySlot
+    ? resolveSlotEffect({
+        slot: enemySlot,
+        actor: enemy,
+        ownerPlayer: context.enemyPlayer,
+        twoVtwoAdapter: context.twoVtwoAdapter || null
+      }).kind
+    : null;
 
   if (state.barbatosIaidoStock > 0) {
     if (kind === "attack") {
       state.barbatosIaidoPendingNegate = true;
-      return { redraw: true, message: `居合待機：相手攻撃を捕捉（${state.barbatosIaidoStock}）` };
+
+      return {
+        redraw: true,
+        message: `居合待機：相手攻撃を捕捉（${state.barbatosIaidoStock}）`
+      };
     }
 
     state.barbatosIaidoStock = 0;
     state.barbatosIaidoPendingNegate = false;
-    return { redraw: true, message: "居合不発：相手スロット行動が攻撃ではなかった" };
+
+    return {
+      redraw: true,
+      message: "居合不発：相手スロット行動が攻撃ではなかった"
+    };
   }
 
   const shootingDisabled = getStateEffect(state, "barbatos_shoot_disabled");
@@ -341,9 +555,11 @@ export function onBarbatosEnemyBeforeSlot(state, rolledSlotNumber, context = {})
 
   if (kind === "attack" && enemySlot?.effect && !enemySlot.effect.ignoreReduction) {
     const type = enemySlot.effect.attackType;
+
     if (type === "shoot" && shootingDisabled) {
       return { redraw: false, message: "射撃武器損傷：射撃攻撃無効" };
     }
+
     if (type === "melee" && meleeDisabled) {
       return { redraw: false, message: "格闘武器損傷：格闘攻撃無効" };
     }
@@ -365,7 +581,11 @@ export function onBarbatosAfterSlotResolved(state, slotNumber, payload = {}) {
 
   if (customEffectId === "barbatos_iai") {
     state.barbatosIaidoStock += 1;
-    return { redraw: true, message: `居合待ち状態：${state.barbatosIaidoStock}` };
+
+    return {
+      redraw: true,
+      message: `居合待ち状態：${state.barbatosIaidoStock}`
+    };
   }
 
   if (customEffectId === "barbatos_parts_capture") {
@@ -382,40 +602,59 @@ export function onBarbatosAfterSlotResolved(state, slotNumber, payload = {}) {
         source: "パーツ鹵獲",
         disabledAttackType: "shoot"
       });
-      return { redraw: true, message: "パーツ鹵獲：相手の射撃武器を2ターン無効化" };
+
+      return {
+        redraw: true,
+        message: "パーツ鹵獲：相手の射撃武器を2ターン無効化"
+      };
     }
 
     if (type === "melee" && enemy) {
       heal(state, 50);
+
       return {
         redraw: true,
         message: "パーツ鹵獲：HP50回復、格闘反撃",
-        appendAttacks: createAttack(50, 1, { type: "melee", source: "パーツ鹵獲" })
+        appendAttacks: createAttack(50, 1, {
+          type: "melee",
+          source: "パーツ鹵獲"
+        })
       };
     }
   }
 
   if (customEffectId === "barbatos_pierce") {
     const enemy = payload.enemyState;
+
     if (Number(enemy?.evade || 0) <= 0) {
       return {
         redraw: false,
-        appendAttacks: createAttack(240, 1, { type: "melee", ignoreReduction: true, source: "太刀〈刺突〉" })
+        appendAttacks: createAttack(240, 1, {
+          type: "melee",
+          ignoreReduction: true,
+          source: "太刀〈刺突〉"
+        })
       };
     }
+
     return {
       redraw: false,
-      appendAttacks: createAttack(120, 1, { type: "melee", source: "太刀〈刺突〉" })
+      appendAttacks: createAttack(120, 1, {
+        type: "melee",
+        source: "太刀〈刺突〉"
+      })
     };
   }
 
   if (resolveResult.kind === "attack") {
     const template = getSlotAttackTemplate(`slot${slotNumber}`, slot, resolveResult);
+
     if (template) {
       if (state.barbatosMaceExReady && slotNumber === 6) {
         template.damage = 40;
         template.source = "メイスギミック打突";
       }
+
       state.barbatosLastComboAttack = template;
     }
   }
@@ -448,7 +687,10 @@ export function onBarbatosActionResolved(attacker, defender, context = {}) {
     messages.push("太刀〈腕落とし〉命中：次の相手格闘攻撃で格闘武器損傷");
   }
 
-  return { redraw: messages.length > 0, message: messages.join(" / ") || null };
+  return {
+    redraw: messages.length > 0,
+    message: messages.join(" / ") || null
+  };
 }
 
 export function onBarbatosDamaged(defender, attacker, context = {}) {
@@ -467,6 +709,7 @@ export function modifyBarbatosTakenDamage(defender, attacker, attack, damage, co
 
     if (!defender.barbatosIaidoNegateContextId) {
       defender.barbatosIaidoNegateContextId = contextId;
+
       const count = Math.max(1, Number(defender.barbatosIaidoStock || 0));
       defender.barbatosIaidoStock = 0;
       defender.barbatosIaidoPendingNegate = false;
@@ -478,19 +721,31 @@ export function modifyBarbatosTakenDamage(defender, attacker, attack, damage, co
         enemyPlayer: context.attackerPlayer,
         type: "attack",
         label: `居合反撃 ${count}回`,
-        attacks: createAttack(70, count, { type: "melee", source: "居合" })
+        attacks: createAttack(70, count, {
+          type: "melee",
+          source: "居合"
+        })
       });
     }
 
     if (defender.barbatosIaidoNegateContextId === contextId) {
-      return { damage: 0, cancelled: true, message: "居合：攻撃無効" };
+      return {
+        damage: 0,
+        cancelled: true,
+        message: "居合：攻撃無効"
+      };
     }
   }
 
   if (defender.formId === "form6" && defender.barbatosExtraArmorCount > 0 && !isIgnoreReduction(attack)) {
     defender.barbatosExtraArmorCount -= 1;
     defender.barbatosExtraArmorActive = true;
-    return { damage: 0, cancelled: true, message: `ナノラミネート追加装甲：攻撃ターン無効（残り${defender.barbatosExtraArmorCount}）` };
+
+    return {
+      damage: 0,
+      cancelled: true,
+      message: `ナノラミネート追加装甲：攻撃ターン無効（残り${defender.barbatosExtraArmorCount}）`
+    };
   }
 
   if (defender.formId === "decisive") {
@@ -503,7 +758,10 @@ export function modifyBarbatosTakenDamage(defender, attacker, attack, damage, co
     messages.push("ナノラミネート装甲：ビーム半減");
   }
 
-  return { damage: finalDamage, message: messages.join(" / ") || null };
+  return {
+    damage: finalDamage,
+    message: messages.join(" / ") || null
+  };
 }
 
 export function modifyBarbatosEvadeAttempt(defender, attacker, attack, context = {}) {
@@ -513,9 +771,11 @@ export function modifyBarbatosEvadeAttempt(defender, attacker, attack, context =
 
 export function onBarbatosTurnEnd(state) {
   ensureBarbatosState(state);
+
   state.barbatosIaidoNegateContextId = "";
   state.barbatosExtraArmorActive = false;
   state.barbatosComboCountThisTurn = 0;
+
   return { redraw: false, message: null };
 }
 
@@ -524,10 +784,19 @@ export function onBarbatosResolveChoice(state, pendingChoice, selectedValue, con
 
   if (pendingChoice.source === "barbatos_alaya_cost") {
     const slotKey = selectedValue;
-    if (!state.slots?.[slotKey]) return { handled: true, redraw: false, message: "スロットが見つからない" };
-    if (Number(state.hp || 0) <= 50) return { handled: true, redraw: false, message: "HPが足りない" };
 
-    state.hp -= 50;
+    if (!state.slots?.[slotKey]) {
+      return { handled: true, redraw: false, message: "スロットが見つからない" };
+    }
+
+    if (getRuleHp(state, context) <= 50) {
+      return { handled: true, redraw: false, message: "HPが足りない" };
+    }
+
+    if (!consumeRuleHp(state, 50, context)) {
+      return { handled: true, redraw: false, message: "HPが足りない" };
+    }
+
     state.barbatosSkipNextTurn = true;
     state.barbatosAlayaCostResolving = true;
 
@@ -537,7 +806,8 @@ export function onBarbatosResolveChoice(state, pendingChoice, selectedValue, con
       message: "阿頼耶識軌道・代償：HP50消費、次ターン行動不能",
       startSlotAction: {
         slotKey,
-        slotData: state.slots[slotKey]
+        slotData: state.slots[slotKey],
+        ownerUnitKey: context.ownerUnitKey || pendingChoice.ownerUnitKey || null
       }
     };
   }
