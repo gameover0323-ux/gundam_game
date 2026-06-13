@@ -195,11 +195,7 @@ function heal(state, amount) {
 
 function addRedEvade(state, amount) {
   addEvade(state, amount);
-  state.overEvadeMode = true;
-  state.overEvadeCap = Math.max(Number(state.overEvadeCap || 0), Number(state.evade || 0));
-  normalizeEvadeCapState(state);
 }
-
 function getSlotAttackTemplate(slotKey, slot, result) {
   const attacks = Array.isArray(result?.attacks) ? result.attacks : [];
 
