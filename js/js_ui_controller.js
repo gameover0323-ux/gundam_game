@@ -37,8 +37,14 @@ function renderAttackLogText(message, options = {}) {
   const attackLog = document.getElementById("attackLog");
   attackLog.innerHTML = "";
 
-  const hasMessage = message !== null && message !== undefined && String(message) !== "";
-  const showCurrentAction = options.showCurrentAction !== false && hasMessage;
+  const hasMessage =
+    message !== null &&
+    message !== undefined &&
+    String(message) !== "";
+
+  const showCurrentAction =
+    options.showCurrentAction !== false &&
+    hasMessage;
 
   if (ctx.getBattleNotice()) {
     attackLog.innerHTML += `
@@ -63,7 +69,6 @@ ${ctx.getCurrentActionLabel()}
 ${hasMessage ? message : getTurnStatusText()}
 `;
 }
-
   function renderPendingChoice() {
     const pendingChoice = ctx.getPendingChoice();
     if (!pendingChoice) return;
