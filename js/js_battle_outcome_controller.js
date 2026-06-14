@@ -3,19 +3,30 @@ export function createBattleOutcomeController(ctx) {
     return !unit || unit.hp <= 0;
   }
 
-  function isSideDefeated(playerKey) {
-    if (ctx.isTeamBattleMode()) {
-      const team = ctx.getTeam(playerKey);
-      if (!team) return true;
+ function isSideDefeated(playerKey) {
+  if (ctx.isTeamBattleMode()) {
+    const team = ctx.getTeam(playerKey);
+    if (!team) return true;
 
-      const unit1Dead = isUnitDefeated(team.unit1);
-      const unit2Dead = team.unit2 ? isUnitDefeated(team.unit2) : true;
+    if (team.mode === "unified") {
+      const unified = team.unified || {};
+      const unifiedHp =
+        Math.max(0, Number(unified.baseHpA || 0)) +
+        Math.max(0, Number(unified.baseHpB || 0)) +
+        Math.max(0, Number(unified.healA || 0)) +
+        Math.max(0, Number(unified.healB || 0)) -
+        Math.max(0, Number(unified.totalDamage || 0));
 
-      return unit1Dead && unit2Dead;
+      return unifiedHp <= 0;
     }
 
-    return isUnitDefeated(ctx.getPlayerStateRaw(playerKey));
+    const unit1Dead = isUnitDefeated(team.unit1);
+    const unit2Dead = team.unit2 ? isUnitDefeated(team.unit2) : true;
+    return unit1Dead && unit2Dead;
   }
+
+  return isUnitDefeated(ctx.getPlayerStateRaw(playerKey));
+ }
 
   function finishBattle(winnerPlayer) {
     ctx.recordBattleResultIfNeeded(winnerPlayer).catch(error => {
