@@ -101,11 +101,11 @@ export const z_gundam = {
 
       slots: {
         slot1: {
-          label: "回避 +2",
-          desc: "回避ストック+2",
+          label: "回避 +3",
+          desc: "回避ストック+3",
           effect: {
             type: "evade",
-            amount: 2
+            amount: 3
           }
         },
         slot2: {
@@ -120,11 +120,11 @@ export const z_gundam = {
           }
         },
         slot3: {
-          label: "回避 +2",
-          desc: "回避ストック+2",
+          label: "回避 +3",
+          desc: "回避ストック+3",
           effect: {
             type: "evade",
-            amount: 2
+            amount: 3
           }
         },
         slot4: {
