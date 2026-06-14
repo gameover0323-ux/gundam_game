@@ -321,6 +321,8 @@ if (Number(attacker.pendingActionPenalty || 0) > 0) {
 
   ctx.redrawBattleBoards();
 
+ctx.clearCurrentAction();
+
 if (turnEndResult.message) {
   ctx.renderAttackLogText(turnEndResult.message, { showCurrentAction: false });
 } else {
