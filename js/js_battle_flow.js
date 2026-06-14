@@ -319,15 +319,12 @@ if (Number(attacker.pendingActionPenalty || 0) > 0) {
     resetActionCount(nextActor);
   }
 
+  const attackLog = document.getElementById("attackLog");
+  if (attackLog) {
+    attackLog.textContent = turnEndResult.message || "バトル開始待機中";
+  }
+
   ctx.redrawBattleBoards();
-
-ctx.clearCurrentAction();
-
-if (turnEndResult.message) {
-  ctx.renderAttackLogText(turnEndResult.message, { showCurrentAction: false });
-} else {
-  ctx.renderAttackLogText("", { showCurrentAction: false });
-}
 
   if (turnEndResult.requestChoice) {
     ctx.handleChoiceRequest(turnEndResult.requestChoice);
