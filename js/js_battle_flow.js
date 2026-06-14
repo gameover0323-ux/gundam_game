@@ -322,9 +322,9 @@ if (Number(attacker.pendingActionPenalty || 0) > 0) {
   ctx.redrawBattleBoards();
 
 if (turnEndResult.message) {
-  ctx.renderAttackLogText(turnEndResult.message);
+  ctx.renderAttackLogText(turnEndResult.message, { showCurrentAction: false });
 } else {
-  ctx.renderAttackLogText("");
+  ctx.renderAttackLogText("", { showCurrentAction: false });
 }
 
   if (turnEndResult.requestChoice) {
