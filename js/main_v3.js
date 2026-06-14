@@ -119,6 +119,7 @@ import { create2v2Core } from "./js_2on2_core.js";
 import { create2v2Helpers } from "./js_2on2_helpers.js";
 import { create2v2Actions } from "./js_2on2_actions.js";
 import { create2v2Adapter } from "./js_2on2_adapter.js";
+import { create2v2TauntController } from "./js_2on2_taunt_controller.js";
 import { createBattleFlow } from "./js_battle_flow.js";
 
 import { createAttackResolution } from "./js_attack_resolution.js";
@@ -224,6 +225,7 @@ let attackResolution = null;
 let twoVtwoHelpers = null;
 let twoVtwoActions = null;
 let twoVtwoAdapter = null;
+let twoVtwoTauntController = null;
 
 let uiController = null;
 
@@ -450,6 +452,11 @@ function toggleTeamMode(playerKey) {
     return;
   }
 
+  if (team.modeChangeLockedThisTurn) {
+    showPopup("スロット行動後はこのターン中、型を切り替えられません");
+    return;
+  }
+
   if (team.mode === "unified") {
     twoVtwoHelpers.exitUnified(team);
   } else {
@@ -466,6 +473,19 @@ function createTeam(unit1, unit2) {
     mode: "split",
     activeUnitKey: "unit1",
     focusUnitKey: "unit1",
+    modeChangeLockedThisTurn: false,
+    tauntState: {
+      tauntTargetPlayer: null,
+      tauntTargetUnitKey: null,
+      tauntOwnerPlayer: null,
+      tauntTurns: 0,
+      duelActive: false,
+      duelAUnitKey: null,
+      duelBUnitKey: null,
+      duelTurns: 0,
+      cooldown: 0,
+      disabledThisTurn: false
+    },
     unified: {
       baseHpA: 0,
       baseHpB: 0,
@@ -685,6 +705,24 @@ function build2v2RenderHandlers(playerKey) {
     currentPlayer,
     playerKey,
     canChangeFocus: isBossSide ? false : canChangeFocus(playerKey),
+
+    canUseTauntSystem: () =>
+      twoVtwoTauntController ? twoVtwoTauntController.canUse(playerKey) : false,
+
+    getTauntButtonLabel: () =>
+      twoVtwoTauntController ? twoVtwoTauntController.getButtonLabel(playerKey) : "挑発",
+
+    isTauntTarget: (unitKey) =>
+      twoVtwoTauntController ? twoVtwoTauntController.isTauntTarget(playerKey, unitKey) : false,
+
+    isDuelTarget: (unitKey) =>
+      twoVtwoTauntController ? twoVtwoTauntController.isDuelTarget(playerKey, unitKey) : false,
+
+    onTauntSystemButton: () => {
+      if (twoVtwoTauntController) {
+        twoVtwoTauntController.handleButton(playerKey);
+      }
+    },
 
     onToggleTeamMode: () => {
       if (currentPlayer !== playerKey) {
@@ -1181,6 +1219,16 @@ twoVtwoAdapter = create2v2Adapter({
   consumeUnifiedEvade,
   zeroUnifiedEvade
 });
+
+twoVtwoTauntController = create2v2TauntController({
+  getCurrentPlayer: () => currentPlayer,
+  getOpponentPlayer,
+  getTeam,
+  hasPendingChoice: () => !!pendingChoice,
+  hasCurrentAttack: () => currentAttack.length > 0,
+  showPopup,
+  redrawBattleBoards
+});
 onlineSpectatorController = createOnlineSpectatorController({
   getBattleMode: () => battleMode,
   setBattleMode: value => {
@@ -1390,8 +1438,9 @@ attackResolution = createAttackResolution({
 
   getCurrentAttack: () => currentAttack,
   getCurrentAttackContext: () => currentAttackContext,
-  getCurrentAttackContexts: () => currentAttackContexts,
+ getCurrentAttackContexts: () => currentAttackContexts,
   twoVtwoAdapter,
+  twoVtwoTauntSystem: twoVtwoTauntController,
 
   setCurrentAttack: (v) => currentAttack = v,
   setCurrentAttackContext: (v) => currentAttackContext = v,
@@ -1583,6 +1632,7 @@ battleFlow = createBattleFlow({
   setCurrentPlayer: (value) => { currentPlayer = value; },
 
   twoVtwoAdapter,
+  twoVtwoTauntSystem: twoVtwoTauntController,
 
   getCurrentTurn: () => currentTurn,
   setCurrentTurn: (value) => { currentTurn = value; },
