@@ -130,6 +130,22 @@ function setRuleActionAtLeast(state, amount, context) {
   return addRuleAction(state, amount - current, context);
 }
 
+function setRuleBaseActionCount(state, amount, context = {}) {
+  const next = Math.max(1, Math.floor(Number(amount || 1)));
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.isUnifiedOwner?.(ownerPlayer) && adapter?.getOwnerTeam && adapter?.ensureUnifiedActionState) {
+    const team = adapter.getOwnerTeam(ownerPlayer);
+    adapter.ensureUnifiedActionState(team);
+    team.unifiedBaseActionCount = next;
+    return true;
+  }
+
+  if (state) state.baseActionCount = next;
+  return true;
+}
+
 function canPayRuleHp(state, amount, context) {
   const adapter = getAdapter(context);
   const ownerPlayer = getOwnerPlayer(context);
@@ -203,6 +219,7 @@ function hasSupportFirePending(state) {
     action.id && String(action.id).startsWith("jegan_ewac_support_")
   );
 }
+
 export function getJeganDerivedState(state) {
   ensureJeganState(state);
 
@@ -446,7 +463,7 @@ export function executeJeganSpecial(state, specialKey, context = {}) {
       }
 
       state.jeganLimiterTurns = 3;
-      state.baseActionCount = 2;
+      setRuleBaseActionCount(state, 2, context);
       setRuleActionAtLeast(state, 2, context);
 
       return {
@@ -810,14 +827,14 @@ export function onJeganTurnEnd(state, context = {}) {
 
   if (state.jeganLimiterRestTurns > 0) {
     state.jeganLimiterRestTurns -= 1;
-    state.baseActionCount = 1;
+    setRuleBaseActionCount(state, 1, context);
     messages.push("リミッター反動終了");
   } else if (state.jeganLimiterTurns > 0) {
     state.jeganLimiterTurns -= 1;
-    state.baseActionCount = 2;
+    setRuleBaseActionCount(state, 2, context);
 
     if (state.jeganLimiterTurns <= 0) {
-      state.baseActionCount = 1;
+      setRuleBaseActionCount(state, 1, context);
       state.jeganLimiterRestTurns = 1;
       messages.push("リミッター解除終了：次の自機ターンは休み");
     }
