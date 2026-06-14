@@ -18,82 +18,83 @@ export function createBattleFlow(ctx) {
   }
 
   function canConsumeAction(state, amount = 1) {
-  if (!state) return false;
-  ensureActionState(state);
+    if (!state) return false;
+    ensureActionState(state);
 
-  if (
-    ctx.twoVtwoAdapter &&
-    ctx.isTeamBattleMode &&
-    ctx.isTeamBattleMode()
-  ) {
-    const ownerPlayer = ctx.getCurrentPlayer();
-    return ctx.twoVtwoAdapter.canConsumeAction(ownerPlayer, state, amount);
-  }
+    if (
+      ctx.twoVtwoAdapter &&
+      ctx.isTeamBattleMode &&
+      ctx.isTeamBattleMode()
+    ) {
+      const ownerPlayer = ctx.getCurrentPlayer();
+      return ctx.twoVtwoAdapter.canConsumeAction(ownerPlayer, state, amount);
+    }
 
-  return state.actionCount >= amount;
+    return state.actionCount >= amount;
   }
 
   function consumeActionCount(state, amount = 1) {
-  if (!state) return;
-  ensureActionState(state);
+    if (!state) return;
+    ensureActionState(state);
 
-  if (ctx.getIsTestMode()) {
-    return;
-  }
+    if (ctx.getIsTestMode()) {
+      return;
+    }
 
-  if (
-    ctx.twoVtwoAdapter &&
-    ctx.isTeamBattleMode &&
-    ctx.isTeamBattleMode()
-  ) {
-    const ownerPlayer = ctx.getCurrentPlayer();
-    ctx.twoVtwoAdapter.consumeAction(ownerPlayer, state, amount);
-    return;
-  }
+    if (
+      ctx.twoVtwoAdapter &&
+      ctx.isTeamBattleMode &&
+      ctx.isTeamBattleMode()
+    ) {
+      const ownerPlayer = ctx.getCurrentPlayer();
+      ctx.twoVtwoAdapter.consumeAction(ownerPlayer, state, amount);
+      return;
+    }
 
-  state.actionCount = Math.max(0, state.actionCount - amount);
+    state.actionCount = Math.max(0, state.actionCount - amount);
   }
 
   function clampEvadeToMax(state) {
-  if (!state || typeof state.evadeMax !== "number") return;
+    if (!state || typeof state.evadeMax !== "number") return;
 
-  const baseMax = state.evadeMax;
-  const absoluteMax = typeof state.overEvadeAbsoluteMax === "number"
-    ? state.overEvadeAbsoluteMax
-    : 50;
+    const baseMax = state.evadeMax;
+    const absoluteMax = typeof state.overEvadeAbsoluteMax === "number"
+      ? state.overEvadeAbsoluteMax
+      : 50;
 
-  let clampMax = baseMax;
+    let clampMax = baseMax;
 
-  if (state.overEvadeMode) {
-    const redCap = typeof state.overEvadeCap === "number"
-      ? state.overEvadeCap
-      : baseMax;
+    if (state.overEvadeMode) {
+      const redCap = typeof state.overEvadeCap === "number"
+        ? state.overEvadeCap
+        : baseMax;
 
-    clampMax = Math.min(Math.max(baseMax, redCap), absoluteMax);
+      clampMax = Math.min(Math.max(baseMax, redCap), absoluteMax);
+    }
+
+    if (state.evade > clampMax) {
+      state.evade = clampMax;
+    }
+
+    if (state.evade < 0) {
+      state.evade = 0;
+    }
+
+    if (state.evade <= baseMax) {
+      state.overEvadeMode = false;
+      state.overEvadeCap = baseMax;
+      state.overEvadeBaseMax = baseMax;
+    } else {
+      state.overEvadeMode = true;
+      state.overEvadeCap = clampMax;
+      state.overEvadeBaseMax = baseMax;
+    }
+
+    state.evadeGoldCap = state.overEvadeCap;
+    state.evadeRedCap = state.overEvadeCap;
   }
 
-  if (state.evade > clampMax) {
-    state.evade = clampMax;
-  }
-
-  if (state.evade < 0) {
-    state.evade = 0;
-  }
-
-  if (state.evade <= baseMax) {
-    state.overEvadeMode = false;
-    state.overEvadeCap = baseMax;
-    state.overEvadeBaseMax = baseMax;
-  } else {
-    state.overEvadeMode = true;
-    state.overEvadeCap = clampMax;
-    state.overEvadeBaseMax = baseMax;
-  }
-
-  state.evadeGoldCap = state.overEvadeCap;
-  state.evadeRedCap = state.overEvadeCap;
-  }
-function clampTeamEvadeToMax(team) {
+  function clampTeamEvadeToMax(team) {
     if (!team) return;
 
     if (team.unit1) {
@@ -103,76 +104,82 @@ function clampTeamEvadeToMax(team) {
     if (team.unit2) {
       clampEvadeToMax(team.unit2);
     }
-}
-  function executeSlot() {
-  if (ctx.hasPendingChoice()) {
-    ctx.renderPendingChoice();
-    return;
   }
 
-  const attacker = ctx.getPlayerState(ctx.getCurrentPlayer());
-  const reservedStarted =
+  function executeSlot() {
+    if (ctx.hasPendingChoice()) {
+      ctx.renderPendingChoice();
+      return;
+    }
+
+    const attacker = ctx.getPlayerState(ctx.getCurrentPlayer());
+
+    const reservedStarted =
       ctx.processReservedActionsForTrigger &&
       ctx.processReservedActionsForTrigger(ctx.getCurrentPlayer(), "turn_start");
 
     if (reservedStarted) {
       return;
     }
+
     if (attacker.pendingReservedAttacks && attacker.pendingReservedAttacks.length > 0) {
-  attacker.pendingReservedAttacks.forEach((reserved) => {
-    reserved.delay = Number(reserved.delay || 0) - 1;
-  });
+      attacker.pendingReservedAttacks.forEach((reserved) => {
+        reserved.delay = Number(reserved.delay || 0) - 1;
+      });
 
-  const readyIndex = attacker.pendingReservedAttacks.findIndex((reserved) => Number(reserved.delay || 0) <= 0);
+      const readyIndex = attacker.pendingReservedAttacks.findIndex((reserved) => Number(reserved.delay || 0) <= 0);
 
-  if (readyIndex >= 0) {
-    const reserved = attacker.pendingReservedAttacks.splice(readyIndex, 1)[0];
-    ctx.setCurrentAction(`${attacker.name} の予約攻撃`, reserved.label || "予約攻撃");
-    ctx.setCurrentAttack(reserved.attacks || []);
-    ctx.setCurrentAttackContext({
-      ownerPlayer: ctx.getCurrentPlayer(),
-      enemyPlayer: ctx.getOpponentPlayer(ctx.getCurrentPlayer()),
-      slotKey: null,
-      slotNumber: null,
-      slotLabel: reserved.label || "予約攻撃",
-      slotDesc: reserved.desc || "",
-      totalCount: (reserved.attacks || []).length,
-      hitCount: 0,
-      evadeCount: 0,
-      reservedAttack: true
-    });
-    ctx.redrawBattleBoards();
-    ctx.renderAttackChoices();
-    return;
-  }
+      if (readyIndex >= 0) {
+        const reserved = attacker.pendingReservedAttacks.splice(readyIndex, 1)[0];
+        ctx.setCurrentAction(`${attacker.name} の予約攻撃`, reserved.label || "予約攻撃");
+        ctx.setCurrentAttack(reserved.attacks || []);
+        ctx.setCurrentAttackContext({
+          ownerPlayer: ctx.getCurrentPlayer(),
+          enemyPlayer: ctx.getOpponentPlayer(ctx.getCurrentPlayer()),
+          slotKey: null,
+          slotNumber: null,
+          slotLabel: reserved.label || "予約攻撃",
+          slotDesc: reserved.desc || "",
+          totalCount: (reserved.attacks || []).length,
+          hitCount: 0,
+          evadeCount: 0,
+          reservedAttack: true
+        });
+        ctx.redrawBattleBoards();
+        ctx.renderAttackChoices();
+        return;
+      }
     }
-  if (!attacker) return;
 
-  ensureActionState(attacker);
-if (Number(attacker.pendingActionPenalty || 0) > 0) {
-  const penalty = Math.min(attacker.actionCount, Number(attacker.pendingActionPenalty || 0));
-  attacker.pendingActionPenalty = Math.max(0, Number(attacker.pendingActionPenalty || 0) - penalty);
-  attacker.actionCount = Math.max(0, attacker.actionCount - penalty);
+    if (!attacker) return;
 
-  ctx.redrawBattleBoards();
-  ctx.renderAttackLogText(`${attacker.name} は行動不能：行動権-${penalty}`);
+    ensureActionState(attacker);
 
-  if (!canConsumeAction(attacker, 1)) {
-    return;
-  }
-}
-  if (!canConsumeAction(attacker, 1)) {
-    ctx.showPopup("残り行動数が足りない");
-    return;
-  }
+    if (Number(attacker.pendingActionPenalty || 0) > 0) {
+      const penalty = Math.min(attacker.actionCount, Number(attacker.pendingActionPenalty || 0));
+      attacker.pendingActionPenalty = Math.max(0, Number(attacker.pendingActionPenalty || 0) - penalty);
+      attacker.actionCount = Math.max(0, attacker.actionCount - penalty);
 
-  const rollableSlotKeys = ctx.getRollableSlotKeys(attacker);
-  if (!Array.isArray(rollableSlotKeys) || rollableSlotKeys.length === 0) {
-    ctx.showPopup("使用可能なスロットがない");
-    return;
-  }
+      ctx.redrawBattleBoards();
+      ctx.renderAttackLogText(`${attacker.name} は行動不能：行動権-${penalty}`);
 
-  const ownerPlayer = ctx.getCurrentPlayer();
+      if (!canConsumeAction(attacker, 1)) {
+        return;
+      }
+    }
+
+    if (!canConsumeAction(attacker, 1)) {
+      ctx.showPopup("残り行動数が足りない");
+      return;
+    }
+
+    const rollableSlotKeys = ctx.getRollableSlotKeys(attacker);
+    if (!Array.isArray(rollableSlotKeys) || rollableSlotKeys.length === 0) {
+      ctx.showPopup("使用可能なスロットがない");
+      return;
+    }
+
+    const ownerPlayer = ctx.getCurrentPlayer();
     const isAutoEnemyTurn =
       typeof ctx.isChallengeMode === "function" &&
       ctx.isChallengeMode() &&
@@ -204,6 +211,7 @@ if (Number(attacker.pendingActionPenalty || 0) > 0) {
 
     ctx.redrawBattleBoards();
   }
+
   function simulateSlot() {
     const attacker = ctx.getPlayerState(ctx.getCurrentPlayer());
     if (!attacker) return;
@@ -218,137 +226,142 @@ if (Number(attacker.pendingActionPenalty || 0) > 0) {
   }
 
   function endTurn() {
-  if (ctx.hasPendingChoice()) {
-    ctx.renderPendingChoice();
-    return;
-  }
-
-  if (ctx.getCurrentAttack && ctx.getCurrentAttack().length > 0) {
-    ctx.renderAttackChoices();
-    ctx.showPopup("QTEを解決してからターン終了してください");
-    return;
-  }
-
-  const actorPlayer = ctx.getCurrentPlayer();
-  const enemyPlayer = ctx.getOpponentPlayer(actorPlayer);
-  const actor = ctx.getPlayerState(actorPlayer);
-  const enemyState = ctx.getPlayerState(enemyPlayer);
-
-  if (!actor || !enemyState) return;
-
-  actor.shieldActive = false;
-  enemyState.shieldActive = false;
-
-  if (ctx.isTeamBattleMode && ctx.isTeamBattleMode()) {
-    const actorTeam = ctx.getTeam ? ctx.getTeam(actorPlayer) : null;
-
-    if (actorTeam) {
-      clampTeamEvadeToMax(actorTeam);
-    } else {
-      clampEvadeToMax(actor);
-    }
-  } else {
-    clampEvadeToMax(actor);
-  }
-
-  if (typeof ctx.tickCriticalBoosts === "function") {
-    ctx.tickCriticalBoosts(actor);
-  }
-
-  actor.lastSlotKey = null;
-
-  const turnEndResult = ctx.executeUnitTurnEnd(actor, {
-    ownerPlayer: actorPlayer,
-    enemyPlayer,
-    enemyPlayerLabel: `PLAYER ${enemyPlayer}`,
-    enemyPredictableSlotKeys: ctx.getPredictableSlotKeys(enemyState)
-  });
-
-  actor.isConfusedTurn = false;
-  actor.confuseHits = 0;
-
-  ctx.clearBattleNotice();
-  ctx.clearCurrentAction();
-  ctx.clearPendingChoice();
-
-  ctx.setCurrentAttack([]);
-  ctx.setCurrentAttackContext(null);
-  ctx.setCurrentAttackContexts([]);
-
-  ctx.setCurrentPlayer(enemyPlayer);
-
-  if (ctx.getCurrentPlayer() === "A") {
-    ctx.setCurrentTurn(ctx.getCurrentTurn() + 1);
-  }
-
-  if (ctx.isTeamBattleMode()) {
-    const nextTeam = ctx.getTeam(ctx.getCurrentPlayer());
-
-    if (nextTeam) {
-      nextTeam.activeUnitKey = nextTeam.focusUnitKey || "unit1";
-
-      resetActionCount(nextTeam.unit1);
-      if (nextTeam.unit2) resetActionCount(nextTeam.unit2);
-
-      if (
-        ctx.twoVtwoAdapter &&
-        typeof ctx.twoVtwoAdapter.resetUnifiedActionCount === "function"
-      ) {
-        ctx.twoVtwoAdapter.resetUnifiedActionCount(nextTeam);
-      }
-
-      if (nextTeam.mode === "unified") {
-        if (nextTeam.unit1) nextTeam.unit1.actionCount = 0;
-        if (nextTeam.unit2) nextTeam.unit2.actionCount = 0;
-      }
-
-      if (
-        ctx.getBattleMode &&
-        ctx.getBattleMode() === "vscpu2v2" &&
-        ctx.getCurrentPlayer() === "B"
-      ) {
-        const cpuTeam = ctx.getTeam("B");
-        if (cpuTeam) {
-          cpuTeam.focusUnitKey = Math.random() < 0.5 ? "unit1" : "unit2";
-          cpuTeam.activeUnitKey = cpuTeam.focusUnitKey;
-        }
-      }
-    }
-  } else {
-    const nextActor = ctx.getPlayerState(ctx.getCurrentPlayer());
-    resetActionCount(nextActor);
-  }
-
-  const attackLog = document.getElementById("attackLog");
-  if (attackLog) {
-    attackLog.textContent = turnEndResult.message || "バトル開始待機中";
-  }
-
-  ctx.redrawBattleBoards();
-
-  if (turnEndResult.requestChoice) {
-    ctx.handleChoiceRequest(turnEndResult.requestChoice);
-    return;
-  }
-
-  if (ctx.isChallengeMode && ctx.isChallengeMode() && ctx.getCurrentPlayer() === "B") {
-    if (ctx.isTeamBattleMode && ctx.isTeamBattleMode() && ctx.executeTeamSlot) {
-      ctx.executeTeamSlot();
+    if (ctx.hasPendingChoice()) {
+      ctx.renderPendingChoice();
       return;
     }
 
-    executeSlot();
-    return;
+    if (ctx.getCurrentAttack && ctx.getCurrentAttack().length > 0) {
+      ctx.renderAttackChoices();
+      ctx.showPopup("QTEを解決してからターン終了してください");
+      return;
+    }
+
+    const actorPlayer = ctx.getCurrentPlayer();
+    const enemyPlayer = ctx.getOpponentPlayer(actorPlayer);
+    const actor = ctx.getPlayerState(actorPlayer);
+    const enemyState = ctx.getPlayerState(enemyPlayer);
+
+    if (!actor || !enemyState) return;
+
+    actor.shieldActive = false;
+    enemyState.shieldActive = false;
+
+    if (ctx.isTeamBattleMode && ctx.isTeamBattleMode()) {
+      const actorTeam = ctx.getTeam ? ctx.getTeam(actorPlayer) : null;
+
+      if (actorTeam) {
+        clampTeamEvadeToMax(actorTeam);
+
+        if (ctx.twoVtwoTauntSystem && typeof ctx.twoVtwoTauntSystem.tickTeam === "function") {
+          ctx.twoVtwoTauntSystem.tickTeam(actorTeam);
+        }
+      } else {
+        clampEvadeToMax(actor);
+      }
+    } else {
+      clampEvadeToMax(actor);
+    }
+
+    if (typeof ctx.tickCriticalBoosts === "function") {
+      ctx.tickCriticalBoosts(actor);
+    }
+
+    actor.lastSlotKey = null;
+
+    const turnEndResult = ctx.executeUnitTurnEnd(actor, {
+      ownerPlayer: actorPlayer,
+      enemyPlayer,
+      enemyPlayerLabel: `PLAYER ${enemyPlayer}`,
+      enemyPredictableSlotKeys: ctx.getPredictableSlotKeys(enemyState)
+    });
+
+    actor.isConfusedTurn = false;
+    actor.confuseHits = 0;
+
+    ctx.clearBattleNotice();
+    ctx.clearCurrentAction();
+    ctx.clearPendingChoice();
+
+    ctx.setCurrentAttack([]);
+    ctx.setCurrentAttackContext(null);
+    ctx.setCurrentAttackContexts([]);
+
+    ctx.setCurrentPlayer(enemyPlayer);
+
+    if (ctx.getCurrentPlayer() === "A") {
+      ctx.setCurrentTurn(ctx.getCurrentTurn() + 1);
+    }
+
+    if (ctx.isTeamBattleMode()) {
+      const nextTeam = ctx.getTeam(ctx.getCurrentPlayer());
+
+      if (nextTeam) {
+        nextTeam.modeChangeLockedThisTurn = false;
+        nextTeam.activeUnitKey = nextTeam.focusUnitKey || "unit1";
+
+        resetActionCount(nextTeam.unit1);
+        if (nextTeam.unit2) resetActionCount(nextTeam.unit2);
+
+        if (
+          ctx.twoVtwoAdapter &&
+          typeof ctx.twoVtwoAdapter.resetUnifiedActionCount === "function"
+        ) {
+          ctx.twoVtwoAdapter.resetUnifiedActionCount(nextTeam);
+        }
+
+        if (nextTeam.mode === "unified") {
+          if (nextTeam.unit1) nextTeam.unit1.actionCount = 0;
+          if (nextTeam.unit2) nextTeam.unit2.actionCount = 0;
+        }
+
+        if (
+          ctx.getBattleMode &&
+          ctx.getBattleMode() === "vscpu2v2" &&
+          ctx.getCurrentPlayer() === "B"
+        ) {
+          const cpuTeam = ctx.getTeam("B");
+          if (cpuTeam) {
+            cpuTeam.focusUnitKey = Math.random() < 0.5 ? "unit1" : "unit2";
+            cpuTeam.activeUnitKey = cpuTeam.focusUnitKey;
+          }
+        }
+      }
+    } else {
+      const nextActor = ctx.getPlayerState(ctx.getCurrentPlayer());
+      resetActionCount(nextActor);
+    }
+
+    const attackLog = document.getElementById("attackLog");
+    if (attackLog) {
+      attackLog.textContent = turnEndResult.message || "バトル開始待機中";
+    }
+
+    ctx.redrawBattleBoards();
+
+    if (turnEndResult.requestChoice) {
+      ctx.handleChoiceRequest(turnEndResult.requestChoice);
+      return;
+    }
+
+    if (ctx.isChallengeMode && ctx.isChallengeMode() && ctx.getCurrentPlayer() === "B") {
+      if (ctx.isTeamBattleMode && ctx.isTeamBattleMode() && ctx.executeTeamSlot) {
+        ctx.executeTeamSlot();
+        return;
+      }
+
+      executeSlot();
+      return;
+    }
   }
-}
-  
-return {
+
+  return {
     ensureActionState,
     resetActionCount,
     canConsumeAction,
     consumeActionCount,
     clampEvadeToMax,
-  clampTeamEvadeToMax,
+    clampTeamEvadeToMax,
     executeSlot,
     simulateSlot,
     endTurn
