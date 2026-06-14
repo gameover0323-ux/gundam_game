@@ -6,69 +6,34 @@ export function createUiController(ctx) {
     ctx.screens[screenId].classList.add("active");
   }
 
-function getTurnStatusText() {
-  const player = ctx.getCurrentPlayer ? ctx.getCurrentPlayer() : "A";
+  function renderAttackLogText(message) {
+    const attackLog = document.getElementById("attackLog");
+    attackLog.innerHTML = "";
 
-  if (!(ctx.isTeamBattleMode && ctx.isTeamBattleMode())) {
-    const actor = ctx.getPlayerState ? ctx.getPlayerState(player) : null;
-    const actionCount = actor ? Number(actor.actionCount || 0) : 0;
-    return `PLAYER ${player}のターンです<br>行動権:${actionCount}`;
-  }
+    if (ctx.getBattleNotice()) {
+      attackLog.innerHTML += `
+        <div style="color:#ff6666;font-weight:bold;">${ctx.getBattleNotice()}</div>
+      `;
+      ctx.clearBattleNotice();
+    }
 
-  const team = ctx.getTeam ? ctx.getTeam(player) : null;
-  if (!team) {
-    return `PLAYER ${player}のターンです`;
-  }
+    if (ctx.getCurrentActionHeader()) {
+      attackLog.innerHTML += `
+        <div style="font-weight:bold;">${ctx.getCurrentActionHeader()}</div>
+      `;
+    }
 
-  if (team.mode === "unified") {
-    const unifiedAction =
-      ctx.twoVtwoAdapter && typeof ctx.twoVtwoAdapter.getActionCount === "function"
-        ? ctx.twoVtwoAdapter.getActionCount(player, team.unit1)
-        : Number(team.unified?.actionCount || 0);
+    if (ctx.getCurrentActionLabel()) {
+      attackLog.innerHTML += `
+        <div>${ctx.getCurrentActionLabel()}</div>
+      `;
+    }
 
-    return `PLAYER ${player}のターンです<br>統合型 行動権:${unifiedAction}`;
-  }
-
-  const unit1Action = Number(team.unit1?.actionCount || 0);
-  const unit2Action = Number(team.unit2?.actionCount || 0);
-  return `PLAYER ${player}のターンです<br>分散型 行動権:1機目 ${unit1Action} / 2機目 ${unit2Action}`;
-}
-function renderAttackLogText(message, options = {}) {
-  const attackLog = document.getElementById("attackLog");
-  attackLog.innerHTML = "";
-
-  const hasMessage =
-    message !== null &&
-    message !== undefined &&
-    String(message) !== "";
-
-  const showCurrentAction =
-    options.showCurrentAction !== false &&
-    hasMessage;
-
-  if (ctx.getBattleNotice()) {
     attackLog.innerHTML += `
-${ctx.getBattleNotice()}
-`;
-    ctx.clearBattleNotice();
+      <div>${message}</div>
+    `;
   }
 
-  if (showCurrentAction && ctx.getCurrentActionHeader()) {
-    attackLog.innerHTML += `
-${ctx.getCurrentActionHeader()}
-`;
-  }
-
-  if (showCurrentAction && ctx.getCurrentActionLabel()) {
-    attackLog.innerHTML += `
-${ctx.getCurrentActionLabel()}
-`;
-  }
-
-  attackLog.innerHTML += `
-${hasMessage ? message : getTurnStatusText()}
-`;
-}
   function renderPendingChoice() {
     const pendingChoice = ctx.getPendingChoice();
     if (!pendingChoice) return;
@@ -107,46 +72,35 @@ ${hasMessage ? message : getTurnStatusText()}
   const isTeam = ctx.isTeamBattleMode && ctx.isTeamBattleMode();
   const team = isTeam && ctx.getTeam ? ctx.getTeam(currentPlayer) : null;
   const isUnified = !!team && team.mode === "unified";
+
   const actor = ctx.getPlayerState(currentPlayer);
 
   if (actor) {
     ctx.ensureActionState(actor);
   }
-  if (team?.unit1) {
-    ctx.ensureActionState(team.unit1);
-  }
-  if (team?.unit2) {
-    ctx.ensureActionState(team.unit2);
-  }
 
-  const actionLabelElement = actionCounterValue ? actionCounterValue.previousElementSibling : null;
+  const actionLabelElement = actionCounterValue
+    ? actionCounterValue.previousElementSibling
+    : null;
 
   if (actionLabelElement) {
-    if (isUnified) {
-      actionLabelElement.textContent = "統行";
-    } else if (isTeam) {
-      actionLabelElement.textContent = "分行";
-    } else {
-      actionLabelElement.textContent = "行動";
-    }
+    actionLabelElement.textContent = isUnified ? "統行" : "行動";
   }
 
   if (singleTeamActionButtons) {
-    singleTeamActionButtons.style.display = isTeam && !isUnified ? "block" : "none";
+    singleTeamActionButtons.style.display =
+      isTeam && !isUnified ? "block" : "none";
   }
 
   if (actionCounterValue) {
-    if (isUnified) {
-      const unifiedAction =
-        ctx.twoVtwoAdapter && ctx.twoVtwoAdapter.getActionCount
-          ? ctx.twoVtwoAdapter.getActionCount(currentPlayer, team.unit1 || actor)
-          : Number(team.unified?.actionCount || 0);
-
-      actionCounterValue.textContent = String(unifiedAction);
-    } else if (isTeam) {
-      const unit1Action = Number(team?.unit1?.actionCount || 0);
-      const unit2Action = Number(team?.unit2?.actionCount || 0);
-      actionCounterValue.textContent = `${unit1Action}/${unit2Action}`;
+    if (
+      isUnified &&
+      ctx.twoVtwoAdapter &&
+      ctx.twoVtwoAdapter.getActionCount
+    ) {
+      actionCounterValue.textContent = String(
+        ctx.twoVtwoAdapter.getActionCount(currentPlayer, team.unit1 || actor)
+      );
     } else {
       actionCounterValue.textContent = actor ? String(actor.actionCount) : "1";
     }
@@ -155,7 +109,7 @@ ${hasMessage ? message : getTurnStatusText()}
   if (toggleTestModeBtn) {
     toggleTestModeBtn.textContent = `テストモード: ${ctx.getIsTestMode() ? "ON" : "OFF"}`;
   }
-}
+  }
 
   function redrawBattleBoards() {
     if (ctx.isTeamBattleMode()) {
