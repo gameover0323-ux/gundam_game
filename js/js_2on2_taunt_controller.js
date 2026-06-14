@@ -95,11 +95,14 @@ export function create2v2TauntController(ctx) {
     return "挑発";
   }
 
-  function startTaunt(ownerPlayer, targetUnitKey) {
+ function startTaunt(ownerPlayer, targetUnitKey) {
     if (!canUse(ownerPlayer)) return { ok: false, message: "現在は挑発できません" };
 
     const enemyPlayer = ctx.getOpponentPlayer(ownerPlayer);
+    const ownerTeam = ctx.getTeam(ownerPlayer);
     const enemyTeam = ctx.getTeam(enemyPlayer);
+
+    const ownerState = ensureTeamTauntState(ownerTeam);
     const enemyState = ensureTeamTauntState(enemyTeam);
 
     if (!enemyTeam?.[targetUnitKey]) {
@@ -110,10 +113,11 @@ export function create2v2TauntController(ctx) {
     enemyState.tauntTargetUnitKey = targetUnitKey;
     enemyState.tauntOwnerPlayer = ownerPlayer;
     enemyState.tauntTurns = EFFECT_TURNS;
-    enemyState.cooldown = COOLDOWN_TURNS;
+
+    ownerState.cooldown = COOLDOWN_TURNS;
 
     return { ok: true, message: `${targetUnitKey === "unit2" ? "2" : "1"}番機を挑発しました` };
-  }
+ }
 
   function startDuel(ownerPlayer, ownUnitKey) {
     if (!canUse(ownerPlayer)) return { ok: false, message: "現在は決戦できません" };
