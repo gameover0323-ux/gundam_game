@@ -40,6 +40,10 @@ function getOwnerPlayer(context) {
   return context?.ownerPlayer || context?.attackerPlayer || context?.defenderPlayer || null;
 }
 
+function getEnemyPlayer(context) {
+  return context?.enemyPlayer || null;
+}
+
 function getRuleEvade(state, context = {}) {
   const adapter = getAdapter(context);
   const ownerPlayer = getOwnerPlayer(context);
@@ -65,6 +69,20 @@ function consumeRuleEvade(state, amount, context = {}) {
   return true;
 }
 
+function consumeEnemyRuleEvade(defender, amount, context = {}) {
+  const cost = Math.max(0, Number(amount || 0));
+  const adapter = getAdapter(context);
+  const enemyPlayer = getEnemyPlayer(context);
+
+  if (adapter?.consumeEvade && enemyPlayer) {
+    return adapter.consumeEvade(enemyPlayer, defender, cost);
+  }
+
+  if (!defender || Number(defender.evade || 0) < cost) return false;
+  reduceEvade(defender, cost);
+  return true;
+}
+
 function addRuleEvade(state, amount, context = {}) {
   const value = Math.max(0, Number(amount || 0));
   const adapter = getAdapter(context);
@@ -83,8 +101,8 @@ function healRuleHp(state, amount, context = {}) {
   const adapter = getAdapter(context);
   const ownerPlayer = getOwnerPlayer(context);
 
-  if (adapter?.healHp && ownerPlayer) {
-    return adapter.healHp(ownerPlayer, state, value);
+  if (adapter?.heal && ownerPlayer) {
+    return adapter.heal(ownerPlayer, state, value);
   }
 
   state.hp = Math.min(Number(state.maxHp || state.hp || 0), Number(state.hp || 0) + value);
@@ -565,6 +583,7 @@ export function onV2AfterSlotResolved(state, slotNumber, payload = {}) {
   ensureV2State(state);
   const resolveResult = payload.resolveResult || payload;
   const customEffectId = resolveResult.customEffectId;
+  const context = payload.context || payload;
   const messages = [];
   let appendAttacks = [];
 
@@ -588,38 +607,38 @@ export function onV2AfterSlotResolved(state, slotNumber, payload = {}) {
   }
 
   if (customEffectId === "v2_assault_slot1") {
-    addRuleEvade(state, 1, payload);
+    addRuleEvade(state, 1, context);
     addCap(state, 1);
     appendAttacks.push(...createAttack(20, 1, { type: "shoot", source: "牽制射撃" }));
     messages.push("牽制射撃：回避+1、回避ストック最大値+1");
   }
 
   if (customEffectId === "v2_assault_evade3") {
-    addEvadeWithAssaultCapRule(state, 3, payload);
+    addEvadeWithAssaultCapRule(state, 3, context);
     messages.push("回避+3、補填分の回避ストック最大値増加");
   }
 
   if (customEffectId === "v2_assault_slot3") {
-    const ev = getRuleEvade(state, payload);
+    const ev = getRuleEvade(state, context);
     appendAttacks.push(...createAttack(ev > 0 ? 15 : 60, ev > 0 ? ev : 1, { type: "melee", source: "強襲格闘" }));
   }
 
   if (customEffectId === "v2_assault_slot5") {
-    addRuleEvade(state, 2, payload);
+    addRuleEvade(state, 2, context);
     addCap(state, 2);
     appendAttacks.push(...createAttack(50, 1, { type: "melee", beam: true, ignoreReduction: true, ignoreDefense: true, source: "光の翼" }));
     messages.push("光の翼：回避+2、回避ストック最大値+2");
   }
 
   if (customEffectId === "v2_assault_slot6") {
-    const ev = getRuleEvade(state, payload);
+    const ev = getRuleEvade(state, context);
     if (ev > 0) appendAttacks.push(...createAttack(ev * 20, 1, { type: "shoot", beam: true, source: "ヴェスバー" }));
     else messages.push("ヴェスバー不発：所持回避0");
   }
 
   if (customEffectId === "v2_heal50_evade2") {
-    heal(state, 50, payload);
-    addRuleEvade(state, 2, payload);
+    heal(state, 50, context);
+    addRuleEvade(state, 2, context);
     messages.push("HP50回復、回避+2");
   }
 
@@ -637,24 +656,24 @@ export function onV2AfterSlotResolved(state, slotNumber, payload = {}) {
   }
 
   if (customEffectId === "v2_ab_evade4") {
-    addEvadeWithAssaultCapRule(state, 4, payload);
+    addEvadeWithAssaultCapRule(state, 4, context);
     messages.push("回避+4、補填分の回避ストック最大値増加");
   }
 
   if (customEffectId === "v2_ab_slot3") {
-    const ev = getRuleEvade(state, payload);
+    const ev = getRuleEvade(state, context);
     appendAttacks.push(...createAttack(ev > 0 ? 30 : 80, ev > 0 ? ev : 1, { type: "melee", beam: true, source: "ビームサーベル" }));
   }
 
   if (customEffectId === "v2_ab_slot5") {
-    heal(state, 80, payload);
-    addRuleEvade(state, 2, payload);
+    heal(state, 80, context);
+    addRuleEvade(state, 2, context);
     addCap(state, 2);
     messages.push("HP80回復、回避+2、回避ストック最大値+2");
   }
 
   if (customEffectId === "v2_ab_slot6") {
-    const ev = getRuleEvade(state, payload);
+    const ev = getRuleEvade(state, context);
     state.v2WingGuardActive = true;
     state.v2WingGuardCountered = false;
     addCap(state, 1);
@@ -673,22 +692,22 @@ export function onV2AfterSlotResolved(state, slotNumber, payload = {}) {
   }
 
   if (customEffectId === "v2_abc_evade4") {
-    addEvadeWithAssaultCapRule(state, 4, payload);
+    addEvadeWithAssaultCapRule(state, 4, context);
     messages.push("回避+4、補填分の回避ストック最大値増加");
   }
 
   if (customEffectId === "v2_abc_evade6") {
-    addEvadeWithAssaultCapRule(state, 6, payload);
+    addEvadeWithAssaultCapRule(state, 6, context);
     messages.push("回避+6、補填分の回避ストック最大値増加");
   }
 
   if (customEffectId === "v2_abc_slot5") {
-    const ev = getRuleEvade(state, payload);
+    const ev = getRuleEvade(state, context);
     appendAttacks.push(...createAttack(ev > 0 ? 20 : 60, ev > 0 ? ev : 1, { type: "melee", beam: true, source: "ビームサーベル" }));
   }
 
   if (customEffectId === "v2_abc_slot6") {
-    const ev = getRuleEvade(state, payload);
+    const ev = getRuleEvade(state, context);
     if (ev > 0) {
       appendAttacks.push(...createAttack(ev * 10, 1, { type: "melee", beam: true, special: "v2_abc_wings_hit", source: "光の翼" }));
     } else {
@@ -727,7 +746,7 @@ export function onV2ActionResolved(attacker, defender, context = {}) {
   }
 
   if (context.hitCount > 0 && context.currentAttack?.some?.(a => a?.special === "v2_abc_wings_hit") && defender) {
-    reduceEvade(defender, 3);
+    consumeEnemyRuleEvade(defender, 3, context);
     addRuleEvade(attacker, 3, context);
     messages.push("光の翼命中：相手回避-3、自分回避+3");
   }
