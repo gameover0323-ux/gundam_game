@@ -16,7 +16,8 @@ export function createAttackResolution(ctx) {
     }
     return false;
   }
-function getAttackTypeFromAttack(attack) {
+
+  function getAttackTypeFromAttack(attack) {
     return attack?.type || attack?.attackType || null;
   }
 
@@ -45,6 +46,7 @@ function getAttackTypeFromAttack(attack) {
 
     defender.barbatosLastEnemyAttackType = firstAttackType;
   }
+
   function finishCurrentAttackResolution() {
     const currentAttackContexts = ctx.getCurrentAttackContexts();
 
@@ -57,8 +59,6 @@ function getAttackTypeFromAttack(attack) {
         const attacker = context.attacker;
         const defender = ctx.getCombatTargetState(context.enemyPlayer);
 
-        const resolvedAttackSnapshot = ctx.getCurrentAttack ? [...ctx.getCurrentAttack()] : [];
-
         rememberLastEnemyAttackType(defender, context);
 
         const actionResult = ctx.executeUnitActionResolved(attacker, defender, {
@@ -68,6 +68,7 @@ function getAttackTypeFromAttack(attack) {
             context.hitCount === 0 &&
             context.evadeCount === context.totalCount
         });
+
         if (actionResult.message) {
           ctx.appendBattleNotice(actionResult.message);
         }
@@ -114,8 +115,6 @@ function getAttackTypeFromAttack(attack) {
 
     ctx.setCurrentAttackContext(null);
 
-    const resolvedAttackSnapshot = ctx.getCurrentAttack ? [...ctx.getCurrentAttack()] : [];
-
     rememberLastEnemyAttackType(defender, context);
 
     const actionResult = ctx.executeUnitActionResolved(attacker, defender, {
@@ -158,74 +157,197 @@ function getAttackTypeFromAttack(attack) {
 
     ctx.renderAttackLogText("攻撃解決済み");
   }
-function startCounterAttackFromHitResult(hitResult, defenderPlayer, attackerPlayer, ctxAtk) {
-  if (!hitResult || !Array.isArray(hitResult.appendAttacks) || hitResult.appendAttacks.length === 0) {
-    return false;
+
+  function startCounterAttackFromHitResult(hitResult, defenderPlayer, attackerPlayer, ctxAtk) {
+    if (!hitResult || !Array.isArray(hitResult.appendAttacks) || hitResult.appendAttacks.length === 0) {
+      return false;
+    }
+
+    ctx.setCurrentAttack(hitResult.appendAttacks);
+    ctx.setCurrentAttackContext({
+      ownerPlayer: defenderPlayer,
+      enemyPlayer: attackerPlayer,
+      slotKey: "counter",
+      slotNumber: null,
+      slotLabel: hitResult.appendSlotLabel || hitResult.appendAttackLabel || "カウンター攻撃",
+      slotDesc: hitResult.appendSlotDesc || "",
+      totalCount: hitResult.appendAttacks.length,
+      hitCount: 0,
+      evadeCount: 0,
+      appendedFrom: ctxAtk?.slotLabel || null,
+      counterAttack: true
+    });
+
+    ctx.redrawBattleBoards();
+    ctx.renderAttackChoices();
+    return true;
   }
 
-  ctx.setCurrentAttack(hitResult.appendAttacks);
-  ctx.setCurrentAttackContext({
-    ownerPlayer: defenderPlayer,
-    enemyPlayer: attackerPlayer,
-    slotKey: "counter",
-    slotNumber: null,
-    slotLabel: hitResult.appendSlotLabel || hitResult.appendAttackLabel || "カウンター攻撃",
-    slotDesc: hitResult.appendSlotDesc || "",
-    totalCount: hitResult.appendAttacks.length,
-    hitCount: 0,
-    evadeCount: 0,
-    appendedFrom: ctxAtk?.slotLabel || null,
-    counterAttack: true
-  });
+  function applyTauntDamageModifier({
+    attackerPlayer,
+    defenderPlayer,
+    defender,
+    ctxAtk,
+    damage
+  }) {
+    let nextDamage = damage;
 
-  ctx.redrawBattleBoards();
-  ctx.renderAttackChoices();
-  return true;
-}
+    if (
+      ctx.twoVtwoTauntSystem &&
+      isTeamBattleMode() &&
+      typeof ctx.twoVtwoTauntSystem.modifyDamage === "function"
+    ) {
+      const defenderTeam = ctx.getTeam(defenderPlayer);
+      let defenderUnitKey = null;
+
+      if (defenderTeam?.unit1 === defender) defenderUnitKey = "unit1";
+      if (defenderTeam?.unit2 === defender) defenderUnitKey = "unit2";
+
+      nextDamage = ctx.twoVtwoTauntSystem.modifyDamage({
+        attackerPlayer,
+        attackerUnitKey: ctxAtk?.ownerUnitKey || null,
+        defenderPlayer,
+        defenderUnitKey,
+        damage: nextDamage
+      });
+    }
+
+    return nextDamage;
+  }
+
   function takeHit(index) {
-  const ctxAtk = ctx.getCurrentAttackContext();
+    const ctxAtk = ctx.getCurrentAttackContext();
 
-  const attackerPlayer = ctxAtk?.ownerPlayer || ctx.getCurrentPlayer();
-  const defenderPlayer = ctxAtk?.enemyPlayer || ctx.getOpponentPlayer(attackerPlayer);
+    const attackerPlayer = ctxAtk?.ownerPlayer || ctx.getCurrentPlayer();
+    const defenderPlayer = ctxAtk?.enemyPlayer || ctx.getOpponentPlayer(attackerPlayer);
 
-  const attacker = ctx.getPlayerState(attackerPlayer);
-  const defender = ctx.getCombatTargetState(defenderPlayer);
+    const attacker = ctx.getPlayerState(attackerPlayer);
+    const defender = ctx.getCombatTargetState(defenderPlayer);
 
-  if (ctxAtk && typeof ctxAtk.enemyEvadeBefore !== "number") {
-    ctxAtk.enemyEvadeBefore = Number(defender?.evade || 0);
-  }
+    if (ctxAtk && typeof ctxAtk.enemyEvadeBefore !== "number") {
+      ctxAtk.enemyEvadeBefore = Number(defender?.evade || 0);
+    }
 
-  const currentAttack = ctx.getCurrentAttack();
+    const currentAttack = ctx.getCurrentAttack();
+    const attack = currentAttack[index];
+    const damagePreview = attack ? attack.damage : 0;
 
-  const attack = currentAttack[index];
+    recordResolvedAttack(ctxAtk, attack);
 
-  const damagePreview = attack ? attack.damage : 0;
+    const currentTotalDamage = currentAttack.reduce((sum, atk) => {
+      return sum + Math.max(0, Number(atk?.damage || 0));
+    }, 0);
 
-  recordResolvedAttack(ctxAtk, attack);
+    const defenderHpBeforeHit = Number(defender?.hp || 0);
 
-  const currentTotalDamage = currentAttack.reduce((sum, atk) => {
-    return sum + Math.max(0, Number(atk?.damage || 0));
-  }, 0);
+    const hitResult = ctx.resolveTakeHit({
+      attacker,
+      defender,
+      currentAttack,
+      attackIndex: index,
+      modifyTakenDamage: (d, a, atk, dmg) => {
+        const nextDamage = applyTauntDamageModifier({
+          attackerPlayer,
+          defenderPlayer,
+          defender,
+          ctxAtk,
+          damage: dmg
+        });
 
- const defenderHpBeforeHit = Number(defender?.hp || 0);
+        return ctx.executeUnitModifyTakenDamage(d, a, atk, nextDamage, {
+          attackerPlayer,
+          defenderPlayer,
+          attacker,
+          defender,
+          currentAttack,
+          attackIndex: index,
+          currentAttackContext: ctxAtk,
+          currentTotalDamage
+        });
+      },
+      rollCritical: () => {
+        return typeof ctx.rollCritical === "function" ? ctx.rollCritical(attacker) : false;
+      }
+    });
 
-const hitResult = ctx.resolveTakeHit({
-  attacker,
-  defender,
-  currentAttack,
-  attackIndex: index,
-  modifyTakenDamage: (d, a, atk, dmg) => ctx.executeUnitModifyTakenDamage(d, a, atk, dmg, { attackerPlayer, defenderPlayer, attacker, defender, currentAttack, attackIndex: index, currentAttackContext: ctxAtk, currentTotalDamage }),
-  rollCritical: () => {
-    return typeof ctx.rollCritical === "function" ? ctx.rollCritical(attacker) : false;
-  }
-});
+    if (hitResult && hitResult.cancelled) {
+      ctx.appendBattleNotice(hitResult.damageMessage || "攻撃無効");
 
-  if (hitResult && hitResult.cancelled) {
-    ctx.appendBattleNotice(hitResult.damageMessage || "攻撃無効");
+      if (currentAttack.length === 0) {
+        if (startCounterAttackFromHitResult(hitResult, defenderPlayer, attackerPlayer, ctxAtk)) {
+          return;
+        }
+
+        finishCurrentAttackResolution();
+        return;
+      }
+
+      ctx.redrawBattleBoards();
+      ctx.renderAttackChoices();
+      return;
+    }
+
+    const defenderTeam = ctx.getTeam(defenderPlayer);
+
+    if (defenderTeam && defenderTeam.mode === "unified" && hitResult && !hitResult.cancelled) {
+      const actualDamage = typeof hitResult.finalDamage === "number" ? hitResult.finalDamage : damagePreview;
+      const unified = defenderTeam.unified || {
+        baseHpA: defenderTeam.unit1?.hp || 0,
+        baseHpB: defenderTeam.unit2?.hp || 0,
+        totalDamage: 0,
+        healA: 0,
+        healB: 0
+      };
+
+      unified.totalDamage = Math.max(0, Number(unified.totalDamage || 0)) + Math.max(0, actualDamage);
+      defenderTeam.unified = unified;
+
+      defender.hp = defenderHpBeforeHit;
+    } else {
+      markDefeatedIfNeeded(defender);
+    }
+
+    defender.lastDamageTaken = typeof hitResult?.finalDamage === "number" ? hitResult.finalDamage : damagePreview;
+
+    if (hitResult?.damageMessage) {
+      ctx.appendBattleNotice(hitResult.damageMessage);
+    }
+
+    if (isUnitDefeated(defender)) {
+      ctx.appendBattleNotice(`${defender.name}は撃墜された`);
+    }
+
+    if (ctxAtk) {
+      ctxAtk.hitCount++;
+      ctxAtk.damageDealt = Number(ctxAtk.damageDealt || 0) + Number(hitResult?.finalDamage || 0);
+
+      ctxAtk.enemyEvadeBefore = typeof ctxAtk.enemyEvadeBefore === "number"
+        ? ctxAtk.enemyEvadeBefore
+        : Number(defender?.evade || 0);
+
+      if (attacker) {
+        attacker.exiaTurnDamageDealt =
+          Number(attacker.exiaTurnDamageDealt || 0) + Number(hitResult?.finalDamage || 0);
+      }
+    }
+
+    if (startCounterAttackFromHitResult(hitResult, defenderPlayer, attackerPlayer, ctxAtk)) {
+      return;
+    }
+
+    const damagedResult = ctx.executeUnitOnDamaged(defender, attacker, {
+      ownerPlayer: defenderPlayer,
+      enemyPlayer: attackerPlayer,
+      defender,
+      attacker,
+      attack,
+      currentAttack,
+      attackIndex: index
+    });
 
     if (currentAttack.length === 0) {
-      if (startCounterAttackFromHitResult(hitResult, defenderPlayer, attackerPlayer, ctxAtk)) {
-        return;
+      if (damagedResult.message) {
+        ctx.appendBattleNotice(damagedResult.message);
       }
 
       finishCurrentAttackResolution();
@@ -234,71 +356,7 @@ const hitResult = ctx.resolveTakeHit({
 
     ctx.redrawBattleBoards();
     ctx.renderAttackChoices();
-    return;
   }
-
- const defenderTeam = ctx.getTeam(defenderPlayer);
-if (defenderTeam && defenderTeam.mode === "unified" && hitResult && !hitResult.cancelled) {
-  const actualDamage = typeof hitResult.finalDamage === "number" ? hitResult.finalDamage : damagePreview;
-  const unified = defenderTeam.unified || { baseHpA: defenderTeam.unit1?.hp || 0, baseHpB: defenderTeam.unit2?.hp || 0, totalDamage: 0, healA: 0, healB: 0 };
-
-  unified.totalDamage = Math.max(0, Number(unified.totalDamage || 0)) + Math.max(0, actualDamage);
-  defenderTeam.unified = unified;
-
-  defender.hp = defenderHpBeforeHit;
-} else {
-  markDefeatedIfNeeded(defender);
-}
-
-defender.lastDamageTaken = typeof hitResult?.finalDamage === "number" ? hitResult.finalDamage : damagePreview;
-  if (hitResult?.damageMessage) {
-    ctx.appendBattleNotice(hitResult.damageMessage);
-  }
-
-  if (isUnitDefeated(defender)) {
-    ctx.appendBattleNotice(`${defender.name}は撃墜された`);
-  }
-
-  if (ctxAtk) {
-    ctxAtk.hitCount++;
-    ctxAtk.damageDealt = Number(ctxAtk.damageDealt || 0) + Number(hitResult?.finalDamage || 0);
-
-    ctxAtk.enemyEvadeBefore = typeof ctxAtk.enemyEvadeBefore === "number"
-      ? ctxAtk.enemyEvadeBefore
-      : Number(defender?.evade || 0);
-
-    if (attacker) {
-      attacker.exiaTurnDamageDealt =
-        Number(attacker.exiaTurnDamageDealt || 0) + Number(hitResult?.finalDamage || 0);
-    }
-  }
-
-  if (startCounterAttackFromHitResult(hitResult, defenderPlayer, attackerPlayer, ctxAtk)) {
-    return;
-  }
-
-  const damagedResult = ctx.executeUnitOnDamaged(defender, attacker, {
-    ownerPlayer: defenderPlayer,
-    enemyPlayer: attackerPlayer,
-    defender,
-    attacker,
-    attack,
-    currentAttack,
-    attackIndex: index
-  });
-
-  if (currentAttack.length === 0) {
-    if (damagedResult.message) {
-      ctx.appendBattleNotice(damagedResult.message);
-    }
-
-    finishCurrentAttackResolution();
-    return;
-  }
-
-  ctx.redrawBattleBoards();
-  ctx.renderAttackChoices();
-}
 
   function evadeAttack(index) {
     const ctxAtk = ctx.getCurrentAttackContext();
@@ -461,7 +519,22 @@ defender.lastDamageTaken = typeof hitResult?.finalDamage === "number" ? hitResul
 
     supportUnit.evade -= 1;
 
-    const baseDamage = Math.floor((attack.damage || 0) / 2);
+    let damageBeforeSupport = Math.max(0, Number(attack.damage || 0));
+
+    if (
+      ctx.twoVtwoTauntSystem &&
+      typeof ctx.twoVtwoTauntSystem.modifyDamage === "function"
+    ) {
+      damageBeforeSupport = ctx.twoVtwoTauntSystem.modifyDamage({
+        attackerPlayer,
+        attackerUnitKey: ctxAtk?.ownerUnitKey || null,
+        defenderPlayer,
+        defenderUnitKey: focusKey,
+        damage: damageBeforeSupport
+      });
+    }
+
+    const baseDamage = Math.floor(damageBeforeSupport / 2);
 
     const modifiedDamage = ctx.executeUnitModifyTakenDamage(
       supportUnit,
