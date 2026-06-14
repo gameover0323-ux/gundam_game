@@ -153,10 +153,11 @@ function getEvadeLineHtml(state, unified = false, handlers = null, unitKey = "")
       : 5;
 
   const disabled = Number(state.evade || 0) <= 0 ? "disabled" : "";
+  const unitKeyAttr = unitKey ? ` data-unit-key="${unitKey}"` : "";
 
- const unitKeyAttr = unitKey ? ` data-unit-key="${unitKey}"` : "";
   return `${getEvadeDisplayHtml(state)} <button class="criticalBoostBtn"${unitKeyAttr} ${disabled}>会心${criticalRate}%</button>`;
 }
+
 export function renderPlayerState(state, container, label, handlers) {
   const defeated = isUnitDefeated(state);
 
@@ -275,17 +276,40 @@ export function renderPlayerState2v2(team, container, label, handlers) {
   const unit1Focused = team.mode === "unified" || team.focusUnitKey === "unit1";
   const unit2Focused = team.mode === "unified" || team.focusUnitKey === "unit2";
 
-  const unit1NameStyle = unit1Defeated
-    ? "color:#777;font-weight:bold;"
-    : unit1Focused
-      ? "color:#ff4040;font-weight:bold;"
-      : "";
+  const unit1TauntTarget =
+    handlers.isTauntTarget && handlers.isTauntTarget("unit1");
 
-  const unit2NameStyle = unit2Defeated
-    ? "color:#777;font-weight:bold;"
-    : unit2Focused
-      ? "color:#ff4040;font-weight:bold;"
-      : "";
+  const unit2TauntTarget =
+    handlers.isTauntTarget && handlers.isTauntTarget("unit2");
+
+  const unit1DuelTarget =
+    handlers.isDuelTarget && handlers.isDuelTarget("unit1");
+
+  const unit2DuelTarget =
+    handlers.isDuelTarget && handlers.isDuelTarget("unit2");
+
+  function get2v2UnitNameStyle(defeated, focused, tauntTarget, duelTarget) {
+    if (defeated) return "color:#777;font-weight:bold;";
+    if (duelTarget) return "color:#ff66cc;font-weight:bold;";
+    if (team.mode === "unified" && tauntTarget) return "color:#44aaff;font-weight:bold;";
+    if (focused) return "color:#ff4040;font-weight:bold;";
+    if (tauntTarget) return "color:#44aaff;font-weight:bold;";
+    return "";
+  }
+
+  const unit1NameStyle = get2v2UnitNameStyle(
+    unit1Defeated,
+    unit1Focused,
+    unit1TauntTarget,
+    unit1DuelTarget
+  );
+
+  const unit2NameStyle = get2v2UnitNameStyle(
+    unit2Defeated,
+    unit2Focused,
+    unit2TauntTarget,
+    unit2DuelTarget
+  );
 
   const activeDefeated = isUnitDefeated(activeState);
 
@@ -307,11 +331,16 @@ export function renderPlayerState2v2(team, container, label, handlers) {
 
   container.innerHTML = `
     <h3>${label} [${modeLabel}]</h3>
-    <button class="teamModeBtn">${team.mode === "unified" ? "分散型へ" : "統合型へ"}</button>
+    <button class="tauntSystemBtn" ${handlers.canUseTauntSystem && handlers.canUseTauntSystem() ? "" : "disabled"}>
+      ${handlers.getTauntButtonLabel ? handlers.getTauntButtonLabel() : "挑発"}
+    </button>
+    <button class="teamModeBtn" ${team.modeChangeLockedThisTurn ? "disabled" : ""}>
+      ${team.mode === "unified" ? "分散型へ" : "統合型へ"}
+    </button>
 
     <div style="${unit1NameStyle}">1. ${team.unit1.name}${unit1Defeated ? " [撃墜]" : ""}</div>
     <div>${getHpLineHtml(team.unit1, team.mode === "unified")}</div>
- <div>${getEvadeLineHtml(team.unit1, team.mode === "unified", handlers, "unit1")}</div>
+    <div>${getEvadeLineHtml(team.unit1, team.mode === "unified", handlers, "unit1")}</div>
 
     <div style="${unit2NameStyle}">2. ${team.unit2 ? team.unit2.name : "空き"}${unit2Defeated ? " [撃墜]" : ""}</div>
     <div>${team.unit2 ? getHpLineHtml(team.unit2, team.mode === "unified") : "HP:-"}</div>
@@ -341,23 +370,30 @@ export function renderPlayerState2v2(team, container, label, handlers) {
     <div class="specialArea"></div>
   `;
 
+  const tauntSystemBtn = container.querySelector(".tauntSystemBtn");
+  if (tauntSystemBtn) {
+    tauntSystemBtn.addEventListener("click", () => {
+      if (handlers.onTauntSystemButton) handlers.onTauntSystemButton();
+    });
+  }
+
   const teamModeBtn = container.querySelector(".teamModeBtn");
-if (teamModeBtn) {
-  teamModeBtn.addEventListener("click", () => {
-    if (handlers.onToggleTeamMode) handlers.onToggleTeamMode();
+  if (teamModeBtn) {
+    teamModeBtn.addEventListener("click", () => {
+      if (handlers.onToggleTeamMode) handlers.onToggleTeamMode();
 
-    const nextActiveUnitKey =
-      !isUnitDefeated(team.unit1)
-        ? "unit1"
-        : !isUnitDefeated(team.unit2)
-          ? "unit2"
-          : null;
+      const nextActiveUnitKey =
+        !isUnitDefeated(team.unit1)
+          ? "unit1"
+          : !isUnitDefeated(team.unit2)
+            ? "unit2"
+            : null;
 
-    if (nextActiveUnitKey && handlers.onSwitchActiveUnit) {
-      handlers.onSwitchActiveUnit(nextActiveUnitKey);
-    }
-  });
-}
+      if (nextActiveUnitKey && handlers.onSwitchActiveUnit) {
+        handlers.onSwitchActiveUnit(nextActiveUnitKey);
+      }
+    });
+  }
 
   container.querySelectorAll(".switchUnitBtn").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -521,6 +557,7 @@ export function renderPendingChoiceUI({
 
   attackLog.appendChild(wrap);
 }
+
 export function renderAttackChoicesUI({
   currentAttack,
   battleNotice,
