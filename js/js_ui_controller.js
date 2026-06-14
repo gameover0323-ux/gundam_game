@@ -33,10 +33,12 @@ function getTurnStatusText() {
   const unit2Action = Number(team.unit2?.actionCount || 0);
   return `PLAYER ${player}のターンです<br>分散型 行動権:1機目 ${unit1Action} / 2機目 ${unit2Action}`;
 }
-
-function renderAttackLogText(message) {
+function renderAttackLogText(message, options = {}) {
   const attackLog = document.getElementById("attackLog");
   attackLog.innerHTML = "";
+
+  const hasMessage = message !== null && message !== undefined && String(message) !== "";
+  const showCurrentAction = options.showCurrentAction !== false && hasMessage;
 
   if (ctx.getBattleNotice()) {
     attackLog.innerHTML += `
@@ -45,22 +47,23 @@ ${ctx.getBattleNotice()}
     ctx.clearBattleNotice();
   }
 
-  if (ctx.getCurrentActionHeader()) {
+  if (showCurrentAction && ctx.getCurrentActionHeader()) {
     attackLog.innerHTML += `
 ${ctx.getCurrentActionHeader()}
 `;
   }
 
-  if (ctx.getCurrentActionLabel()) {
+  if (showCurrentAction && ctx.getCurrentActionLabel()) {
     attackLog.innerHTML += `
 ${ctx.getCurrentActionLabel()}
 `;
   }
 
   attackLog.innerHTML += `
-${message || getTurnStatusText()}
+${hasMessage ? message : getTurnStatusText()}
 `;
 }
+
   function renderPendingChoice() {
     const pendingChoice = ctx.getPendingChoice();
     if (!pendingChoice) return;
