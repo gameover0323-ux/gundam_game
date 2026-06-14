@@ -1,4 +1,4 @@
-import { setForm, reduceEvade, doubleEvadeRedCap, normalizeEvadeCapState } from "./js_unit_runtime.js";
+import { setForm, doubleEvadeRedCap, normalizeEvadeCapState } from "./js_unit_runtime.js";
 import { createAttack } from "./js_battle_system.js";
 
 function chance(rate) { return Math.random() < rate; }
@@ -15,6 +15,64 @@ function ensureAerialState(state) {
   if (typeof state.aerialOrbitalNextTurn !== "boolean") state.aerialOrbitalNextTurn = false;
   if (typeof state.aerialOrbitalActiveThisTurn !== "boolean") state.aerialOrbitalActiveThisTurn = false;
   if (typeof state.aerialScoreSixTurnTicked !== "boolean") state.aerialScoreSixTurnTicked = false;
+}
+
+function getAdapter(context = {}) {
+  return context?.twoVtwoAdapter || null;
+}
+
+function getOwnerPlayer(context = {}) {
+  return context?.ownerPlayer || context?.defenderPlayer || context?.targetPlayer || context?.player || null;
+}
+
+function getRuleEvade(state, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+  if (adapter?.getEvade && ownerPlayer) return adapter.getEvade(ownerPlayer, state);
+  return Math.max(0, Number(state?.evade || 0));
+}
+
+function consumeRuleEvade(state, amount, context = {}) {
+  const cost = Math.max(0, Math.floor(Number(amount || 0)));
+  if (cost <= 0) return true;
+
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+  if (adapter?.consumeEvade && ownerPlayer) return adapter.consumeEvade(ownerPlayer, state, cost);
+
+  if (!state || Number(state.evade || 0) < cost) return false;
+  state.evade = Math.max(0, Number(state.evade || 0) - cost);
+  normalizeEvadeCapState(state);
+  return true;
+}
+
+function addRuleActionAtLeast(state, amount, context = {}) {
+  const target = Math.max(0, Math.floor(Number(amount || 0)));
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.getActionCount && adapter?.addActionCount && ownerPlayer) {
+    const current = adapter.getActionCount(ownerPlayer, state);
+    if (current >= target) return 0;
+    return adapter.addActionCount(ownerPlayer, state, target - current);
+  }
+
+  state.actionCount = Math.max(Number(state.actionCount || 0), target);
+  return true;
+}
+
+function doubleRuleEvadeRedCap(state, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (adapter?.applyToUnifiedPartners && ownerPlayer && adapter.applyToUnifiedPartners(ownerPlayer, unit => {
+    doubleEvadeRedCap(unit);
+  })) {
+    return true;
+  }
+
+  doubleEvadeRedCap(state);
+  return true;
 }
 
 function enterScoreSix(state) {
@@ -37,6 +95,7 @@ function exitScoreSix(state) {
   setForm(state, "base", { preserveHp: true, preserveEvade: true });
   normalizeEvadeCapState(state);
 }
+
 function buildGundbitSlot() {
   return {
     key: "slot7",
@@ -57,10 +116,10 @@ export function getAerialDerivedState(state) {
 
   if (state.formId === "score_six") {
     status.push({
-  text: `スコアシックス:${Math.max(0, Number(state.aerialScoreSixTurns || 0))}ターン`,
-  color: "#44aaff",
-  bold: true
-});
+      text: `スコアシックス:${Math.max(0, Number(state.aerialScoreSixTurns || 0))}ターン`,
+      color: "#44aaff",
+      bold: true
+    });
     status.push(`ビットオン軽減:${Math.max(0, Number(state.aerialBitOnReduction || 0))}`);
 
     if (state.aerialOrbitalActiveThisTurn) {
@@ -76,7 +135,7 @@ export function getAerialDerivedState(state) {
   return { status, slots, specials: {} };
 }
 
-export function canUseAerialSpecial(state, specialKey) {
+export function canUseAerialSpecial(state, specialKey, context = {}) {
   ensureAerialState(state);
   const special = state.specials?.[specialKey];
   if (!special) return { allowed: false, message: "特殊行動データが見つからない" };
@@ -90,18 +149,20 @@ export function canUseAerialSpecial(state, specialKey) {
 
   if (special.effectType === "aerial_gundbit_link") {
     if (Number(state.aerialGundbitLinkCountThisTurn || 0) >= 3) return { allowed: false, message: "1ターン3回まで" };
-    return { allowed: Number(state.evade || 0) >= 1, message: Number(state.evade || 0) >= 1 ? null : "回避が足りない" };
+    const ev = getRuleEvade(state, context);
+    return { allowed: ev >= 1, message: ev >= 1 ? null : "回避が足りない" };
   }
 
   if (special.effectType === "aerial_data_storm_support") {
     if (state.formId !== "score_six") return { allowed: false, message: "スコアシックス中のみ使用可能" };
-    return { allowed: Number(state.evade || 0) >= 3, message: Number(state.evade || 0) >= 3 ? null : "回避が足りない" };
+    const ev = getRuleEvade(state, context);
+    return { allowed: ev >= 3, message: ev >= 3 ? null : "回避が足りない" };
   }
 
   return { allowed: true, message: null };
 }
 
-export function executeAerialSpecial(state, specialKey) {
+export function executeAerialSpecial(state, specialKey, context = {}) {
   ensureAerialState(state);
   const special = state.specials?.[specialKey];
   if (!special) return { handled: true, redraw: false, message: "特殊行動データが見つからない" };
@@ -115,16 +176,23 @@ export function executeAerialSpecial(state, specialKey) {
 
   if (special.effectType === "aerial_gundbit_link") {
     if (Number(state.aerialGundbitLinkCountThisTurn || 0) >= 3) return { handled: true, redraw: false, message: "1ターン3回まで" };
-    if (Number(state.evade || 0) < 1) return { handled: true, redraw: false, message: "回避が足りない" };
-    reduceEvade(state, 1);
+    if (getRuleEvade(state, context) < 1) return { handled: true, redraw: false, message: "回避が足りない" };
+    if (!consumeRuleEvade(state, 1, context)) return { handled: true, redraw: true, message: "回避が足りない" };
+
     state.aerialGundbitLinkCountThisTurn += 1;
-    return { handled: true, redraw: true, message: "ガンビット連携：回避1消費", startSlotAction: { slotKey: "slot7", slotData: buildGundbitSlot() } };
+    return {
+      handled: true,
+      redraw: true,
+      message: "ガンビット連携：回避1消費",
+      startSlotAction: { slotKey: "slot7", slotData: buildGundbitSlot() }
+    };
   }
 
   if (special.effectType === "aerial_data_storm_support") {
     if (state.formId !== "score_six") return { handled: true, redraw: false, message: "スコアシックス中のみ使用可能" };
-    if (Number(state.evade || 0) < 3) return { handled: true, redraw: false, message: "回避が足りない" };
-    reduceEvade(state, 3);
+    if (getRuleEvade(state, context) < 3) return { handled: true, redraw: false, message: "回避が足りない" };
+    if (!consumeRuleEvade(state, 3, context)) return { handled: true, redraw: true, message: "回避が足りない" };
+
     state.aerialScoreSixTurns += 1;
     return { handled: true, redraw: true, message: "データストーム補助：強化ターン+1" };
   }
@@ -132,19 +200,19 @@ export function executeAerialSpecial(state, specialKey) {
   return { handled: false, redraw: false, message: null };
 }
 
-export function onAerialBeforeSlot(state) {
+export function onAerialBeforeSlot(state, rolledSlotNumber, context = {}) {
   ensureAerialState(state);
   state.aerialGundbitLinkCountThisTurn = 0;
 
   if (state.aerialOrbitalNextTurn) {
     state.aerialOrbitalNextTurn = false;
     state.aerialOrbitalActiveThisTurn = true;
-    state.actionCount = Math.max(Number(state.actionCount || 0), 3);
+    addRuleActionAtLeast(state, 3, context);
   } else {
     state.aerialOrbitalActiveThisTurn = false;
   }
 
- if (state.formId === "score_six") {
+  if (state.formId === "score_six") {
     if (state.aerialScoreSixJustActivated) {
       state.aerialScoreSixJustActivated = false;
       state.aerialScoreSixTurnTicked = true;
@@ -177,6 +245,7 @@ export function onAerialAfterSlotResolved(state, slotNumber, payload = {}) {
   ensureAerialState(state);
   const resolveResult = payload.resolveResult || payload;
   const customEffectId = resolveResult.customEffectId;
+  const context = payload.context || payload;
 
   if (customEffectId === "aerial_score_six") {
     enterScoreSix(state);
@@ -194,42 +263,58 @@ export function onAerialAfterSlotResolved(state, slotNumber, payload = {}) {
   }
 
   if (customEffectId === "aerial_score_six_saber") {
-    const ev = Number(state.evade || 0);
-    return { redraw: false, appendAttacks: createAttack(ev > 0 ? 20 : 60, ev > 0 ? ev : 1, { type: "melee", beam: true, source: "ビームサーベル" }) };
+    const ev = getRuleEvade(state, context);
+    return {
+      redraw: false,
+      appendAttacks: createAttack(ev > 0 ? 20 : 60, ev > 0 ? ev : 1, {
+        type: "melee",
+        beam: true,
+        source: "ビームサーベル"
+      })
+    };
   }
 
   if (customEffectId === "aerial_score_six_escutcheon") {
-    const ev = Number(state.evade || 0);
-    return { redraw: false, appendAttacks: createAttack(ev > 0 ? 30 * ev : 120, 1, { type: "shoot", beam: true, ignoreReduction: true, source: "エスカッシャン" }) };
+    const ev = getRuleEvade(state, context);
+    return {
+      redraw: false,
+      appendAttacks: createAttack(ev > 0 ? 30 * ev : 120, 1, {
+        type: "shoot",
+        beam: true,
+        ignoreReduction: true,
+        source: "エスカッシャン"
+      })
+    };
   }
 
   return { redraw: false, message: null };
 }
 
-export function onAerialDamaged(defender) {
+export function onAerialDamaged(defender, attacker, context = {}) {
   ensureAerialState(defender);
   const damage = Math.max(0, Number(defender.lastDamageTaken || 0));
   if (damage <= 0) return { redraw: false, message: null };
 
   defender.aerialDamageBucket += damage;
   let count = 0;
+
   while (defender.aerialDamageBucket >= 100) {
     defender.aerialDamageBucket -= 100;
-    doubleEvadeRedCap(defender);
+    doubleRuleEvadeRedCap(defender, context);
     count += 1;
   }
 
   return count > 0 ? { redraw: true, message: `意思：回避倍加×${count}` } : { redraw: false, message: null };
 }
 
-export function modifyAerialTakenDamage(defender, attacker, attack, damage) {
+export function modifyAerialTakenDamage(defender, attacker, attack, damage, context = {}) {
   ensureAerialState(defender);
 
   if (defender.aerialCompositeShieldActive) {
-  return { damage: 0, cancelled: true, message: "コンポジットガンビットシールド：攻撃無効" };
+    return { damage: 0, cancelled: true, message: "コンポジットガンビットシールド：攻撃無効" };
   }
 
-  if (Number(defender.evade || 0) <= 0 && chance(0.5)) {
+  if (getRuleEvade(defender, context) <= 0 && chance(0.5)) {
     return { damage: 0, cancelled: true, message: "ガンビットシールド行動：攻撃無効" };
   }
 
