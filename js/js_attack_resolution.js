@@ -207,29 +207,18 @@ function startCounterAttackFromHitResult(hitResult, defenderPlayer, attackerPlay
     return sum + Math.max(0, Number(atk?.damage || 0));
   }, 0);
 
-  const hitResult = ctx.resolveTakeHit({
-    attacker,
-    defender,
-    currentAttack,
-    attackIndex: index,
+ const defenderHpBeforeHit = Number(defender?.hp || 0);
 
-    modifyTakenDamage: (d, a, atk, dmg) => ctx.executeUnitModifyTakenDamage(d, a, atk, dmg, {
-      attackerPlayer,
-      defenderPlayer,
-      attacker,
-      defender,
-      currentAttack,
-      attackIndex: index,
-      currentAttackContext: ctxAtk,
-      currentTotalDamage
-    }),
-
-    rollCritical: () => {
-  return typeof ctx.rollCritical === "function"
-    ? ctx.rollCritical(attacker)
-    : false;
-}
-  });
+const hitResult = ctx.resolveTakeHit({
+  attacker,
+  defender,
+  currentAttack,
+  attackIndex: index,
+  modifyTakenDamage: (d, a, atk, dmg) => ctx.executeUnitModifyTakenDamage(d, a, atk, dmg, { attackerPlayer, defenderPlayer, attacker, defender, currentAttack, attackIndex: index, currentAttackContext: ctxAtk, currentTotalDamage }),
+  rollCritical: () => {
+    return typeof ctx.rollCritical === "function" ? ctx.rollCritical(attacker) : false;
+  }
+});
 
   if (hitResult && hitResult.cancelled) {
     ctx.appendBattleNotice(hitResult.damageMessage || "攻撃無効");
@@ -248,34 +237,20 @@ function startCounterAttackFromHitResult(hitResult, defenderPlayer, attackerPlay
     return;
   }
 
-  const defenderTeam = ctx.getTeam(defenderPlayer);
+ const defenderTeam = ctx.getTeam(defenderPlayer);
+if (defenderTeam && defenderTeam.mode === "unified" && hitResult && !hitResult.cancelled) {
+  const actualDamage = typeof hitResult.finalDamage === "number" ? hitResult.finalDamage : damagePreview;
+  const unified = defenderTeam.unified || { baseHpA: defenderTeam.unit1?.hp || 0, baseHpB: defenderTeam.unit2?.hp || 0, totalDamage: 0, healA: 0, healB: 0 };
 
-  if (defenderTeam && defenderTeam.mode === "unified" && hitResult && !hitResult.cancelled) {
-    const actualDamage =
-      typeof hitResult.finalDamage === "number" ? hitResult.finalDamage : damagePreview;
+  unified.totalDamage = Math.max(0, Number(unified.totalDamage || 0)) + Math.max(0, actualDamage);
+  defenderTeam.unified = unified;
 
-    const unified =
-      defenderTeam.unified || {
-        baseHpA: defenderTeam.unit1?.hp || 0,
-        baseHpB: defenderTeam.unit2?.hp || 0,
-        totalDamage: 0,
-        healA: 0,
-        healB: 0
-      };
-
-    unified.totalDamage =
-      Math.max(0, Number(unified.totalDamage || 0)) + Math.max(0, actualDamage);
-
-    defenderTeam.unified = unified;
-
-    defender.hp += Math.max(0, actualDamage);
-  }
-
-  defender.lastDamageTaken =
-    typeof hitResult?.finalDamage === "number" ? hitResult.finalDamage : damagePreview;
-
+  defender.hp = defenderHpBeforeHit;
+} else {
   markDefeatedIfNeeded(defender);
+}
 
+defender.lastDamageTaken = typeof hitResult?.finalDamage === "number" ? hitResult.finalDamage : damagePreview;
   if (hitResult?.damageMessage) {
     ctx.appendBattleNotice(hitResult.damageMessage);
   }
