@@ -87,12 +87,42 @@ export function create2v2Helpers({ getBattleMode, getTeam }) {
     return true;
   }
 
-  function exitUnified(team) {
-    if (!team || team.mode !== "unified") return false;
+function exitUnified(team) {
+  if (!team || team.mode !== "unified") return false;
 
-    syncUnifiedHealFromCurrentHp(team);
-    const unified = ensureUnifiedState(team);
+  const unified = ensureUnifiedState(team);
+  const rawUnifiedHp =
+    Math.max(0, Number(unified.baseHpA || 0)) +
+    Math.max(0, Number(unified.baseHpB || 0)) +
+    Math.max(0, Number(unified.healA || 0)) +
+    Math.max(0, Number(unified.healB || 0)) -
+    Math.max(0, Number(unified.totalDamage || 0));
 
+  if (rawUnifiedHp <= 0) {
+    if (team.unit1) {
+      team.unit1.hp = 0;
+      team.unit1.isDefeated = true;
+    }
+    if (team.unit2) {
+      team.unit2.hp = 0;
+      team.unit2.isDefeated = true;
+    }
+
+    unified.baseHpA = 0;
+    unified.baseHpB = 0;
+    unified.totalDamage = 0;
+    unified.healA = 0;
+    unified.healB = 0;
+    unified.baseActionCount = 1;
+    unified.actionCount = 1;
+
+    team.mode = "split";
+    team.activeUnitKey = "unit1";
+    team.focusUnitKey = "unit1";
+    return true;
+  }
+
+  syncUnifiedHealFromCurrentHp(team);
     const aPool = Math.max(0, Number(unified.baseHpA || 0)) + Math.max(0, Number(unified.healA || 0));
     const bPool = Math.max(0, Number(unified.baseHpB || 0)) + Math.max(0, Number(unified.healB || 0));
     const totalPool = Math.max(1, aPool + bPool);
