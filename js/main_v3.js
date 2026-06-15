@@ -452,8 +452,16 @@ function toggleTeamMode(playerKey) {
     return;
   }
 
-  if (team.modeChangeLockedThisTurn) {
+ if (team.modeChangeLockedThisTurn) {
     showPopup("スロット行動後はこのターン中、型を切り替えられません");
+    return;
+  }
+
+  if (
+    twoVtwoTauntController &&
+    twoVtwoTauntController.isTeamModeLocked(playerKey)
+  ) {
+    showPopup("挑発・決戦中は統合型へ切り替えられません");
     return;
   }
 
@@ -704,7 +712,11 @@ function build2v2RenderHandlers(playerKey) {
   return {
     currentPlayer,
     playerKey,
-    canChangeFocus: isBossSide ? false : canChangeFocus(playerKey),
+   canChangeFocus:
+      isBossSide
+        ? false
+        : canChangeFocus(playerKey) &&
+          (!twoVtwoTauntController || twoVtwoTauntController.canChangeFocus(playerKey)),
 
     canUseTauntSystem: () =>
       twoVtwoTauntController ? twoVtwoTauntController.canUse(playerKey) : false,
@@ -747,6 +759,14 @@ function build2v2RenderHandlers(playerKey) {
 
       if (!canChangeFocus(playerKey)) {
         showPopup("フォーカス変更は自分ターン中、かつQTE中でない時のみ可能");
+        return;
+      }
+
+      if (
+        twoVtwoTauntController &&
+        !twoVtwoTauntController.canChangeFocus(playerKey)
+      ) {
+        showPopup("決戦中はフォーカス機体を変更できません");
         return;
       }
 
