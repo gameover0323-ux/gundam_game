@@ -239,17 +239,6 @@ if (Number(attacker.pendingActionPenalty || 0) > 0) {
 
     if (!actor || !enemyState) return;
 
-    if (
-      typeof ctx.getBattleMode === "function" &&
-      (ctx.getBattleMode() === "vscpu1v1" || ctx.getBattleMode() === "vscpu2v2") &&
-      actorPlayer === "B" &&
-      typeof ctx.hasCpuRemainingAction === "function" &&
-      ctx.hasCpuRemainingAction(actorPlayer)
-    ) {
-      ctx.showPopup("CPUの行動権が残っています。CPU行動を実行してください。");
-      return;
-    }
-
     actor.shieldActive = false;
   enemyState.shieldActive = false;
 
