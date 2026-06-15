@@ -120,6 +120,7 @@ import { create2v2Helpers } from "./js_2on2_helpers.js";
 import { create2v2Actions } from "./js_2on2_actions.js";
 import { create2v2Adapter } from "./js_2on2_adapter.js";
 import { create2v2TauntController } from "./js_2on2_taunt_controller.js";
+import { create2v2BreakthroughController } from "./js_2on2_breakthrough_controller.js";
 import { createBattleFlow } from "./js_battle_flow.js";
 
 import { createAttackResolution } from "./js_attack_resolution.js";
@@ -226,7 +227,7 @@ let twoVtwoHelpers = null;
 let twoVtwoActions = null;
 let twoVtwoAdapter = null;
 let twoVtwoTauntController = null;
-
+let twoVtwoBreakthroughController = null;
 let uiController = null;
 
 let gameSetup = null;
@@ -1247,6 +1248,33 @@ twoVtwoTauntController = create2v2TauntController({
   hasPendingChoice: () => !!pendingChoice,
   hasCurrentAttack: () => currentAttack.length > 0,
   showPopup,
+  redrawBattleBoards,
+  openBreakthrough: () => {
+    if (twoVtwoBreakthroughController) {
+      twoVtwoBreakthroughController.renderBetChoice();
+      return;
+    }
+
+    showPopup("打破システムを参照できません");
+  }
+});
+
+twoVtwoBreakthroughController = create2v2BreakthroughController({
+  getTeam,
+  getOpponentPlayer,
+  getRollableSlotKeys,
+  getSlotByKey,
+  getSlotNumberFromKey,
+  twoVtwoAdapter,
+  twoVtwoTauntController,
+  clampTeamEvadeToMax: (team) => {
+    if (battleFlow && typeof battleFlow.clampTeamEvadeToMax === "function") {
+      battleFlow.clampTeamEvadeToMax(team);
+    }
+  },
+  setCurrentPlayer: (value) => {
+    currentPlayer = value;
+  },
   redrawBattleBoards
 });
 onlineSpectatorController = createOnlineSpectatorController({
