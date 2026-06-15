@@ -409,28 +409,6 @@ function getOpponentPlayer(playerKey) {
   return playerKey === "A" ? "B" : "A";
 }
 
-function hasCpuRemainingAction(playerKey) {
-  if (!(battleMode === "vscpu1v1" || battleMode === "vscpu2v2")) return false;
-  if (playerKey !== "B") return false;
-
-  if (isTeamBattleMode()) {
-    const team = getTeam(playerKey);
-    if (!team) return false;
-
-    if (team.mode === "unified") {
-      return Number(team.unified?.actionCount || 0) > 0;
-    }
-
-    return (
-      Number(team.unit1?.actionCount || 0) > 0 ||
-      Number(team.unit2?.actionCount || 0) > 0
-    );
-  }
-
-  const state = getPlayerStateRaw(playerKey);
-  return Number(state?.actionCount || 0) > 0;
-}
-
 function setBattleNotice(text) {
   battleNotice = text || "";
 }
@@ -515,8 +493,7 @@ function createTeam(unit1, unit2) {
       duelBUnitKey: null,
       duelTurns: 0,
       cooldown: 0,
-      disabledThisTurn: false,
-      cpuTauntCheckedThisTurn: false
+      disabledThisTurn: false
     },
     unified: {
       baseHpA: 0,
@@ -1265,19 +1242,17 @@ twoVtwoAdapter = create2v2Adapter({
 });
 
 twoVtwoTauntController = create2v2TauntController({
-  getBattleMode: () => battleMode,
   getCurrentPlayer: () => currentPlayer,
   getOpponentPlayer,
   getTeam,
   exitUnified: (team) => twoVtwoHelpers.exitUnified(team),
   hasPendingChoice: () => !!pendingChoice,
   hasCurrentAttack: () => currentAttack.length > 0,
-  appendBattleNotice,
   showPopup,
   redrawBattleBoards,
-  openBreakthrough: (options = {}) => {
+  openBreakthrough: () => {
     if (twoVtwoBreakthroughController) {
-      twoVtwoBreakthroughController.renderBetChoice(options);
+      twoVtwoBreakthroughController.renderBetChoice();
       return;
     }
 
@@ -1496,7 +1471,6 @@ attackResolution = createAttackResolution({
  getCurrentAttackContexts: () => currentAttackContexts,
   twoVtwoAdapter,
   twoVtwoTauntSystem: twoVtwoTauntController,
-  hasCpuRemainingAction,
 
   setCurrentAttack: (v) => currentAttack = v,
   setCurrentAttackContext: (v) => currentAttackContext = v,
@@ -1730,7 +1704,6 @@ renderAttackChoices
 });
 
 twoVtwoBreakthroughController = create2v2BreakthroughController({
-  getBattleMode: () => battleMode,
   getTeam,
   getOpponentPlayer,
   getRollableSlotKeys,
@@ -1744,16 +1717,13 @@ twoVtwoBreakthroughController = create2v2BreakthroughController({
   setCurrentPlayer: (value) => {
     currentPlayer = value;
   },
-  redrawBattleBoards,
-  showPopup
+  redrawBattleBoards
 });
 turnActionController = createTurnActionController({
   isOnlineEnabled: () => onlineState.enabled,
   getOnlineMyPlayer: () => onlineState.myPlayer,
   isOnlineSpectator,
-  getBattleMode: () => battleMode,
   getCurrentPlayer: () => currentPlayer,
-  hasCpuRemainingAction,
 
   executeSlotRaw: () => battleFlow.executeSlot(),
   simulateSlotRaw: () => battleFlow.simulateSlot(),
