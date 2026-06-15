@@ -1,6 +1,29 @@
 export function create2v2TauntController(ctx) {
   const EFFECT_TURNS = 5;
   const COOLDOWN_TURNS = 5;
+  const CPU_USE_RATE = 0.1;
+
+  function isCpuPlayer(playerKey) {
+    return (
+      typeof ctx.getBattleMode === "function" &&
+      ctx.getBattleMode() === "vscpu2v2" &&
+      playerKey === "B"
+    );
+  }
+
+  function isDefeated(unit) {
+    return !unit || Number(unit.hp || 0) <= 0 || unit.isDefeated === true;
+  }
+
+  function getAliveUnitKeys(team) {
+    return ["unit1", "unit2"].filter((unitKey) => team?.[unitKey] && !isDefeated(team[unitKey]));
+  }
+
+  function pickRandomAliveUnitKey(team) {
+    const keys = getAliveUnitKeys(team);
+    if (keys.length <= 0) return null;
+    return keys[Math.floor(Math.random() * keys.length)];
+  }
 
   function ensureTeamTauntState(team) {
     if (!team) return null;
@@ -11,15 +34,18 @@ export function create2v2TauntController(ctx) {
         tauntTargetUnitKey: null,
         tauntOwnerPlayer: null,
         tauntTurns: 0,
-
         duelActive: false,
         duelAUnitKey: null,
         duelBUnitKey: null,
         duelTurns: 0,
-
         cooldown: 0,
-        disabledThisTurn: false
+        disabledThisTurn: false,
+        cpuTauntCheckedThisTurn: false
       };
+    }
+
+    if (typeof team.tauntState.cpuTauntCheckedThisTurn !== "boolean") {
+      team.tauntState.cpuTauntCheckedThisTurn = false;
     }
 
     return team.tauntState;
@@ -79,6 +105,7 @@ export function create2v2TauntController(ctx) {
     if (!state) return;
 
     state.disabledThisTurn = false;
+    state.cpuTauntCheckedThisTurn = false;
 
     if (state.cooldown > 0) {
       state.cooldown -= 1;
@@ -86,7 +113,6 @@ export function create2v2TauntController(ctx) {
 
     if (state.tauntTurns > 0) {
       state.tauntTurns -= 1;
-
       if (state.tauntTurns <= 0) {
         state.tauntTargetPlayer = null;
         state.tauntTargetUnitKey = null;
@@ -96,7 +122,6 @@ export function create2v2TauntController(ctx) {
 
     if (state.duelTurns > 0) {
       state.duelTurns -= 1;
-
       if (state.duelTurns <= 0) {
         state.duelActive = false;
         state.duelAUnitKey = null;
@@ -113,21 +138,21 @@ export function create2v2TauntController(ctx) {
     state.tauntTargetUnitKey = null;
     state.tauntOwnerPlayer = null;
     state.tauntTurns = 0;
-
     state.duelActive = false;
     state.duelAUnitKey = null;
     state.duelBUnitKey = null;
     state.duelTurns = 0;
-
     state.cooldown = Math.max(Number(state.cooldown || 0), COOLDOWN_TURNS);
     state.disabledThisTurn = true;
   }
 
-function canUse(playerKey) {
+  function canUse(playerKey, options = {}) {
+    const allowCpu = options.allowCpu === true;
     const team = ctx.getTeam(playerKey);
     const state = ensureTeamTauntState(team);
 
     if (!team || !state) return false;
+    if (!allowCpu && isCpuPlayer(playerKey)) return false;
     if (ctx.hasPendingChoice()) return false;
     if (ctx.hasCurrentAttack()) return false;
 
@@ -160,19 +185,18 @@ function canUse(playerKey) {
     return "挑発";
   }
 
-  function startTaunt(ownerPlayer, targetUnitKey) {
-    if (!canUse(ownerPlayer)) {
+  function startTaunt(ownerPlayer, targetUnitKey, options = {}) {
+    if (!canUse(ownerPlayer, options)) {
       return { ok: false, message: "現在は挑発できません" };
     }
 
     const enemyPlayer = ctx.getOpponentPlayer(ownerPlayer);
     const ownerTeam = ctx.getTeam(ownerPlayer);
     const enemyTeam = ctx.getTeam(enemyPlayer);
-
     const ownerState = ensureTeamTauntState(ownerTeam);
     const enemyState = ensureTeamTauntState(enemyTeam);
 
-    if (!enemyTeam?.[targetUnitKey]) {
+    if (!enemyTeam?.[targetUnitKey] || isDefeated(enemyTeam[targetUnitKey])) {
       return { ok: false, message: "挑発対象が見つかりません" };
     }
 
@@ -182,28 +206,26 @@ function canUse(playerKey) {
     enemyState.tauntTargetUnitKey = targetUnitKey;
     enemyState.tauntOwnerPlayer = ownerPlayer;
     enemyState.tauntTurns = EFFECT_TURNS;
-
     ownerState.cooldown = COOLDOWN_TURNS;
 
     return {
       ok: true,
-      message: `${targetUnitKey === "unit2" ? "2" : "1"}番機を挑発しました`
+      message: `${ownerPlayer === "B" ? "CPU" : `PLAYER ${ownerPlayer}`} が ${targetUnitKey === "unit2" ? "2" : "1"}番機を挑発しました`
     };
   }
 
- function startDuel(ownerPlayer, ownUnitKey) {
-    if (!canUse(ownerPlayer)) {
+  function startDuel(ownerPlayer, ownUnitKey, options = {}) {
+    if (!canUse(ownerPlayer, options)) {
       return { ok: false, message: "現在は決戦できません" };
     }
 
     const enemyPlayer = ctx.getOpponentPlayer(ownerPlayer);
     const ownTeam = ctx.getTeam(ownerPlayer);
     const enemyTeam = ctx.getTeam(enemyPlayer);
-
     const ownState = ensureTeamTauntState(ownTeam);
     const enemyState = ensureTeamTauntState(enemyTeam);
 
-    if (!ownTeam?.[ownUnitKey]) {
+    if (!ownTeam?.[ownUnitKey] || isDefeated(ownTeam[ownUnitKey])) {
       return { ok: false, message: "決戦する自軍機体が見つかりません" };
     }
 
@@ -215,10 +237,9 @@ function canUse(playerKey) {
       return { ok: false, message: "相手から受けている挑発がありません" };
     }
 
-    const enemyFocusUnitKey =
-      enemyTeam?.focusUnitKey === "unit2" ? "unit2" : "unit1";
+    const enemyFocusUnitKey = enemyTeam?.focusUnitKey === "unit2" ? "unit2" : "unit1";
 
-    if (!enemyTeam?.[enemyFocusUnitKey]) {
+    if (!enemyTeam?.[enemyFocusUnitKey] || isDefeated(enemyTeam[enemyFocusUnitKey])) {
       return { ok: false, message: "相手のフォーカス機体が見つかりません" };
     }
 
@@ -262,8 +283,62 @@ function canUse(playerKey) {
     enemyState.tauntOwnerPlayer = null;
     enemyState.tauntTurns = 0;
 
-    return { ok: true, message: "決戦成立" };
- }
+    return {
+      ok: true,
+      message: `${ownerPlayer === "B" ? "CPU" : `PLAYER ${ownerPlayer}`} が決戦を受けました`
+    };
+  }
+
+  function tryCpuAutoUse(playerKey) {
+    if (!isCpuPlayer(playerKey)) {
+      return { used: false, message: "" };
+    }
+
+    const team = ctx.getTeam(playerKey);
+    const state = ensureTeamTauntState(team);
+
+    if (!team || !state) {
+      return { used: false, message: "" };
+    }
+
+    if (state.cpuTauntCheckedThisTurn) {
+      return { used: false, message: "" };
+    }
+
+    state.cpuTauntCheckedThisTurn = true;
+
+    if (!canUse(playerKey, { allowCpu: true })) {
+      return { used: false, message: "" };
+    }
+
+    if (Math.random() >= CPU_USE_RATE) {
+      return { used: false, message: "" };
+    }
+
+    const label = getButtonLabel(playerKey);
+
+    if (label === "打破") {
+      return { used: false, message: "" };
+    }
+
+    if (label === "決戦") {
+      const ownUnitKey = pickRandomAliveUnitKey(team);
+      if (!ownUnitKey) return { used: false, message: "" };
+
+      const result = startDuel(playerKey, ownUnitKey, { allowCpu: true });
+      return { used: result.ok === true, message: result.message || "" };
+    }
+
+    const enemyTeam = ctx.getTeam(ctx.getOpponentPlayer(playerKey));
+    const targetUnitKey = pickRandomAliveUnitKey(enemyTeam);
+
+    if (!targetUnitKey) {
+      return { used: false, message: "" };
+    }
+
+    const result = startTaunt(playerKey, targetUnitKey, { allowCpu: true });
+    return { used: result.ok === true, message: result.message || "" };
+  }
 
   function isTauntTarget(playerKey, unitKey) {
     const state = getOwnState(playerKey);
@@ -273,21 +348,11 @@ function canUse(playerKey) {
   function isDuelTarget(playerKey, unitKey) {
     const state = getOwnState(playerKey);
     if (!state?.duelActive) return false;
-
-    return playerKey === "A"
-      ? state.duelAUnitKey === unitKey
-      : state.duelBUnitKey === unitKey;
+    return playerKey === "A" ? state.duelAUnitKey === unitKey : state.duelBUnitKey === unitKey;
   }
 
-  function modifyDamage({
-    attackerPlayer,
-    attackerUnitKey,
-    defenderPlayer,
-    defenderUnitKey,
-    damage
-  }) {
+  function modifyDamage({ attackerPlayer, attackerUnitKey, defenderPlayer, defenderUnitKey, damage }) {
     let result = Math.max(0, Number(damage || 0));
-
     const defenderState = getOwnState(defenderPlayer);
 
     if (
@@ -301,20 +366,10 @@ function canUse(playerKey) {
     const attackerState = getOwnState(attackerPlayer);
 
     if (attackerState?.duelActive) {
-      const attackerDuelKey =
-        attackerPlayer === "A"
-          ? attackerState.duelAUnitKey
-          : attackerState.duelBUnitKey;
+      const attackerDuelKey = attackerPlayer === "A" ? attackerState.duelAUnitKey : attackerState.duelBUnitKey;
+      const defenderDuelKey = defenderPlayer === "A" ? attackerState.duelAUnitKey : attackerState.duelBUnitKey;
 
-      const defenderDuelKey =
-        defenderPlayer === "A"
-          ? attackerState.duelAUnitKey
-          : attackerState.duelBUnitKey;
-
-      if (
-        attackerUnitKey === attackerDuelKey &&
-        defenderUnitKey === defenderDuelKey
-      ) {
+      if (attackerUnitKey === attackerDuelKey && defenderUnitKey === defenderDuelKey) {
         result = Math.floor(result * 2);
       }
     }
@@ -329,7 +384,9 @@ function canUse(playerKey) {
 
     if (!attackLog || !enemyTeam) return;
 
-    attackLog.innerHTML = `<div style="font-weight:bold;margin-bottom:6px;">PLAYER ${enemyPlayer} の挑発対象を選択</div>`;
+    attackLog.innerHTML = `
+PLAYER ${enemyPlayer} の挑発対象を選択
+`;
 
     ["unit1", "unit2"].forEach((unitKey) => {
       const unit = enemyTeam[unitKey];
@@ -337,7 +394,7 @@ function canUse(playerKey) {
 
       const btn = document.createElement("button");
       btn.textContent = `${unitKey === "unit2" ? "2" : "1"}. ${unit.name}`;
-      btn.disabled = Number(unit.hp || 0) <= 0 || unit.isDefeated === true;
+      btn.disabled = isDefeated(unit);
 
       btn.addEventListener("click", () => {
         const result = startTaunt(ownerPlayer, unitKey);
@@ -356,7 +413,9 @@ function canUse(playerKey) {
 
     if (!attackLog || !ownTeam) return;
 
-    attackLog.innerHTML = `<div style="font-weight:bold;margin-bottom:6px;">PLAYER ${ownerPlayer} の決戦機体を選択</div>`;
+    attackLog.innerHTML = `
+PLAYER ${ownerPlayer} の決戦機体を選択
+`;
 
     ["unit1", "unit2"].forEach((unitKey) => {
       const unit = ownTeam[unitKey];
@@ -364,7 +423,7 @@ function canUse(playerKey) {
 
       const btn = document.createElement("button");
       btn.textContent = `${unitKey === "unit2" ? "2" : "1"}. ${unit.name}`;
-      btn.disabled = Number(unit.hp || 0) <= 0 || unit.isDefeated === true;
+      btn.disabled = isDefeated(unit);
 
       btn.addEventListener("click", () => {
         const result = startDuel(ownerPlayer, unitKey);
@@ -377,7 +436,12 @@ function canUse(playerKey) {
     });
   }
 
-function handleButton(playerKey) {
+  function handleButton(playerKey) {
+    if (isCpuPlayer(playerKey)) {
+      ctx.showPopup("CPU側の挑発・決戦・打破は手動操作できません");
+      return;
+    }
+
     const label = getButtonLabel(playerKey);
 
     if (label === "挑発") {
@@ -391,12 +455,12 @@ function handleButton(playerKey) {
     }
 
     if (typeof ctx.openBreakthrough === "function") {
-      ctx.openBreakthrough();
+      ctx.openBreakthrough({ initiatorPlayer: playerKey });
       return;
     }
 
     ctx.showPopup("打破システムを参照できません");
-}
+  }
 
   return {
     tickTeam,
@@ -409,6 +473,9 @@ function handleButton(playerKey) {
     canChangeFocus,
     getLockedFocusUnitKey,
     modifyDamage,
-    handleButton
+    handleButton,
+    startTaunt,
+    startDuel,
+    tryCpuAutoUse
   };
 }
