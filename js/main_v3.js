@@ -1245,6 +1245,7 @@ twoVtwoTauntController = create2v2TauntController({
   getCurrentPlayer: () => currentPlayer,
   getOpponentPlayer,
   getTeam,
+  exitUnified: (team) => twoVtwoHelpers.exitUnified(team),
   hasPendingChoice: () => !!pendingChoice,
   hasCurrentAttack: () => currentAttack.length > 0,
   showPopup,
