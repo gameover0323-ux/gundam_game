@@ -170,7 +170,9 @@ export function create2v2Breakthrough(ctx) {
       twoVtwoAdapter: breakthroughAdapter
     });
 
-    const afterResult = executeUnitAfterSlotResolved(unit, resolvedSlotNumber, result, {
+    const afterContext = {
+      ...(result || {}),
+      resolveResult: result,
       ownerPlayer,
       enemyPlayer,
       slotKey: resolvedSlotKey,
@@ -178,7 +180,16 @@ export function create2v2Breakthrough(ctx) {
       slot: resolvedSlot,
       isBreakthroughSimulation: true,
       twoVtwoAdapter: breakthroughAdapter
-    });
+    };
+
+    const afterResult = executeUnitAfterSlotResolved(
+      unit,
+      resolvedSlotNumber,
+      afterContext,
+      afterContext
+    );
+
+    applyUnitDerivedState(unit);
 
     const extraResult = executeUnitExtraWeaponResult(unit, {
       ownerPlayer,
@@ -186,6 +197,8 @@ export function create2v2Breakthrough(ctx) {
       slotKey: resolvedSlotKey,
       slotNumber: resolvedSlotNumber,
       slot: resolvedSlot,
+      resolveResult: result,
+      afterResult,
       isBreakthroughSimulation: true,
       twoVtwoAdapter: breakthroughAdapter
     });
