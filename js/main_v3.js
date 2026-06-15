@@ -1701,6 +1701,7 @@ tickCriticalBoosts,
   getCurrentAttack,
 renderAttackChoices
 });
+
 twoVtwoBreakthroughController = create2v2BreakthroughController({
   getTeam,
   getOpponentPlayer,
@@ -1717,7 +1718,6 @@ twoVtwoBreakthroughController = create2v2BreakthroughController({
   },
   redrawBattleBoards
 });
-
 turnActionController = createTurnActionController({
   isOnlineEnabled: () => onlineState.enabled,
   getOnlineMyPlayer: () => onlineState.myPlayer,
