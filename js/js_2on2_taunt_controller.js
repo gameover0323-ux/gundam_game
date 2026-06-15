@@ -117,11 +117,16 @@ export function create2v2TauntController(ctx) {
     const state = ensureTeamTauntState(team);
 
     if (!team || !state) return false;
-    if (state.disabledThisTurn) return false;
-    if (state.cooldown > 0) return false;
     if (ctx.getCurrentPlayer() !== playerKey) return false;
     if (ctx.hasPendingChoice()) return false;
     if (ctx.hasCurrentAttack()) return false;
+
+    if (isDuelActiveForPlayer(playerKey)) {
+      return true;
+    }
+
+    if (state.disabledThisTurn) return false;
+    if (state.cooldown > 0) return false;
 
     return true;
   }
