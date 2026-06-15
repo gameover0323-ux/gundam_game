@@ -8,12 +8,38 @@ import {
 } from "./js_unit_runtime.js";
 
 export function create2v2Breakthrough(ctx) {
+  const BONUS_TABLE = {
+    10: { 10: 5, 9: 4, 8: 4, 7: 3, 6: 3, 5: 2, 4: 2, 3: 1, 2: 1, 1: 1, 0: 1 },
+    9:  { 10: 4, 9: 4, 8: 4, 7: 3, 6: 3, 5: 2, 4: 2, 3: 1, 2: 1, 1: 1, 0: 1 },
+    8:  { 10: 4, 9: 4, 8: 4, 7: 3, 6: 3, 5: 2, 4: 2, 3: 1, 2: 1, 1: 1, 0: 1 },
+    7:  { 10: 3, 9: 3, 8: 3, 7: 3, 6: 3, 5: 2, 4: 2, 3: 1, 2: 1, 1: 1, 0: 1 },
+    6:  { 10: 3, 9: 3, 8: 3, 7: 3, 6: 3, 5: 2, 4: 2, 3: 1, 2: 1, 1: 1, 0: 1 },
+    5:  { 10: 2, 9: 2, 8: 2, 7: 2, 6: 2, 5: 2, 4: 2, 3: 1, 2: 1, 1: 1, 0: 1 },
+    4:  { 10: 2, 9: 2, 8: 2, 7: 2, 6: 2, 5: 2, 4: 2, 3: 1, 2: 1, 1: 1, 0: 1 },
+    3:  { 10: 1, 9: 1, 8: 1, 7: 1, 6: 1, 5: 1, 4: 1, 3: 1, 2: 1, 1: 1, 0: 1 },
+    2:  { 10: 1, 9: 1, 8: 1, 7: 1, 6: 1, 5: 1, 4: 1, 3: 1, 2: 1, 1: 1, 0: 1 },
+    1:  { 10: 1, 9: 1, 8: 1, 7: 1, 6: 1, 5: 1, 4: 1, 3: 1, 2: 1, 1: 1, 0: 1 },
+    0:  { 10: 1, 9: 1, 8: 1, 7: 1, 6: 1, 5: 1, 4: 1, 3: 1, 2: 1, 1: 1, 0: 0 }
+  };
+
   function isUnitDefeated(unit) {
     return !unit || Number(unit.hp || 0) <= 0 || unit.isDefeated === true;
   }
 
-  function getAliveUnitKeys(team) {
-    return ["unit1", "unit2"].filter((unitKey) => team?.[unitKey] && !isUnitDefeated(team[unitKey]));
+  function getDuelUnitKey(playerKey) {
+    if (ctx.twoVtwoTauntSystem?.getLockedFocusUnitKey) {
+      return ctx.twoVtwoTauntSystem.getLockedFocusUnitKey(playerKey);
+    }
+
+    const team = ctx.getTeam(playerKey);
+    return team?.focusUnitKey || "unit1";
+  }
+
+  function getDuelUnit(playerKey) {
+    const team = ctx.getTeam(playerKey);
+    const unitKey = getDuelUnitKey(playerKey);
+    if (!team || !unitKey) return null;
+    return team[unitKey] || null;
   }
 
   function getRandomSlotKey(unit) {
@@ -22,9 +48,15 @@ export function create2v2Breakthrough(ctx) {
     return keys[Math.floor(Math.random() * keys.length)];
   }
 
+  function getBonusTurns(winnerBet, loserBet) {
+    const w = Math.max(0, Math.min(10, Number(winnerBet || 0)));
+    const l = Math.max(0, Math.min(10, Number(loserBet || 0)));
+    return BONUS_TABLE[w]?.[l] ?? 0;
+  }
+
   function createBreakthroughAdapter(realAdapter, scoreState) {
     return {
-      ...realAdapter,
+      ...(realAdapter || {}),
 
       heal(ownerPlayer, actor, amount) {
         const enemyPlayer = ctx.getOpponentPlayer(ownerPlayer);
@@ -40,18 +72,16 @@ export function create2v2Breakthrough(ctx) {
           return realAdapter.addTeamEvade(ownerPlayer, actor, value);
         }
 
-        actor.evade = Math.max(0, Number(actor.evade || 0)) + value;
+        if (actor) {
+          actor.evade = Math.max(0, Number(actor.evade || 0)) + value;
+        }
+
         return value;
       }
     };
   }
 
-  function collectDamageFromAttacks({
-    attacks,
-    ownerPlayer,
-    unitKey,
-    enemyPlayer
-  }) {
+  function collectDamageFromAttacks({ attacks, ownerPlayer, unitKey, enemyPlayer }) {
     return attacks.reduce((sum, attack) => {
       let value = Math.max(0, Number(attack.damage || 0));
 
@@ -59,8 +89,7 @@ export function create2v2Breakthrough(ctx) {
         ctx.twoVtwoTauntSystem &&
         typeof ctx.twoVtwoTauntSystem.modifyDamage === "function"
       ) {
-        const enemyTeam = ctx.getTeam(enemyPlayer);
-        const defenderUnitKey = enemyTeam?.focusUnitKey || "unit1";
+        const defenderUnitKey = getDuelUnitKey(enemyPlayer);
 
         value = ctx.twoVtwoTauntSystem.modifyDamage({
           attackerPlayer: ownerPlayer,
@@ -75,23 +104,35 @@ export function create2v2Breakthrough(ctx) {
     }, 0);
   }
 
-  function simulateOneUnitSlot({
-    ownerPlayer,
-    unitKey,
-    unit,
-    enemyPlayer,
-    scoreState,
-    realAdapter,
-    turnIndex
-  }) {
+  function simulateOneDuelSlot({ ownerPlayer, enemyPlayer, scoreState, turnIndex }) {
+    const unitKey = getDuelUnitKey(ownerPlayer);
+    const unit = getDuelUnit(ownerPlayer);
+    const enemyUnit = getDuelUnit(enemyPlayer);
+
+    if (!unitKey || !unit || isUnitDefeated(unit)) {
+      return {
+        turnIndex,
+        player: ownerPlayer,
+        unitKey: unitKey || "-",
+        unitName: "決戦機体なし",
+        slotNumber: "-",
+        slotName: "行動不可",
+        damage: 0,
+        healReduction: 0,
+        evadeGain: 0,
+        notes: ["決戦機体が存在しないか撃墜されています"]
+      };
+    }
+
     applyUnitDerivedState(unit);
 
     const slotKey = getRandomSlotKey(unit);
     if (!slotKey) {
       return {
         turnIndex,
+        player: ownerPlayer,
         unitKey,
-        unitName: unit?.name || "不明",
+        unitName: unit.name,
         slotNumber: "-",
         slotName: "使用可能スロットなし",
         damage: 0,
@@ -103,13 +144,11 @@ export function create2v2Breakthrough(ctx) {
 
     const slot = ctx.getSlotByKey(unit, slotKey);
     const slotNumber = ctx.getSlotNumberFromKey(slotKey);
-    const enemyTeam = ctx.getTeam(enemyPlayer);
-    const enemyUnit = enemyTeam?.[enemyTeam.focusUnitKey || "unit1"] || null;
 
     const evadeBefore = Number(unit.evade || 0);
     const enemyReductionBefore = Number(scoreState[enemyPlayer].healReduction || 0);
 
-    const breakthroughAdapter = createBreakthroughAdapter(realAdapter, scoreState);
+    const breakthroughAdapter = createBreakthroughAdapter(ctx.twoVtwoAdapter, scoreState);
     const notes = [];
 
     const beforeResult = executeUnitBeforeSlot(unit, slotNumber, {
@@ -125,9 +164,12 @@ export function create2v2Breakthrough(ctx) {
 
     if (beforeResult?.message) notes.push(beforeResult.message);
 
+    applyUnitDerivedState(unit);
+
     if (beforeResult?.cancelSlot) {
       return {
         turnIndex,
+        player: ownerPlayer,
         unitKey,
         unitName: unit.name,
         slotNumber,
@@ -161,6 +203,8 @@ export function create2v2Breakthrough(ctx) {
       });
 
       if (enemyBeforeResult?.message) notes.push(enemyBeforeResult.message);
+
+      applyUnitDerivedState(enemyUnit);
     }
 
     const result = resolveSlotEffect({
@@ -169,6 +213,8 @@ export function create2v2Breakthrough(ctx) {
       ownerPlayer,
       twoVtwoAdapter: breakthroughAdapter
     });
+
+    applyUnitDerivedState(unit);
 
     const afterResult = executeUnitAfterSlotResolved(unit, resolvedSlotNumber, result, {
       ownerPlayer,
@@ -179,6 +225,8 @@ export function create2v2Breakthrough(ctx) {
       isBreakthroughSimulation: true,
       twoVtwoAdapter: breakthroughAdapter
     });
+
+    applyUnitDerivedState(unit);
 
     const extraResult = executeUnitExtraWeaponResult(unit, {
       ownerPlayer,
@@ -223,6 +271,7 @@ export function create2v2Breakthrough(ctx) {
 
     return {
       turnIndex,
+      player: ownerPlayer,
       unitKey,
       unitName: unit.name,
       slotNumber: resolvedSlotNumber,
@@ -234,64 +283,48 @@ export function create2v2Breakthrough(ctx) {
     };
   }
 
-  function calculateBonusTurns(winnerBet, loserBet) {
-    const high = Math.max(Number(winnerBet || 0), Number(loserBet || 0));
-
-    if (high >= 9) return 5;
-    if (high >= 7) return 4;
-    if (high >= 5) return 3;
-    if (high >= 3) return 2;
-    return 1;
-  }
-
   function applyBonusActions(winnerPlayer, bonusTurns) {
     const team = ctx.getTeam(winnerPlayer);
     if (!team) return;
 
+    const add = Math.max(0, Number(bonusTurns || 0));
+
     if (team.mode === "unified") {
-      const unified = team.unified;
-      if (unified) {
-        unified.actionCount = Math.max(0, Number(unified.actionCount || 0)) + Number(bonusTurns || 0);
+      if (team.unified) {
+        team.unified.actionCount = Math.max(0, Number(team.unified.actionCount || 0)) + add;
       }
       return;
     }
 
     if (team.unit1 && !isUnitDefeated(team.unit1)) {
-      team.unit1.actionCount = Math.max(0, Number(team.unit1.actionCount || 0)) + Number(bonusTurns || 0);
+      team.unit1.actionCount = Math.max(0, Number(team.unit1.actionCount || 0)) + add;
     }
 
     if (team.unit2 && !isUnitDefeated(team.unit2)) {
-      team.unit2.actionCount = Math.max(0, Number(team.unit2.actionCount || 0)) + Number(bonusTurns || 0);
+      team.unit2.actionCount = Math.max(0, Number(team.unit2.actionCount || 0)) + add;
     }
   }
 
-  function endTauntAndDuelAfterBreakthrough() {
+  function clearTauntAndDuelAfterBreakthrough() {
     ["A", "B"].forEach((playerKey) => {
       const team = ctx.getTeam(playerKey);
-      if (!team || !ctx.twoVtwoTauntSystem) return;
+      if (!team || !ctx.twoVtwoTauntSystem?.clearBattleState) return;
       ctx.twoVtwoTauntSystem.clearBattleState(team);
     });
   }
 
   function clampAllTeamEvade() {
-    const teamA = ctx.getTeam("A");
-    const teamB = ctx.getTeam("B");
-
-    if (teamA && typeof ctx.clampTeamEvadeToMax === "function") {
-      ctx.clampTeamEvadeToMax(teamA);
-    }
-
-    if (teamB && typeof ctx.clampTeamEvadeToMax === "function") {
-      ctx.clampTeamEvadeToMax(teamB);
-    }
+    ["A", "B"].forEach((playerKey) => {
+      const team = ctx.getTeam(playerKey);
+      if (team && typeof ctx.clampTeamEvadeToMax === "function") {
+        ctx.clampTeamEvadeToMax(team);
+      }
+    });
   }
 
   function runBreakthrough({ betA, betB }) {
     const aBet = Math.max(0, Math.min(10, Number(betA || 0)));
     const bBet = Math.max(0, Math.min(10, Number(betB || 0)));
-
-    const teamA = ctx.getTeam("A");
-    const teamB = ctx.getTeam("B");
 
     const scoreState = {
       A: { rawDamage: 0, healReduction: 0 },
@@ -303,60 +336,52 @@ export function create2v2Breakthrough(ctx) {
 
     for (let turnIndex = 1; turnIndex <= maxTurns; turnIndex += 1) {
       if (turnIndex <= aBet) {
-        getAliveUnitKeys(teamA).forEach((unitKey) => {
-          logs.push(simulateOneUnitSlot({
-            ownerPlayer: "A",
-            unitKey,
-            unit: teamA[unitKey],
-            enemyPlayer: "B",
-            scoreState,
-            realAdapter: ctx.twoVtwoAdapter,
-            turnIndex
-          }));
-        });
+        logs.push(simulateOneDuelSlot({
+          ownerPlayer: "A",
+          enemyPlayer: "B",
+          scoreState,
+          turnIndex
+        }));
       }
 
       if (turnIndex <= bBet) {
-        getAliveUnitKeys(teamB).forEach((unitKey) => {
-          logs.push(simulateOneUnitSlot({
-            ownerPlayer: "B",
-            unitKey,
-            unit: teamB[unitKey],
-            enemyPlayer: "A",
-            scoreState,
-            realAdapter: ctx.twoVtwoAdapter,
-            turnIndex
-          }));
-        });
+        logs.push(simulateOneDuelSlot({
+          ownerPlayer: "B",
+          enemyPlayer: "A",
+          scoreState,
+          turnIndex
+        }));
       }
     }
 
-    const finalA = Math.max(0, scoreState.A.rawDamage - scoreState.A.healReduction);
-    const finalB = Math.max(0, scoreState.B.rawDamage - scoreState.B.healReduction);
+    const scoreA = Math.max(0, scoreState.A.rawDamage - scoreState.A.healReduction);
+    const scoreB = Math.max(0, scoreState.B.rawDamage - scoreState.B.healReduction);
 
     let winnerPlayer = null;
     let bonusTurns = 0;
 
-    if (finalA > finalB) {
+    if (scoreA > scoreB) {
       winnerPlayer = "A";
-      bonusTurns = calculateBonusTurns(aBet, bBet);
-    } else if (finalB > finalA) {
+      bonusTurns = getBonusTurns(aBet, bBet);
+    } else if (scoreB > scoreA) {
       winnerPlayer = "B";
-      bonusTurns = calculateBonusTurns(bBet, aBet);
+      bonusTurns = getBonusTurns(bBet, aBet);
     }
 
     if (winnerPlayer) {
       applyBonusActions(winnerPlayer, bonusTurns);
       ctx.setCurrentPlayer(winnerPlayer);
+      clearTauntAndDuelAfterBreakthrough();
+    } else {
+      clampAllTeamEvade();
     }
 
-    endTauntAndDuelAfterBreakthrough();
-    clampAllTeamEvade();
-
     return {
+      betA: aBet,
+      betB: bBet,
       logs,
-      scoreA: finalA,
-      scoreB: finalB,
+      scoreA,
+      scoreB,
       rawA: scoreState.A.rawDamage,
       rawB: scoreState.B.rawDamage,
       reductionA: scoreState.A.healReduction,
@@ -435,12 +460,12 @@ export function create2v2Breakthrough(ctx) {
     const summary = document.createElement("div");
     summary.style.marginBottom = "8px";
     summary.innerHTML = `
-      PLAYER A: ${result.scoreA}（素点:${result.rawA} / 回復減算:${result.reductionA}）<br>
-      PLAYER B: ${result.scoreB}（素点:${result.rawB} / 回復減算:${result.reductionB}）<br>
+      PLAYER A: ${result.scoreA}（素点:${result.rawA} / 回復減算:${result.reductionA} / ベット:${result.betA}）<br>
+      PLAYER B: ${result.scoreB}（素点:${result.rawB} / 回復減算:${result.reductionB} / ベット:${result.betB}）<br>
       ${
         result.winnerPlayer
-          ? `勝者: PLAYER ${result.winnerPlayer}<br>取得ボーナスターン: +${result.bonusTurns}`
-          : "引き分け：ボーナスなし"
+          ? `勝者: PLAYER ${result.winnerPlayer}<br>取得ボーナス行動権: +${result.bonusTurns}`
+          : "同点：賭け直し可能"
       }
     `;
     attackLog.appendChild(summary);
@@ -452,7 +477,7 @@ export function create2v2Breakthrough(ctx) {
       div.style.marginTop = "4px";
 
       div.innerHTML = `
-        ${log.turnIndex}T / ${log.unitKey === "unit2" ? "2" : "1"}機目 ${log.unitName}<br>
+        ${log.turnIndex}T / PLAYER ${log.player} / ${log.unitKey === "unit2" ? "2" : "1"}機目 ${log.unitName}<br>
         ${log.slotNumber}.${log.slotName}<br>
         加算ダメージ:${log.damage}
         ${log.healReduction ? ` / 回復減算:${log.healReduction}` : ""}
@@ -467,10 +492,17 @@ export function create2v2Breakthrough(ctx) {
       attackLog.appendChild(div);
     });
 
-   ctx.redrawBattleBoards();
-    });
+    if (!result.winnerPlayer) {
+      const retryBtn = document.createElement("button");
+      retryBtn.textContent = "賭け直す";
+      retryBtn.addEventListener("click", () => {
+        clampAllTeamEvade();
+        renderBreakthroughBetChoice();
+      });
+      attackLog.appendChild(retryBtn);
+    }
 
-    attackLog.appendChild(backBtn);
+    ctx.redrawBattleBoards();
   }
 
   return {
