@@ -4,24 +4,20 @@ export function create2v2TauntController(ctx) {
 
   function ensureTeamTauntState(team) {
     if (!team) return null;
-
     if (!team.tauntState) {
       team.tauntState = {
         tauntTargetPlayer: null,
         tauntTargetUnitKey: null,
         tauntOwnerPlayer: null,
         tauntTurns: 0,
-
         duelActive: false,
         duelAUnitKey: null,
         duelBUnitKey: null,
         duelTurns: 0,
-
         cooldown: 0,
         disabledThisTurn: false
       };
     }
-
     return team.tauntState;
   }
 
@@ -79,14 +75,10 @@ export function create2v2TauntController(ctx) {
     if (!state) return;
 
     state.disabledThisTurn = false;
-
-    if (state.cooldown > 0) {
-      state.cooldown -= 1;
-    }
+    if (state.cooldown > 0) state.cooldown -= 1;
 
     if (state.tauntTurns > 0) {
       state.tauntTurns -= 1;
-
       if (state.tauntTurns <= 0) {
         state.tauntTargetPlayer = null;
         state.tauntTargetUnitKey = null;
@@ -96,7 +88,6 @@ export function create2v2TauntController(ctx) {
 
     if (state.duelTurns > 0) {
       state.duelTurns -= 1;
-
       if (state.duelTurns <= 0) {
         state.duelActive = false;
         state.duelAUnitKey = null;
@@ -113,12 +104,10 @@ export function create2v2TauntController(ctx) {
     state.tauntTargetUnitKey = null;
     state.tauntOwnerPlayer = null;
     state.tauntTurns = 0;
-
     state.duelActive = false;
     state.duelAUnitKey = null;
     state.duelBUnitKey = null;
     state.duelTurns = 0;
-
     state.cooldown = Math.max(Number(state.cooldown || 0), COOLDOWN_TURNS);
     state.disabledThisTurn = true;
   }
@@ -146,9 +135,7 @@ export function create2v2TauntController(ctx) {
     const ownState = getOwnState(playerKey);
     const enemyState = getEnemyState(playerKey);
 
-    if (ownState?.duelActive || enemyState?.duelActive) {
-      return "打破";
-    }
+    if (ownState?.duelActive || enemyState?.duelActive) return "打破";
 
     if (
       ownState?.tauntTurns > 0 &&
@@ -161,14 +148,11 @@ export function create2v2TauntController(ctx) {
   }
 
   function startTaunt(ownerPlayer, targetUnitKey) {
-    if (!canUse(ownerPlayer)) {
-      return { ok: false, message: "現在は挑発できません" };
-    }
+    if (!canUse(ownerPlayer)) return { ok: false, message: "現在は挑発できません" };
 
     const enemyPlayer = ctx.getOpponentPlayer(ownerPlayer);
     const ownerTeam = ctx.getTeam(ownerPlayer);
     const enemyTeam = ctx.getTeam(enemyPlayer);
-
     const ownerState = ensureTeamTauntState(ownerTeam);
     const enemyState = ensureTeamTauntState(enemyTeam);
 
@@ -185,21 +169,15 @@ export function create2v2TauntController(ctx) {
 
     ownerState.cooldown = COOLDOWN_TURNS;
 
-    return {
-      ok: true,
-      message: `${targetUnitKey === "unit2" ? "2" : "1"}番機を挑発しました`
-    };
+    return { ok: true, message: `${targetUnitKey === "unit2" ? "2" : "1"}番機を挑発しました` };
   }
 
   function startDuel(ownerPlayer, ownUnitKey) {
-    if (!canUse(ownerPlayer)) {
-      return { ok: false, message: "現在は決戦できません" };
-    }
+    if (!canUse(ownerPlayer)) return { ok: false, message: "現在は決戦できません" };
 
     const enemyPlayer = ctx.getOpponentPlayer(ownerPlayer);
     const ownTeam = ctx.getTeam(ownerPlayer);
     const enemyTeam = ctx.getTeam(enemyPlayer);
-
     const ownState = ensureTeamTauntState(ownTeam);
     const enemyState = ensureTeamTauntState(enemyTeam);
 
@@ -215,11 +193,9 @@ export function create2v2TauntController(ctx) {
       return { ok: false, message: "相手から受けている挑発がありません" };
     }
 
-    const enemyFocusUnitKey =
-      enemyTeam?.focusUnitKey === "unit2" ? "unit2" : "unit1";
-
-    const aUnitKey = ownerPlayer === "A" ? ownUnitKey : enemyFocusUnitKey;
-    const bUnitKey = ownerPlayer === "B" ? ownUnitKey : enemyFocusUnitKey;
+    const challengedUnitKey = ownState.tauntTargetUnitKey;
+    const aUnitKey = ownerPlayer === "A" ? ownUnitKey : challengedUnitKey;
+    const bUnitKey = ownerPlayer === "B" ? ownUnitKey : challengedUnitKey;
 
     forceSplit("A");
     forceSplit("B");
@@ -269,23 +245,13 @@ export function create2v2TauntController(ctx) {
   function isDuelTarget(playerKey, unitKey) {
     const state = getOwnState(playerKey);
     if (!state?.duelActive) return false;
-
-    return playerKey === "A"
-      ? state.duelAUnitKey === unitKey
-      : state.duelBUnitKey === unitKey;
+    return playerKey === "A" ? state.duelAUnitKey === unitKey : state.duelBUnitKey === unitKey;
   }
 
-  function modifyDamage({
-    attackerPlayer,
-    attackerUnitKey,
-    defenderPlayer,
-    defenderUnitKey,
-    damage
-  }) {
+  function modifyDamage({ attackerPlayer, attackerUnitKey, defenderPlayer, defenderUnitKey, damage }) {
     let result = Math.max(0, Number(damage || 0));
 
     const defenderState = getOwnState(defenderPlayer);
-
     if (
       defenderState?.tauntTurns > 0 &&
       defenderState.tauntTargetUnitKey &&
@@ -295,22 +261,11 @@ export function create2v2TauntController(ctx) {
     }
 
     const attackerState = getOwnState(attackerPlayer);
-
     if (attackerState?.duelActive) {
-      const attackerDuelKey =
-        attackerPlayer === "A"
-          ? attackerState.duelAUnitKey
-          : attackerState.duelBUnitKey;
+      const attackerDuelKey = attackerPlayer === "A" ? attackerState.duelAUnitKey : attackerState.duelBUnitKey;
+      const defenderDuelKey = defenderPlayer === "A" ? attackerState.duelAUnitKey : attackerState.duelBUnitKey;
 
-      const defenderDuelKey =
-        defenderPlayer === "A"
-          ? attackerState.duelAUnitKey
-          : attackerState.duelBUnitKey;
-
-      if (
-        attackerUnitKey === attackerDuelKey &&
-        defenderUnitKey === defenderDuelKey
-      ) {
+      if (attackerUnitKey === attackerDuelKey && defenderUnitKey === defenderDuelKey) {
         result = Math.floor(result * 2);
       }
     }
@@ -322,7 +277,6 @@ export function create2v2TauntController(ctx) {
     const enemyPlayer = ctx.getOpponentPlayer(ownerPlayer);
     const enemyTeam = ctx.getTeam(enemyPlayer);
     const attackLog = document.getElementById("attackLog");
-
     if (!attackLog || !enemyTeam) return;
 
     attackLog.innerHTML = `<div style="font-weight:bold;margin-bottom:6px;">PLAYER ${enemyPlayer} の挑発対象を選択</div>`;
@@ -334,10 +288,8 @@ export function create2v2TauntController(ctx) {
       const btn = document.createElement("button");
       btn.textContent = `${unitKey === "unit2" ? "2" : "1"}. ${unit.name}`;
       btn.disabled = Number(unit.hp || 0) <= 0 || unit.isDefeated === true;
-
       btn.addEventListener("click", () => {
         const result = startTaunt(ownerPlayer, unitKey);
-        attackLog.textContent = result.message;
         ctx.showPopup(result.message);
         ctx.redrawBattleBoards();
       });
@@ -349,7 +301,6 @@ export function create2v2TauntController(ctx) {
   function renderDuelUnitChoice(ownerPlayer) {
     const ownTeam = ctx.getTeam(ownerPlayer);
     const attackLog = document.getElementById("attackLog");
-
     if (!attackLog || !ownTeam) return;
 
     attackLog.innerHTML = `<div style="font-weight:bold;margin-bottom:6px;">PLAYER ${ownerPlayer} の決戦機体を選択</div>`;
@@ -361,10 +312,8 @@ export function create2v2TauntController(ctx) {
       const btn = document.createElement("button");
       btn.textContent = `${unitKey === "unit2" ? "2" : "1"}. ${unit.name}`;
       btn.disabled = Number(unit.hp || 0) <= 0 || unit.isDefeated === true;
-
       btn.addEventListener("click", () => {
         const result = startDuel(ownerPlayer, unitKey);
-        attackLog.textContent = result.message;
         ctx.showPopup(result.message);
         ctx.redrawBattleBoards();
       });
@@ -373,7 +322,7 @@ export function create2v2TauntController(ctx) {
     });
   }
 
-function handleButton(playerKey) {
+  function handleButton(playerKey) {
     const label = getButtonLabel(playerKey);
 
     if (label === "挑発") {
@@ -386,13 +335,8 @@ function handleButton(playerKey) {
       return;
     }
 
-    if (typeof ctx.openBreakthrough === "function") {
-      ctx.openBreakthrough();
-      return;
-    }
-
-    ctx.showPopup("打破システムを参照できません");
-}
+    ctx.showPopup("打破は未実装です");
+  }
 
   return {
     tickTeam,
