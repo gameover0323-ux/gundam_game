@@ -18,83 +18,82 @@ export function createBattleFlow(ctx) {
   }
 
   function canConsumeAction(state, amount = 1) {
-    if (!state) return false;
-    ensureActionState(state);
+  if (!state) return false;
+  ensureActionState(state);
 
-    if (
-      ctx.twoVtwoAdapter &&
-      ctx.isTeamBattleMode &&
-      ctx.isTeamBattleMode()
-    ) {
-      const ownerPlayer = ctx.getCurrentPlayer();
-      return ctx.twoVtwoAdapter.canConsumeAction(ownerPlayer, state, amount);
-    }
+  if (
+    ctx.twoVtwoAdapter &&
+    ctx.isTeamBattleMode &&
+    ctx.isTeamBattleMode()
+  ) {
+    const ownerPlayer = ctx.getCurrentPlayer();
+    return ctx.twoVtwoAdapter.canConsumeAction(ownerPlayer, state, amount);
+  }
 
-    return state.actionCount >= amount;
+  return state.actionCount >= amount;
   }
 
   function consumeActionCount(state, amount = 1) {
-    if (!state) return;
-    ensureActionState(state);
+  if (!state) return;
+  ensureActionState(state);
 
-    if (ctx.getIsTestMode()) {
-      return;
-    }
+  if (ctx.getIsTestMode()) {
+    return;
+  }
 
-    if (
-      ctx.twoVtwoAdapter &&
-      ctx.isTeamBattleMode &&
-      ctx.isTeamBattleMode()
-    ) {
-      const ownerPlayer = ctx.getCurrentPlayer();
-      ctx.twoVtwoAdapter.consumeAction(ownerPlayer, state, amount);
-      return;
-    }
+  if (
+    ctx.twoVtwoAdapter &&
+    ctx.isTeamBattleMode &&
+    ctx.isTeamBattleMode()
+  ) {
+    const ownerPlayer = ctx.getCurrentPlayer();
+    ctx.twoVtwoAdapter.consumeAction(ownerPlayer, state, amount);
+    return;
+  }
 
-    state.actionCount = Math.max(0, state.actionCount - amount);
+  state.actionCount = Math.max(0, state.actionCount - amount);
   }
 
   function clampEvadeToMax(state) {
-    if (!state || typeof state.evadeMax !== "number") return;
+  if (!state || typeof state.evadeMax !== "number") return;
 
-    const baseMax = state.evadeMax;
-    const absoluteMax = typeof state.overEvadeAbsoluteMax === "number"
-      ? state.overEvadeAbsoluteMax
-      : 50;
+  const baseMax = state.evadeMax;
+  const absoluteMax = typeof state.overEvadeAbsoluteMax === "number"
+    ? state.overEvadeAbsoluteMax
+    : 50;
 
-    let clampMax = baseMax;
+  let clampMax = baseMax;
 
-    if (state.overEvadeMode) {
-      const redCap = typeof state.overEvadeCap === "number"
-        ? state.overEvadeCap
-        : baseMax;
+  if (state.overEvadeMode) {
+    const redCap = typeof state.overEvadeCap === "number"
+      ? state.overEvadeCap
+      : baseMax;
 
-      clampMax = Math.min(Math.max(baseMax, redCap), absoluteMax);
-    }
-
-    if (state.evade > clampMax) {
-      state.evade = clampMax;
-    }
-
-    if (state.evade < 0) {
-      state.evade = 0;
-    }
-
-    if (state.evade <= baseMax) {
-      state.overEvadeMode = false;
-      state.overEvadeCap = baseMax;
-      state.overEvadeBaseMax = baseMax;
-    } else {
-      state.overEvadeMode = true;
-      state.overEvadeCap = clampMax;
-      state.overEvadeBaseMax = baseMax;
-    }
-
-    state.evadeGoldCap = state.overEvadeCap;
-    state.evadeRedCap = state.overEvadeCap;
+    clampMax = Math.min(Math.max(baseMax, redCap), absoluteMax);
   }
 
-  function clampTeamEvadeToMax(team) {
+  if (state.evade > clampMax) {
+    state.evade = clampMax;
+  }
+
+  if (state.evade < 0) {
+    state.evade = 0;
+  }
+
+  if (state.evade <= baseMax) {
+    state.overEvadeMode = false;
+    state.overEvadeCap = baseMax;
+    state.overEvadeBaseMax = baseMax;
+  } else {
+    state.overEvadeMode = true;
+    state.overEvadeCap = clampMax;
+    state.overEvadeBaseMax = baseMax;
+  }
+
+  state.evadeGoldCap = state.overEvadeCap;
+  state.evadeRedCap = state.overEvadeCap;
+  }
+function clampTeamEvadeToMax(team) {
     if (!team) return;
 
     if (team.unit1) {
@@ -104,82 +103,76 @@ export function createBattleFlow(ctx) {
     if (team.unit2) {
       clampEvadeToMax(team.unit2);
     }
+}
+  function executeSlot() {
+  if (ctx.hasPendingChoice()) {
+    ctx.renderPendingChoice();
+    return;
   }
 
-  function executeSlot() {
-    if (ctx.hasPendingChoice()) {
-      ctx.renderPendingChoice();
-      return;
-    }
-
-    const attacker = ctx.getPlayerState(ctx.getCurrentPlayer());
-
-    const reservedStarted =
+  const attacker = ctx.getPlayerState(ctx.getCurrentPlayer());
+  const reservedStarted =
       ctx.processReservedActionsForTrigger &&
       ctx.processReservedActionsForTrigger(ctx.getCurrentPlayer(), "turn_start");
 
     if (reservedStarted) {
       return;
     }
-
     if (attacker.pendingReservedAttacks && attacker.pendingReservedAttacks.length > 0) {
-      attacker.pendingReservedAttacks.forEach((reserved) => {
-        reserved.delay = Number(reserved.delay || 0) - 1;
-      });
+  attacker.pendingReservedAttacks.forEach((reserved) => {
+    reserved.delay = Number(reserved.delay || 0) - 1;
+  });
 
-      const readyIndex = attacker.pendingReservedAttacks.findIndex((reserved) => Number(reserved.delay || 0) <= 0);
+  const readyIndex = attacker.pendingReservedAttacks.findIndex((reserved) => Number(reserved.delay || 0) <= 0);
 
-      if (readyIndex >= 0) {
-        const reserved = attacker.pendingReservedAttacks.splice(readyIndex, 1)[0];
-        ctx.setCurrentAction(`${attacker.name} の予約攻撃`, reserved.label || "予約攻撃");
-        ctx.setCurrentAttack(reserved.attacks || []);
-        ctx.setCurrentAttackContext({
-          ownerPlayer: ctx.getCurrentPlayer(),
-          enemyPlayer: ctx.getOpponentPlayer(ctx.getCurrentPlayer()),
-          slotKey: null,
-          slotNumber: null,
-          slotLabel: reserved.label || "予約攻撃",
-          slotDesc: reserved.desc || "",
-          totalCount: (reserved.attacks || []).length,
-          hitCount: 0,
-          evadeCount: 0,
-          reservedAttack: true
-        });
-        ctx.redrawBattleBoards();
-        ctx.renderAttackChoices();
-        return;
-      }
+  if (readyIndex >= 0) {
+    const reserved = attacker.pendingReservedAttacks.splice(readyIndex, 1)[0];
+    ctx.setCurrentAction(`${attacker.name} の予約攻撃`, reserved.label || "予約攻撃");
+    ctx.setCurrentAttack(reserved.attacks || []);
+    ctx.setCurrentAttackContext({
+      ownerPlayer: ctx.getCurrentPlayer(),
+      enemyPlayer: ctx.getOpponentPlayer(ctx.getCurrentPlayer()),
+      slotKey: null,
+      slotNumber: null,
+      slotLabel: reserved.label || "予約攻撃",
+      slotDesc: reserved.desc || "",
+      totalCount: (reserved.attacks || []).length,
+      hitCount: 0,
+      evadeCount: 0,
+      reservedAttack: true
+    });
+    ctx.redrawBattleBoards();
+    ctx.renderAttackChoices();
+    return;
+  }
     }
+  if (!attacker) return;
 
-    if (!attacker) return;
+  ensureActionState(attacker);
+if (Number(attacker.pendingActionPenalty || 0) > 0) {
+  const penalty = Math.min(attacker.actionCount, Number(attacker.pendingActionPenalty || 0));
+  attacker.pendingActionPenalty = Math.max(0, Number(attacker.pendingActionPenalty || 0) - penalty);
+  attacker.actionCount = Math.max(0, attacker.actionCount - penalty);
 
-    ensureActionState(attacker);
+  ctx.redrawBattleBoards();
+  ctx.renderAttackLogText(`${attacker.name} は行動不能：行動権-${penalty}`);
 
-    if (Number(attacker.pendingActionPenalty || 0) > 0) {
-      const penalty = Math.min(attacker.actionCount, Number(attacker.pendingActionPenalty || 0));
-      attacker.pendingActionPenalty = Math.max(0, Number(attacker.pendingActionPenalty || 0) - penalty);
-      attacker.actionCount = Math.max(0, attacker.actionCount - penalty);
+  if (!canConsumeAction(attacker, 1)) {
+    return;
+  }
+}
+  if (!canConsumeAction(attacker, 1)) {
+    ctx.showPopup("残り行動数が足りない");
+    return;
+  }
 
-      ctx.redrawBattleBoards();
-      ctx.renderAttackLogText(`${attacker.name} は行動不能：行動権-${penalty}`);
+  const rollableSlotKeys = ctx.getRollableSlotKeys(attacker);
+  if (!Array.isArray(rollableSlotKeys) || rollableSlotKeys.length === 0) {
+    ctx.showPopup("使用可能なスロットがない");
+    return;
+  }
 
-      if (!canConsumeAction(attacker, 1)) {
-        return;
-      }
-    }
-
-    if (!canConsumeAction(attacker, 1)) {
-      ctx.showPopup("残り行動数が足りない");
-      return;
-    }
-
-    const rollableSlotKeys = ctx.getRollableSlotKeys(attacker);
-    if (!Array.isArray(rollableSlotKeys) || rollableSlotKeys.length === 0) {
-      ctx.showPopup("使用可能なスロットがない");
-      return;
-    }
-
-    const ownerPlayer = ctx.getCurrentPlayer();
+  const ownerPlayer = ctx.getCurrentPlayer();
     const isAutoEnemyTurn =
       typeof ctx.isChallengeMode === "function" &&
       ctx.isChallengeMode() &&
@@ -211,7 +204,6 @@ export function createBattleFlow(ctx) {
 
     ctx.redrawBattleBoards();
   }
-
   function simulateSlot() {
     const attacker = ctx.getPlayerState(ctx.getCurrentPlayer());
     if (!attacker) return;
@@ -226,142 +218,166 @@ export function createBattleFlow(ctx) {
   }
 
   function endTurn() {
-    if (ctx.hasPendingChoice()) {
-      ctx.renderPendingChoice();
-      return;
-    }
+  if (ctx.hasPendingChoice()) {
+    ctx.renderPendingChoice();
+    return;
+  }
 
-    if (ctx.getCurrentAttack && ctx.getCurrentAttack().length > 0) {
-      ctx.renderAttackChoices();
-      ctx.showPopup("QTEを解決してからターン終了してください");
-      return;
-    }
+  if (ctx.getCurrentAttack && ctx.getCurrentAttack().length > 0) {
+    ctx.renderAttackChoices();
+    ctx.showPopup("QTEを解決してからターン終了してください");
+    return;
+  }
 
-    const actorPlayer = ctx.getCurrentPlayer();
+  const actorPlayer = ctx.getCurrentPlayer();
+
     const enemyPlayer = ctx.getOpponentPlayer(actorPlayer);
+
     const actor = ctx.getPlayerState(actorPlayer);
+
     const enemyState = ctx.getPlayerState(enemyPlayer);
 
     if (!actor || !enemyState) return;
 
+    if (
+      typeof ctx.getBattleMode === "function" &&
+      (ctx.getBattleMode() === "vscpu1v1" || ctx.getBattleMode() === "vscpu2v2") &&
+      actorPlayer === "B" &&
+      typeof ctx.hasCpuRemainingAction === "function" &&
+      ctx.hasCpuRemainingAction(actorPlayer)
+    ) {
+      ctx.showPopup("CPUの行動権が残っています。CPU行動を実行してください。");
+      return;
+    }
+
     actor.shieldActive = false;
-    enemyState.shieldActive = false;
+  enemyState.shieldActive = false;
 
-    if (ctx.isTeamBattleMode && ctx.isTeamBattleMode()) {
-      const actorTeam = ctx.getTeam ? ctx.getTeam(actorPlayer) : null;
+  if (ctx.isTeamBattleMode && ctx.isTeamBattleMode()) {
+    const actorTeam = ctx.getTeam ? ctx.getTeam(actorPlayer) : null;
 
-      if (actorTeam) {
-        clampTeamEvadeToMax(actorTeam);
-
-        if (ctx.twoVtwoTauntSystem && typeof ctx.twoVtwoTauntSystem.tickTeam === "function") {
-          ctx.twoVtwoTauntSystem.tickTeam(actorTeam);
-        }
-      } else {
-        clampEvadeToMax(actor);
-      }
+    if (actorTeam) {
+      clampTeamEvadeToMax(actorTeam);
     } else {
       clampEvadeToMax(actor);
     }
+  } else {
+    clampEvadeToMax(actor);
+  }
 
-    if (typeof ctx.tickCriticalBoosts === "function") {
-      ctx.tickCriticalBoosts(actor);
-    }
+  if (typeof ctx.tickCriticalBoosts === "function") {
+    ctx.tickCriticalBoosts(actor);
+  }
 
-    actor.lastSlotKey = null;
+  actor.lastSlotKey = null;
 
-    const turnEndResult = ctx.executeUnitTurnEnd(actor, {
-      ownerPlayer: actorPlayer,
-      enemyPlayer,
-      enemyPlayerLabel: `PLAYER ${enemyPlayer}`,
-      enemyPredictableSlotKeys: ctx.getPredictableSlotKeys(enemyState)
-    });
+  const turnEndResult = ctx.executeUnitTurnEnd(actor, {
+    ownerPlayer: actorPlayer,
+    enemyPlayer,
+    enemyPlayerLabel: `PLAYER ${enemyPlayer}`,
+    enemyPredictableSlotKeys: ctx.getPredictableSlotKeys(enemyState)
+  });
 
-    actor.isConfusedTurn = false;
-    actor.confuseHits = 0;
+  actor.isConfusedTurn = false;
+  actor.confuseHits = 0;
 
-    ctx.clearBattleNotice();
-    ctx.clearCurrentAction();
-    ctx.clearPendingChoice();
+  ctx.clearBattleNotice();
+  ctx.clearCurrentAction();
+  ctx.clearPendingChoice();
 
-    ctx.setCurrentAttack([]);
-    ctx.setCurrentAttackContext(null);
-    ctx.setCurrentAttackContexts([]);
+  ctx.setCurrentAttack([]);
+  ctx.setCurrentAttackContext(null);
+  ctx.setCurrentAttackContexts([]);
 
-    ctx.setCurrentPlayer(enemyPlayer);
+  ctx.setCurrentPlayer(enemyPlayer);
 
-    if (ctx.getCurrentPlayer() === "A") {
-      ctx.setCurrentTurn(ctx.getCurrentTurn() + 1);
-    }
+  if (ctx.getCurrentPlayer() === "A") {
+    ctx.setCurrentTurn(ctx.getCurrentTurn() + 1);
+  }
 
-    if (ctx.isTeamBattleMode()) {
-      const nextTeam = ctx.getTeam(ctx.getCurrentPlayer());
+  if (ctx.isTeamBattleMode()) {
+    const nextTeam = ctx.getTeam(ctx.getCurrentPlayer());
 
-      if (nextTeam) {
-        nextTeam.modeChangeLockedThisTurn = false;
-        nextTeam.activeUnitKey = nextTeam.focusUnitKey || "unit1";
+    if (nextTeam) {
+      nextTeam.activeUnitKey = nextTeam.focusUnitKey || "unit1";
 
-        resetActionCount(nextTeam.unit1);
-        if (nextTeam.unit2) resetActionCount(nextTeam.unit2);
+      resetActionCount(nextTeam.unit1);
+      if (nextTeam.unit2) resetActionCount(nextTeam.unit2);
 
-        if (
-          ctx.twoVtwoAdapter &&
-          typeof ctx.twoVtwoAdapter.resetUnifiedActionCount === "function"
-        ) {
-          ctx.twoVtwoAdapter.resetUnifiedActionCount(nextTeam);
-        }
+      if (
+        ctx.twoVtwoAdapter &&
+        typeof ctx.twoVtwoAdapter.resetUnifiedActionCount === "function"
+      ) {
+        ctx.twoVtwoAdapter.resetUnifiedActionCount(nextTeam);
+      }
 
-        if (nextTeam.mode === "unified") {
-          if (nextTeam.unit1) nextTeam.unit1.actionCount = 0;
-          if (nextTeam.unit2) nextTeam.unit2.actionCount = 0;
-        }
+      if (nextTeam.mode === "unified") {
+        if (nextTeam.unit1) nextTeam.unit1.actionCount = 0;
+        if (nextTeam.unit2) nextTeam.unit2.actionCount = 0;
+      }
 
-        if (
+     if (
           ctx.getBattleMode &&
           ctx.getBattleMode() === "vscpu2v2" &&
           ctx.getCurrentPlayer() === "B"
         ) {
           const cpuTeam = ctx.getTeam("B");
+
           if (cpuTeam) {
             cpuTeam.focusUnitKey = Math.random() < 0.5 ? "unit1" : "unit2";
             cpuTeam.activeUnitKey = cpuTeam.focusUnitKey;
           }
+
+          if (
+            ctx.twoVtwoTauntSystem &&
+            typeof ctx.twoVtwoTauntSystem.tryCpuAutoUse === "function"
+          ) {
+            const cpuTauntResult = ctx.twoVtwoTauntSystem.tryCpuAutoUse("B");
+
+            if (cpuTauntResult?.message) {
+              ctx.appendBattleNotice(cpuTauntResult.message);
+            }
+          }
         }
-      }
-    } else {
-      const nextActor = ctx.getPlayerState(ctx.getCurrentPlayer());
-      resetActionCount(nextActor);
     }
-
-    const attackLog = document.getElementById("attackLog");
-    if (attackLog) {
-      attackLog.textContent = turnEndResult.message || "バトル開始待機中";
-    }
-
-    ctx.redrawBattleBoards();
-
-    if (turnEndResult.requestChoice) {
-      ctx.handleChoiceRequest(turnEndResult.requestChoice);
-      return;
-    }
-
-    if (ctx.isChallengeMode && ctx.isChallengeMode() && ctx.getCurrentPlayer() === "B") {
-      if (ctx.isTeamBattleMode && ctx.isTeamBattleMode() && ctx.executeTeamSlot) {
-        ctx.executeTeamSlot();
-        return;
-      }
-
-      executeSlot();
-      return;
-    }
+  } else {
+    const nextActor = ctx.getPlayerState(ctx.getCurrentPlayer());
+    resetActionCount(nextActor);
   }
 
-  return {
+  ctx.redrawBattleBoards();
+
+ctx.clearCurrentAction();
+
+if (turnEndResult.message) {
+  ctx.renderAttackLogText(turnEndResult.message, { showCurrentAction: false });
+} else {
+  ctx.renderAttackLogText("", { showCurrentAction: false });
+}
+
+  if (turnEndResult.requestChoice) {
+    ctx.handleChoiceRequest(turnEndResult.requestChoice);
+    return;
+  }
+
+  if (ctx.isChallengeMode && ctx.isChallengeMode() && ctx.getCurrentPlayer() === "B") {
+    if (ctx.isTeamBattleMode && ctx.isTeamBattleMode() && ctx.executeTeamSlot) {
+      ctx.executeTeamSlot();
+      return;
+    }
+
+    executeSlot();
+    return;
+  }
+}
+  
+return {
     ensureActionState,
     resetActionCount,
     canConsumeAction,
     consumeActionCount,
     clampEvadeToMax,
-    clampTeamEvadeToMax,
+  clampTeamEvadeToMax,
     executeSlot,
     simulateSlot,
     endTurn
