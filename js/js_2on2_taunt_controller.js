@@ -373,7 +373,7 @@ export function create2v2TauntController(ctx) {
     });
   }
 
-  function handleButton(playerKey) {
+function handleButton(playerKey) {
     const label = getButtonLabel(playerKey);
 
     if (label === "挑発") {
@@ -386,8 +386,13 @@ export function create2v2TauntController(ctx) {
       return;
     }
 
-    ctx.showPopup("打破は未実装です");
-  }
+    if (typeof ctx.openBreakthrough === "function") {
+      ctx.openBreakthrough();
+      return;
+    }
+
+    ctx.showPopup("打破システムを参照できません");
+}
 
   return {
     tickTeam,
