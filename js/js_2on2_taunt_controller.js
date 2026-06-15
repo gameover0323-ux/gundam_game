@@ -123,12 +123,11 @@ export function create2v2TauntController(ctx) {
     state.disabledThisTurn = true;
   }
 
-  function canUse(playerKey) {
+function canUse(playerKey) {
     const team = ctx.getTeam(playerKey);
     const state = ensureTeamTauntState(team);
 
     if (!team || !state) return false;
-    if (ctx.getCurrentPlayer() !== playerKey) return false;
     if (ctx.hasPendingChoice()) return false;
     if (ctx.hasCurrentAttack()) return false;
 
@@ -136,6 +135,7 @@ export function create2v2TauntController(ctx) {
       return true;
     }
 
+    if (ctx.getCurrentPlayer() !== playerKey) return false;
     if (state.disabledThisTurn) return false;
     if (state.cooldown > 0) return false;
 
@@ -191,7 +191,7 @@ export function create2v2TauntController(ctx) {
     };
   }
 
-  function startDuel(ownerPlayer, ownUnitKey) {
+ function startDuel(ownerPlayer, ownUnitKey) {
     if (!canUse(ownerPlayer)) {
       return { ok: false, message: "現在は決戦できません" };
     }
@@ -202,6 +202,28 @@ export function create2v2TauntController(ctx) {
 
     const ownState = ensureTeamTauntState(ownTeam);
     const enemyState = ensureTeamTauntState(enemyTeam);
+
+    if (!ownTeam?.[ownUnitKey]) {
+      return { ok: false, message: "決戦する自軍機体が見つかりません" };
+    }
+
+    if (
+      ownState?.tauntTurns <= 0 ||
+      ownState.tauntOwnerPlayer !== enemyPlayer ||
+      !ownState.tauntTargetUnitKey
+    ) {
+      return { ok: false, message: "相手から受けている挑発がありません" };
+    }
+
+    const enemyFocusUnitKey =
+      enemyTeam?.focusUnitKey === "unit2" ? "unit2" : "unit1";
+
+    if (!enemyTeam?.[enemyFocusUnitKey]) {
+      return { ok: false, message: "相手のフォーカス機体が見つかりません" };
+    }
+
+    const aUnitKey = ownerPlayer === "A" ? ownUnitKey : enemyFocusUnitKey;
+    const bUnitKey = ownerPlayer === "B" ? ownUnitKey : enemyFocusUnitKey;
 
     if (!ownTeam?.[ownUnitKey]) {
       return { ok: false, message: "決戦する自軍機体が見つかりません" };
