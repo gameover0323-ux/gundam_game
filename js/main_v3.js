@@ -1258,25 +1258,6 @@ twoVtwoTauntController = create2v2TauntController({
     showPopup("打破システムを参照できません");
   }
 });
-
-twoVtwoBreakthroughController = create2v2BreakthroughController({
-  getTeam,
-  getOpponentPlayer,
-  getRollableSlotKeys,
-  getSlotByKey,
-  getSlotNumberFromKey,
-  twoVtwoAdapter,
-  twoVtwoTauntController,
-  clampTeamEvadeToMax: (team) => {
-    if (battleFlow && typeof battleFlow.clampTeamEvadeToMax === "function") {
-      battleFlow.clampTeamEvadeToMax(team);
-    }
-  },
-  setCurrentPlayer: (value) => {
-    currentPlayer = value;
-  },
-  redrawBattleBoards
-});
 onlineSpectatorController = createOnlineSpectatorController({
   getBattleMode: () => battleMode,
   setBattleMode: value => {
@@ -1720,6 +1701,23 @@ tickCriticalBoosts,
   getCurrentAttack,
 renderAttackChoices
 });
+twoVtwoBreakthroughController = create2v2BreakthroughController({
+  getTeam,
+  getOpponentPlayer,
+  getRollableSlotKeys,
+  getSlotByKey,
+  getSlotNumberFromKey,
+  twoVtwoAdapter,
+  twoVtwoTauntController,
+  clampTeamEvadeToMax: (team) => {
+    battleFlow.clampTeamEvadeToMax(team);
+  },
+  setCurrentPlayer: (value) => {
+    currentPlayer = value;
+  },
+  redrawBattleBoards
+});
+
 turnActionController = createTurnActionController({
   isOnlineEnabled: () => onlineState.enabled,
   getOnlineMyPlayer: () => onlineState.myPlayer,
