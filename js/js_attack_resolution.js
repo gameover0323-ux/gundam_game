@@ -183,11 +183,12 @@ export function createAttackResolution(ctx) {
     return true;
   }
 
-  function applyTauntDamageModifier({
+function applyTauntDamageModifier({
     attackerPlayer,
     defenderPlayer,
     defender,
     ctxAtk,
+    attack,
     damage
   }) {
     let nextDamage = damage;
@@ -205,7 +206,7 @@ export function createAttackResolution(ctx) {
 
       nextDamage = ctx.twoVtwoTauntSystem.modifyDamage({
         attackerPlayer,
-        attackerUnitKey: ctxAtk?.ownerUnitKey || null,
+        attackerUnitKey: ctxAtk?.ownerUnitKey || attack?.ownerUnitKey || null,
         defenderPlayer,
         defenderUnitKey,
         damage: nextDamage
@@ -251,6 +252,7 @@ export function createAttackResolution(ctx) {
           defenderPlayer,
           defender,
           ctxAtk,
+          attack: atk,
           damage: dmg
         });
 
@@ -525,9 +527,9 @@ export function createAttackResolution(ctx) {
       ctx.twoVtwoTauntSystem &&
       typeof ctx.twoVtwoTauntSystem.modifyDamage === "function"
     ) {
-      damageBeforeSupport = ctx.twoVtwoTauntSystem.modifyDamage({
+     damageBeforeSupport = ctx.twoVtwoTauntSystem.modifyDamage({
         attackerPlayer,
-        attackerUnitKey: ctxAtk?.ownerUnitKey || null,
+        attackerUnitKey: ctxAtk?.ownerUnitKey || attack?.ownerUnitKey || null,
         defenderPlayer,
         defenderUnitKey: focusKey,
         damage: damageBeforeSupport
