@@ -21,6 +21,55 @@ export function create2v2TauntController(ctx) {
     return team.tauntState;
   }
 
+  function getOwnState(playerKey) {
+    return ensureTeamTauntState(ctx.getTeam(playerKey));
+  }
+
+  function getEnemyState(playerKey) {
+    return ensureTeamTauntState(ctx.getTeam(ctx.getOpponentPlayer(playerKey)));
+  }
+
+  function isTauntOwner(playerKey) {
+    const enemyState = getEnemyState(playerKey);
+    return enemyState?.tauntTurns > 0 && enemyState.tauntOwnerPlayer === playerKey;
+  }
+
+  function isDuelActiveForPlayer(playerKey) {
+    const ownState = getOwnState(playerKey);
+    const enemyState = getEnemyState(playerKey);
+    return ownState?.duelActive || enemyState?.duelActive;
+  }
+
+  function getDuelUnitKey(playerKey) {
+    const state = getOwnState(playerKey);
+    if (!state?.duelActive) return null;
+    return playerKey === "A" ? state.duelAUnitKey : state.duelBUnitKey;
+  }
+
+  function isTeamModeLocked(playerKey) {
+    return isTauntOwner(playerKey) || isDuelActiveForPlayer(playerKey);
+  }
+
+  function canChangeFocus(playerKey) {
+    return !isDuelActiveForPlayer(playerKey);
+  }
+
+  function getLockedFocusUnitKey(playerKey) {
+    if (!isDuelActiveForPlayer(playerKey)) return null;
+    return getDuelUnitKey(playerKey);
+  }
+
+  function forceSplit(playerKey) {
+    const team = ctx.getTeam(playerKey);
+    if (!team) return;
+
+    if (team.mode === "unified" && typeof ctx.exitUnified === "function") {
+      ctx.exitUnified(team);
+    }
+
+    team.mode = "split";
+  }
+
   function tickTeam(team) {
     const state = ensureTeamTauntState(team);
     if (!state) return;
@@ -78,10 +127,8 @@ export function create2v2TauntController(ctx) {
   }
 
   function getButtonLabel(playerKey) {
-    const ownTeam = ctx.getTeam(playerKey);
-    const enemyTeam = ctx.getTeam(ctx.getOpponentPlayer(playerKey));
-    const ownState = ensureTeamTauntState(ownTeam);
-    const enemyState = ensureTeamTauntState(enemyTeam);
+    const ownState = getOwnState(playerKey);
+    const enemyState = getEnemyState(playerKey);
 
     if (ownState?.duelActive || enemyState?.duelActive) return "打破";
 
@@ -95,19 +142,20 @@ export function create2v2TauntController(ctx) {
     return "挑発";
   }
 
- function startTaunt(ownerPlayer, targetUnitKey) {
+  function startTaunt(ownerPlayer, targetUnitKey) {
     if (!canUse(ownerPlayer)) return { ok: false, message: "現在は挑発できません" };
 
     const enemyPlayer = ctx.getOpponentPlayer(ownerPlayer);
     const ownerTeam = ctx.getTeam(ownerPlayer);
     const enemyTeam = ctx.getTeam(enemyPlayer);
-
     const ownerState = ensureTeamTauntState(ownerTeam);
     const enemyState = ensureTeamTauntState(enemyTeam);
 
     if (!enemyTeam?.[targetUnitKey]) {
       return { ok: false, message: "挑発対象が見つかりません" };
     }
+
+    forceSplit(ownerPlayer);
 
     enemyState.tauntTargetPlayer = enemyPlayer;
     enemyState.tauntTargetUnitKey = targetUnitKey;
@@ -117,7 +165,7 @@ export function create2v2TauntController(ctx) {
     ownerState.cooldown = COOLDOWN_TURNS;
 
     return { ok: true, message: `${targetUnitKey === "unit2" ? "2" : "1"}番機を挑発しました` };
- }
+  }
 
   function startDuel(ownerPlayer, ownUnitKey) {
     if (!canUse(ownerPlayer)) return { ok: false, message: "現在は決戦できません" };
@@ -144,6 +192,22 @@ export function create2v2TauntController(ctx) {
     const aUnitKey = ownerPlayer === "A" ? ownUnitKey : challengedUnitKey;
     const bUnitKey = ownerPlayer === "B" ? ownUnitKey : challengedUnitKey;
 
+    forceSplit("A");
+    forceSplit("B");
+
+    const teamA = ctx.getTeam("A");
+    const teamB = ctx.getTeam("B");
+
+    if (teamA) {
+      teamA.focusUnitKey = aUnitKey;
+      teamA.activeUnitKey = aUnitKey;
+    }
+
+    if (teamB) {
+      teamB.focusUnitKey = bUnitKey;
+      teamB.activeUnitKey = bUnitKey;
+    }
+
     ownState.duelActive = true;
     ownState.duelAUnitKey = aUnitKey;
     ownState.duelBUnitKey = bUnitKey;
@@ -169,12 +233,12 @@ export function create2v2TauntController(ctx) {
   }
 
   function isTauntTarget(playerKey, unitKey) {
-    const state = ensureTeamTauntState(ctx.getTeam(playerKey));
+    const state = getOwnState(playerKey);
     return state?.tauntTargetPlayer === playerKey && state?.tauntTargetUnitKey === unitKey;
   }
 
   function isDuelTarget(playerKey, unitKey) {
-    const state = ensureTeamTauntState(ctx.getTeam(playerKey));
+    const state = getOwnState(playerKey);
     if (!state?.duelActive) return false;
     return playerKey === "A" ? state.duelAUnitKey === unitKey : state.duelBUnitKey === unitKey;
   }
@@ -182,7 +246,7 @@ export function create2v2TauntController(ctx) {
   function modifyDamage({ attackerPlayer, attackerUnitKey, defenderPlayer, defenderUnitKey, damage }) {
     let result = Math.max(0, Number(damage || 0));
 
-    const defenderState = ensureTeamTauntState(ctx.getTeam(defenderPlayer));
+    const defenderState = getOwnState(defenderPlayer);
     if (
       defenderState?.tauntTurns > 0 &&
       defenderState.tauntTargetUnitKey &&
@@ -191,7 +255,7 @@ export function create2v2TauntController(ctx) {
       result = Math.floor(result * 1.5);
     }
 
-    const attackerState = ensureTeamTauntState(ctx.getTeam(attackerPlayer));
+    const attackerState = getOwnState(attackerPlayer);
     if (attackerState?.duelActive) {
       const attackerDuelKey = attackerPlayer === "A" ? attackerState.duelAUnitKey : attackerState.duelBUnitKey;
       const defenderDuelKey = defenderPlayer === "A" ? attackerState.duelAUnitKey : attackerState.duelBUnitKey;
@@ -276,6 +340,9 @@ export function create2v2TauntController(ctx) {
     getButtonLabel,
     isTauntTarget,
     isDuelTarget,
+    isTeamModeLocked,
+    canChangeFocus,
+    getLockedFocusUnitKey,
     modifyDamage,
     handleButton
   };
