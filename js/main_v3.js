@@ -1751,7 +1751,9 @@ turnActionController = createTurnActionController({
   isOnlineEnabled: () => onlineState.enabled,
   getOnlineMyPlayer: () => onlineState.myPlayer,
   isOnlineSpectator,
+  getBattleMode: () => battleMode,
   getCurrentPlayer: () => currentPlayer,
+  hasCpuRemainingAction,
 
   executeSlotRaw: () => battleFlow.executeSlot(),
   simulateSlotRaw: () => battleFlow.simulateSlot(),
