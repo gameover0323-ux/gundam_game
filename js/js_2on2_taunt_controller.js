@@ -225,24 +225,6 @@ function canUse(playerKey) {
     const aUnitKey = ownerPlayer === "A" ? ownUnitKey : enemyFocusUnitKey;
     const bUnitKey = ownerPlayer === "B" ? ownUnitKey : enemyFocusUnitKey;
 
-    if (!ownTeam?.[ownUnitKey]) {
-      return { ok: false, message: "決戦する自軍機体が見つかりません" };
-    }
-
-    if (
-      ownState?.tauntTurns <= 0 ||
-      ownState.tauntOwnerPlayer !== enemyPlayer ||
-      !ownState.tauntTargetUnitKey
-    ) {
-      return { ok: false, message: "相手から受けている挑発がありません" };
-    }
-
-    const enemyFocusUnitKey =
-      enemyTeam?.focusUnitKey === "unit2" ? "unit2" : "unit1";
-
-    const aUnitKey = ownerPlayer === "A" ? ownUnitKey : enemyFocusUnitKey;
-    const bUnitKey = ownerPlayer === "B" ? ownUnitKey : enemyFocusUnitKey;
-
     forceSplit("A");
     forceSplit("B");
 
@@ -281,7 +263,7 @@ function canUse(playerKey) {
     enemyState.tauntTurns = 0;
 
     return { ok: true, message: "決戦成立" };
-  }
+ }
 
   function isTauntTarget(playerKey, unitKey) {
     const state = getOwnState(playerKey);
