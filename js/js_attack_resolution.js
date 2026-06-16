@@ -1,6 +1,12 @@
 export function createAttackResolution(ctx) {
   function isTeamBattleMode() {
-    return ctx.getBattleMode() === "2v2" || ctx.getBattleMode() === "challenge2v2";
+    const mode = ctx.getBattleMode ? ctx.getBattleMode() : "";
+    return (
+      mode === "2v2" ||
+      mode === "challenge2v2" ||
+      mode === "vscpu2v2" ||
+      mode === "online2v2"
+    );
   }
 
   function isUnitDefeated(unit) {
