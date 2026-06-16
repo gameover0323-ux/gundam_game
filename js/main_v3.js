@@ -122,6 +122,9 @@ import { create2v2Actions } from "./js_2on2_actions.js";
 import { create2v2Adapter } from "./js_2on2_adapter.js";
 import { create2v2TauntController } from "./js_2on2_taunt_controller.js";
 import { create2v2BreakthroughController } from "./js_2on2_breakthrough_controller.js";
+import { createOnline2v2RoomController } from "./js_online_2v2_room_controller.js";
+import { createOnline2v2ActionSync } from "./js_online_2v2_action_sync.js";
+
 import { createBattleFlow } from "./js_battle_flow.js";
 
 import { createAttackResolution } from "./js_attack_resolution.js";
@@ -231,6 +234,9 @@ let twoVtwoAdapter = null;
 let twoVtwoTauntController = null;
 let twoVtwoBreakthroughController = null;
 let uiController = null;
+
+let online2v2RoomController = null;
+let online2v2ActionSync = null;
 
 let gameSetup = null;
 
@@ -581,7 +587,9 @@ function publishOnlineBattleEnd(winnerPlayer) {
 function applyOnlineAction(action) {
   return onlineActionSync.applyOnlineAction(action);
 }
-
+function applyOnline2v2Action(action) {
+  return online2v2ActionSync.applyOnline2v2Action(action);
+}
 function toggleTestMode() {
   if (!canUseTestMode()) {
     showPopup("テストモードはデバッグアカウント専用です");
@@ -1025,6 +1033,10 @@ function getOnlineProfilePatch(playerKey) {
 }
 
 function bootOnlineFromUrl() {
+  if (online2v2RoomController?.bootOnline2v2FromUrl?.()) {
+    return true;
+  }
+
   return onlineRoomController.bootOnlineFromUrl();
 }
 
@@ -1397,6 +1409,104 @@ buildOnlineBattleSnapshot,
   endTurnRaw: () => battleFlow.endTurn()
 });
 
+online2v2ActionSync = createOnline2v2ActionSync({
+  isOnlineEnabled: () => onlineState.enabled,
+  getBattleMode: () => battleMode,
+  getOnlineRoomId: () => onlineState.roomId,
+  getOnlineMyPlayer: () => onlineState.myPlayer,
+
+  isApplyingRemote: () => onlineState.isApplyingRemote,
+  setApplyingRemote: (value) => {
+    onlineState.isApplyingRemote = value;
+  },
+
+  getLastAppliedActionId: () => onlineState.lastAppliedActionId,
+  setLastAppliedActionId: (value) => {
+    onlineState.lastAppliedActionId = value;
+  },
+
+  getOnlineActionSeq: () => onlineActionSeq,
+  setOnlineActionSeq: (value) => {
+    onlineActionSeq = value;
+  },
+  nextOnlineActionSeq: () => {
+    onlineActionSeq += 1;
+    onlineState.lastAppliedActionId = onlineActionSeq;
+    return onlineActionSeq;
+  },
+
+  updateRoom,
+
+  getCurrentTurn: () => currentTurn,
+  setCurrentTurn: (value) => {
+    currentTurn = value;
+  },
+
+  getCurrentPlayer: () => currentPlayer,
+  setCurrentPlayer: (value) => {
+    currentPlayer = value;
+  },
+
+  getTeam,
+  setTeamA: (value) => {
+    teamA = value;
+  },
+  setTeamB: (value) => {
+    teamB = value;
+  },
+
+  setPlayerAState: (value) => {
+    playerAState = value;
+  },
+  setPlayerBState: (value) => {
+    playerBState = value;
+  },
+
+  getCurrentAttack: () => currentAttack,
+  setCurrentAttack: (value) => {
+    currentAttack = value;
+  },
+
+  getCurrentAttackContext: () => currentAttackContext,
+  setCurrentAttackContext: (value) => {
+    currentAttackContext = value;
+  },
+
+  getCurrentAttackContexts: () => currentAttackContexts,
+  setCurrentAttackContexts: (value) => {
+    currentAttackContexts = value;
+  },
+
+  getBattleNotice: () => battleNotice,
+  setBattleNotice: (value) => {
+    battleNotice = value;
+  },
+
+  getCurrentActionHeader: () => currentActionHeader,
+  setCurrentActionHeader: (value) => {
+    currentActionHeader = value;
+  },
+
+  getCurrentActionLabel: () => currentActionLabel,
+  setCurrentActionLabel: (value) => {
+    currentActionLabel = value;
+  },
+
+  executeTeamSlotRaw: () => twoVtwoActions.executeTeamSlot(),
+  executeSingleTeamSlotRaw: (unitKey) => twoVtwoActions.executeSingleTeamSlot(unitKey),
+
+  takeHitRaw: (index) => attackResolution.takeHit(index),
+  evadeAttackRaw: (index) => attackResolution.evadeAttack(index),
+  supportDefenseAttackRaw: (index) => attackResolution.supportDefenseAttack(index),
+
+  checkBattleEnd,
+  finishBattle,
+  endTurnRaw: () => battleFlow.endTurn(),
+
+  redrawBattleBoards,
+  renderAttackChoices
+});
+
 
 uiController = createUiController({
   screens,
@@ -1527,7 +1637,14 @@ isOnlineSpectator,
   finishCurrentAttackResolutionRaw: () => attackResolution.finishCurrentAttackResolution(),
 
   checkBattleEnd,
-  publishOnlineQteAction,
+  publishOnlineQteAction: (kind, index) => {
+    if (battleMode === "online2v2") {
+      online2v2ActionSync.publishOnline2v2QteAction(kind, index);
+      return;
+    }
+
+    publishOnlineQteAction(kind, index);
+  },
   showPopup
 });
 bossQteAutoResolver = createBossQteAutoResolver({
@@ -1749,7 +1866,14 @@ turnActionController = createTurnActionController({
   simulateSlotRaw: () => battleFlow.simulateSlot(),
   endTurnRaw: () => battleFlow.endTurn(),
 
-  publishOnlineEndTurnAction,
+  publishOnlineEndTurnAction: (actorPlayer) => {
+    if (battleMode === "online2v2") {
+      online2v2ActionSync.publishOnline2v2EndTurnAction(actorPlayer);
+      return;
+    }
+
+    publishOnlineEndTurnAction(actorPlayer);
+  },
   showPopup
 });
 onlineRoomController = createOnlineRoomController({
@@ -1862,6 +1986,85 @@ applyOnlineBattleSnapshot,
 
   enterRandomMatchedRoom
 });
+
+online2v2RoomController = createOnline2v2RoomController({
+  getPlayerProfile: () => playerSession.profile,
+
+  getBattleMode: () => battleMode,
+  setBattleMode: (value) => {
+    battleMode = value;
+  },
+
+  getOnlineRoomIdInput: () => onlineRoomIdInput,
+  getOnlineRoomStatus: () => onlineRoomStatus,
+  getOnlineInviteUrl: () => onlineInviteUrl,
+
+  isOnlineEnabled: () => onlineState.enabled,
+  getOnlineRoomId: () => onlineState.roomId,
+  getOnlineMyPlayer: () => onlineState.myPlayer,
+
+  setOnlineState: (patch) => {
+    Object.assign(onlineState, { isSpectator: false }, patch);
+  },
+
+  getOnlineBattleStarted: () => onlineBattleStarted,
+  setOnlineBattleStarted: (value) => {
+    onlineBattleStarted = value;
+  },
+
+  getOnlineSelectEntered: () => onlineSelectEntered,
+  setOnlineSelectEntered: (value) => {
+    onlineSelectEntered = value;
+  },
+
+  setSelectingPlayer: (value) => {
+    selectingPlayer = value;
+  },
+
+  setSelectedUnitA: (value) => {
+    selectedUnitA = value;
+  },
+
+  setSelectedUnitB: (value) => {
+    selectedUnitB = value;
+  },
+
+  getTeamA: () => teamA,
+  setTeamA: (value) => {
+    teamA = value;
+  },
+
+  getTeamB: () => teamB,
+  setTeamB: (value) => {
+    teamB = value;
+  },
+
+  createRoomId,
+  writeRoom,
+  readRoom,
+  updateRoom,
+  listenRoom,
+  buildInitialRoomData,
+  cleanupOldRooms,
+
+  getUnitById,
+  updateSelectUi,
+  applyOnline2v2Action,
+
+  renderOnlineExtraUi,
+  applyOnlinePeaceRequest,
+  applyOnlineMetaResult,
+  saveOnlineEncounteredPlayer,
+
+  init2v2,
+
+  redrawBattleBoards,
+  ensureOnlineBattleExtraUi,
+  showScreen,
+  loadUnitButtons,
+  showPopup
+});
+
 resetController = createResetController({
   isOnlineEnabled: () => onlineState.enabled,
   getOnlineRoomId: () => onlineState.roomId,
@@ -2128,6 +2331,10 @@ gameSetup = createGameSetup({
   },
 
 onSelectUnit: (unit) => {
+  if (battleMode === "online2v2") {
+    return online2v2RoomController.selectOnline2v2Unit(unit);
+  }
+
   if (String(battleMode).startsWith("online")) {
     return selectOnlineUnit(unit);
   }
@@ -2215,7 +2422,13 @@ twoVtwoAdapter,
 
   redrawBattleBoards,
   renderAttackChoices,
-  renderAttackLogText,
+ renderAttackLogText,
+
+  onOnline2v2SlotAction: (ownerPlayer, slotMode = "team", unitKey = null) => {
+    if (battleMode === "online2v2") {
+      online2v2ActionSync.publishOnline2v2SlotAction(ownerPlayer, slotMode, unitKey);
+    }
+  },
 
   executeSlot
 });
