@@ -30,6 +30,19 @@ export function createTurnActionController(ctx) {
 
     const beforePlayer = ctx.getCurrentPlayer();
 
+    if (
+      ctx.shouldBlockManualEndTurn &&
+      ctx.shouldBlockManualEndTurn(beforePlayer)
+    ) {
+      const message =
+        ctx.getManualEndTurnBlockMessage
+          ? ctx.getManualEndTurnBlockMessage()
+          : "CPUの行動権が残っています。";
+
+      ctx.showPopup(message);
+      return;
+    }
+
     const result = ctx.endTurnRaw();
 
     if (ctx.isOnlineEnabled() && beforePlayer !== ctx.getCurrentPlayer()) {
