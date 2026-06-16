@@ -304,11 +304,13 @@ export function create2v2Actions(ctx) {
     finishTeamSlotAction(
       currentPlayer,
       enemyPlayer,
-      team.mode === "unified"
-        ? `PLAYER ${currentPlayer} の統合型スロット行動`
-        : `PLAYER ${currentPlayer} の2on2スロット行動`,
+      team.mode === "unified" ? `PLAYER ${currentPlayer} の統合型スロット行動` : `PLAYER ${currentPlayer} の2on2スロット行動`,
       actionSummaries
     );
+
+    if (typeof ctx.onOnline2v2SlotAction === "function") {
+      ctx.onOnline2v2SlotAction(currentPlayer, "team", null);
+    }
   }
 
   function executeSingleTeamSlot(unitKey) {
@@ -339,12 +341,16 @@ export function create2v2Actions(ctx) {
       actionSummaries
     });
 
-    finishTeamSlotAction(
+   finishTeamSlotAction(
       currentPlayer,
       enemyPlayer,
       `PLAYER ${currentPlayer} の単独スロット行動`,
       actionSummaries
     );
+
+    if (typeof ctx.onOnline2v2SlotAction === "function") {
+      ctx.onOnline2v2SlotAction(currentPlayer, unitKey, unitKey);
+    }
   }
 
  function executeUnifiedSelectedSlot(ownerPlayer, slotKey, ownerUnitKey = null, options = {}) {
