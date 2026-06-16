@@ -35,6 +35,10 @@ export function createOnline2v2RoomController(ctx) {
     return unit?.id || unit?.name || "";
   }
 
+function isOnlineSpectator() {
+    return typeof ctx.isOnlineSpectator === "function" && ctx.isOnlineSpectator();
+}
+  
   function getRoomUnitIds(roomData, playerKey) {
     const playerData = roomData?.players?.[playerKey] || {};
     return Array.isArray(playerData.unitIds)
@@ -310,7 +314,7 @@ export function createOnline2v2RoomController(ctx) {
     ctx.updateSelectUi();
   }
 
-  function applyOnline2v2RoomData(roomData) {
+ function applyOnline2v2RoomData(roomData) {
     if (!ctx.isOnlineEnabled() || !roomData) return;
     if (roomData?.meta?.mode !== "online2v2") return;
 
@@ -330,7 +334,10 @@ export function createOnline2v2RoomController(ctx) {
     setSelectTeamUnits("B", unitsB);
     ctx.updateSelectUi();
 
-    if (!ctx.isOnlineSpectator()) {
+    if (
+      !isOnlineSpectator() &&
+      typeof ctx.applyOnline2v2Action === "function"
+    ) {
       ctx.applyOnline2v2Action(roomData.action);
     }
 
@@ -338,7 +345,7 @@ export function createOnline2v2RoomController(ctx) {
     const bReady = playerB.ready === true || idsB.length >= 2;
 
     if (
-      !ctx.isOnlineSpectator() &&
+      !isOnlineSpectator() &&
       !ctx.getOnlineBattleStarted() &&
       aReady &&
       bReady &&
