@@ -1244,17 +1244,19 @@ twoVtwoAdapter = create2v2Adapter({
 });
 
 twoVtwoTauntController = create2v2TauntController({
+  getBattleMode: () => battleMode,
   getCurrentPlayer: () => currentPlayer,
   getOpponentPlayer,
   getTeam,
   exitUnified: (team) => twoVtwoHelpers.exitUnified(team),
   hasPendingChoice: () => !!pendingChoice,
   hasCurrentAttack: () => currentAttack.length > 0,
+  appendBattleNotice,
   showPopup,
   redrawBattleBoards,
-  openBreakthrough: () => {
+  openBreakthrough: (options = {}) => {
     if (twoVtwoBreakthroughController) {
-      twoVtwoBreakthroughController.renderBetChoice();
+      twoVtwoBreakthroughController.renderBetChoice(options);
       return;
     }
 
@@ -1682,6 +1684,7 @@ setCurrentAttackContext,
 setCurrentAttackContexts,
 
   clearBattleNotice,
+  appendBattleNotice,
   clearCurrentAction,
   clearPendingChoice,
 
@@ -1713,6 +1716,7 @@ cpuTurnGuard = createCpuTurnGuard({
 });
 
 twoVtwoBreakthroughController = create2v2BreakthroughController({
+  getBattleMode: () => battleMode,
   getTeam,
   getOpponentPlayer,
   getRollableSlotKeys,
@@ -1726,7 +1730,8 @@ twoVtwoBreakthroughController = create2v2BreakthroughController({
   setCurrentPlayer: (value) => {
     currentPlayer = value;
   },
-  redrawBattleBoards
+  redrawBattleBoards,
+  showPopup
 });
 turnActionController = createTurnActionController({
   isOnlineEnabled: () => onlineState.enabled,
