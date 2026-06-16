@@ -106,6 +106,53 @@ export function createBattleFlow(ctx) {
     }
   }
 
+  function isAliveUnit(unit) {
+    return unit && Number(unit.hp || 0) > 0 && unit.isDefeated !== true;
+  }
+
+  function pickRandomAliveUnitKey(team) {
+    if (!team) return "unit1";
+
+    const aliveKeys = ["unit1", "unit2"].filter((unitKey) => {
+      return isAliveUnit(team[unitKey]);
+    });
+
+    if (aliveKeys.length <= 0) return "unit1";
+    return aliveKeys[Math.floor(Math.random() * aliveKeys.length)];
+  }
+
+  function setupCpu2v2TurnStart() {
+    if (
+      !ctx.getBattleMode ||
+      ctx.getBattleMode() !== "vscpu2v2" ||
+      ctx.getCurrentPlayer() !== "B"
+    ) {
+      return;
+    }
+
+    const cpuTeam = ctx.getTeam("B");
+
+    if (cpuTeam) {
+      const nextFocus = pickRandomAliveUnitKey(cpuTeam);
+      cpuTeam.focusUnitKey = nextFocus;
+      cpuTeam.activeUnitKey = nextFocus;
+    }
+
+    if (
+      ctx.twoVtwoTauntSystem &&
+      typeof ctx.twoVtwoTauntSystem.tryCpuAutoUse === "function"
+    ) {
+      const result = ctx.twoVtwoTauntSystem.tryCpuAutoUse("B");
+
+      if (
+        result?.message &&
+        typeof ctx.appendBattleNotice === "function"
+      ) {
+        ctx.appendBattleNotice(result.message);
+      }
+    }
+  }
+
   function executeSlot() {
     if (ctx.hasPendingChoice()) {
       ctx.renderPendingChoice();
@@ -315,17 +362,7 @@ export function createBattleFlow(ctx) {
           if (nextTeam.unit2) nextTeam.unit2.actionCount = 0;
         }
 
-        if (
-          ctx.getBattleMode &&
-          ctx.getBattleMode() === "vscpu2v2" &&
-          ctx.getCurrentPlayer() === "B"
-        ) {
-          const cpuTeam = ctx.getTeam("B");
-          if (cpuTeam) {
-            cpuTeam.focusUnitKey = Math.random() < 0.5 ? "unit1" : "unit2";
-            cpuTeam.activeUnitKey = cpuTeam.focusUnitKey;
-          }
-        }
+        setupCpu2v2TurnStart();
       }
     } else {
       const nextActor = ctx.getPlayerState(ctx.getCurrentPlayer());
