@@ -35,18 +35,18 @@ export function createOnline2v2RoomController(ctx) {
     return unit?.id || unit?.name || "";
   }
 
-  function getOnline2v2PlayerIds(roomData, playerKey) {
+  function getRoomUnitIds(roomData, playerKey) {
     const playerData = roomData?.players?.[playerKey] || {};
-    return Array.isArray(playerData.unitIds) ? playerData.unitIds.filter(Boolean) : [];
+    return Array.isArray(playerData.unitIds)
+      ? playerData.unitIds.filter(Boolean)
+      : [];
   }
 
-  function getOnline2v2PlayerUnits(roomData, playerKey) {
-    return getOnline2v2PlayerIds(roomData, playerKey)
-      .map((id) => ctx.getUnitById(id))
-      .filter(Boolean);
+  function idsToUnits(ids) {
+    return ids.map((id) => ctx.getUnitById(id)).filter(Boolean);
   }
 
-  function setLocalTeamUnits(playerKey, units) {
+  function setSelectTeamUnits(playerKey, units) {
     const safeUnits = Array.isArray(units) ? units.filter(Boolean) : [];
 
     if (playerKey === "A") {
@@ -56,7 +56,7 @@ export function createOnline2v2RoomController(ctx) {
     }
   }
 
-  function getLocalTeamUnits(playerKey) {
+  function getSelectTeamUnits(playerKey) {
     const team = playerKey === "A" ? ctx.getTeamA() : ctx.getTeamB();
     return Array.isArray(team?.units) ? team.units : [];
   }
@@ -70,7 +70,6 @@ export function createOnline2v2RoomController(ctx) {
     cleanupRoomIdMatchListener();
 
     const onlineRoomStatus = ctx.getOnlineRoomStatus();
-
     if (onlineRoomStatus) {
       onlineRoomStatus.textContent = `オンライン2on2マッチ成立。あなたはPLAYER ${playerSide}です。`;
     }
@@ -133,7 +132,8 @@ export function createOnline2v2RoomController(ctx) {
         joined: false,
         ready: false,
         unitIds: [],
-        unitId: null
+        unitId: null,
+        lastSeen: 0
       });
 
       await ctx.writeRoom(roomId, initialRoomData);
@@ -273,7 +273,7 @@ export function createOnline2v2RoomController(ctx) {
       return true;
     }
 
-    const currentUnits = getLocalTeamUnits(myPlayer);
+    const currentUnits = getSelectTeamUnits(myPlayer);
     const currentIds = currentUnits.map(getUnitId).filter(Boolean);
 
     if (currentIds.length >= 2) {
@@ -281,11 +281,11 @@ export function createOnline2v2RoomController(ctx) {
       return true;
     }
 
-    const nextUnits = [...currentUnits, unit].slice(0, 2);
-    const nextIds = nextUnits.map(getUnitId).filter(Boolean);
+    const nextIds = [...currentIds, getUnitId(unit)].filter(Boolean).slice(0, 2);
+    const nextUnits = idsToUnits(nextIds);
     const ready = nextIds.length >= 2;
 
-    setLocalTeamUnits(myPlayer, nextUnits);
+    setSelectTeamUnits(myPlayer, nextUnits);
     ctx.updateSelectUi();
 
     await ctx.updateRoom(roomId, {
@@ -301,11 +301,11 @@ export function createOnline2v2RoomController(ctx) {
   }
 
   function syncSelectedUnitsFromRoom(roomData) {
-    const unitsA = getOnline2v2PlayerUnits(roomData, "A");
-    const unitsB = getOnline2v2PlayerUnits(roomData, "B");
+    const idsA = getRoomUnitIds(roomData, "A");
+    const idsB = getRoomUnitIds(roomData, "B");
 
-    setLocalTeamUnits("A", unitsA);
-    setLocalTeamUnits("B", unitsB);
+    setSelectTeamUnits("A", idsToUnits(idsA));
+    setSelectTeamUnits("B", idsToUnits(idsB));
 
     ctx.updateSelectUi();
   }
@@ -318,22 +318,27 @@ export function createOnline2v2RoomController(ctx) {
     ctx.applyOnlinePeaceRequest(roomData);
     ctx.applyOnlineMetaResult(roomData);
 
+    const playerA = roomData.players?.A || {};
+    const playerB = roomData.players?.B || {};
+
+    const idsA = getRoomUnitIds(roomData, "A");
+    const idsB = getRoomUnitIds(roomData, "B");
+    const unitsA = idsToUnits(idsA);
+    const unitsB = idsToUnits(idsB);
+
+    setSelectTeamUnits("A", unitsA);
+    setSelectTeamUnits("B", unitsB);
+    ctx.updateSelectUi();
+
     if (!ctx.isOnlineSpectator()) {
       ctx.applyOnline2v2Action(roomData.action);
     }
 
-    syncSelectedUnitsFromRoom(roomData);
-
-    const playerA = roomData.players?.A || {};
-    const playerB = roomData.players?.B || {};
-    const unitsA = getOnline2v2PlayerUnits(roomData, "A");
-    const unitsB = getOnline2v2PlayerUnits(roomData, "B");
-
     if (
       !ctx.isOnlineSpectator() &&
       !ctx.getOnlineBattleStarted() &&
-      playerA.ready &&
-      playerB.ready &&
+      playerA.ready === true &&
+      playerB.ready === true &&
       unitsA.length >= 2 &&
       unitsB.length >= 2
     ) {
