@@ -31,6 +31,36 @@ export function createOnline2v2RoomController(ctx) {
     };
   }
 
+  function getUnitId(unit) {
+    return unit?.id || unit?.name || "";
+  }
+
+  function getOnline2v2PlayerIds(roomData, playerKey) {
+    const playerData = roomData?.players?.[playerKey] || {};
+    return Array.isArray(playerData.unitIds) ? playerData.unitIds.filter(Boolean) : [];
+  }
+
+  function getOnline2v2PlayerUnits(roomData, playerKey) {
+    return getOnline2v2PlayerIds(roomData, playerKey)
+      .map((id) => ctx.getUnitById(id))
+      .filter(Boolean);
+  }
+
+  function setLocalTeamUnits(playerKey, units) {
+    const safeUnits = Array.isArray(units) ? units.filter(Boolean) : [];
+
+    if (playerKey === "A") {
+      ctx.setTeamA({ units: safeUnits });
+    } else {
+      ctx.setTeamB({ units: safeUnits });
+    }
+  }
+
+  function getLocalTeamUnits(playerKey) {
+    const team = playerKey === "A" ? ctx.getTeamA() : ctx.getTeamB();
+    return Array.isArray(team?.units) ? team.units : [];
+  }
+
   function enterRoomIdMatchedRoom(roomId, playerSide) {
     if (!roomId || (playerSide !== "A" && playerSide !== "B")) return;
     if (roomIdMatchEntering && roomIdMatchActiveRoomId === roomId) return;
@@ -47,12 +77,12 @@ export function createOnline2v2RoomController(ctx) {
 
     enterOnline2v2Select();
 
-    ctx.readRoom(roomId).then(snapshot => {
+    ctx.readRoom(roomId).then((snapshot) => {
       if (!snapshot.exists()) return;
       applyOnline2v2RoomData(snapshot.val());
     });
 
-    roomIdMatchUnsubscribe = ctx.listenRoom(roomId, roomData => {
+    roomIdMatchUnsubscribe = ctx.listenRoom(roomId, (roomData) => {
       if (!roomData) return;
       applyOnline2v2RoomData(roomData);
     });
@@ -100,6 +130,7 @@ export function createOnline2v2RoomController(ctx) {
       });
 
       Object.assign(initialRoomData.players.B, {
+        joined: false,
         ready: false,
         unitIds: [],
         unitId: null
@@ -117,7 +148,7 @@ export function createOnline2v2RoomController(ctx) {
         onlineInviteUrl.textContent = inviteUrl;
       }
 
-      roomIdMatchUnsubscribe = ctx.listenRoom(roomId, roomData => {
+      roomIdMatchUnsubscribe = ctx.listenRoom(roomId, (roomData) => {
         if (!roomData) return;
 
         const playerBJoined = roomData.players?.B?.joined;
@@ -242,30 +273,24 @@ export function createOnline2v2RoomController(ctx) {
       return true;
     }
 
-    const team = myPlayer === "A" ? ctx.getTeamA() : ctx.getTeamB();
+    const currentUnits = getLocalTeamUnits(myPlayer);
+    const currentIds = currentUnits.map(getUnitId).filter(Boolean);
 
-    if (!team || !Array.isArray(team.units)) {
-      if (myPlayer === "A") ctx.setTeamA({ units: [] });
-      if (myPlayer === "B") ctx.setTeamB({ units: [] });
-    }
-
-    const targetTeam = myPlayer === "A" ? ctx.getTeamA() : ctx.getTeamB();
-
-    if (targetTeam.units.length >= 2) {
+    if (currentIds.length >= 2) {
       ctx.showPopup("オンライン2on2では2機まで選択済みです");
       return true;
     }
 
-    targetTeam.units.push(unit);
+    const nextUnits = [...currentUnits, unit].slice(0, 2);
+    const nextIds = nextUnits.map(getUnitId).filter(Boolean);
+    const ready = nextIds.length >= 2;
 
-    const unitIds = targetTeam.units.map(selected => selected.id || selected.name);
-    const ready = unitIds.length >= 2;
-
+    setLocalTeamUnits(myPlayer, nextUnits);
     ctx.updateSelectUi();
 
     await ctx.updateRoom(roomId, {
-      [`players/${myPlayer}/unitIds`]: unitIds,
-      [`players/${myPlayer}/unitId`]: unitIds[0] || null,
+      [`players/${myPlayer}/unitIds`]: nextIds,
+      [`players/${myPlayer}/unitId`]: nextIds[0] || null,
       [`players/${myPlayer}/ready`]: ready,
       [`players/${myPlayer}/lastSeen`]: Date.now(),
       "meta/status": "selecting",
@@ -276,16 +301,11 @@ export function createOnline2v2RoomController(ctx) {
   }
 
   function syncSelectedUnitsFromRoom(roomData) {
-    const playerA = roomData.players?.A || {};
-    const playerB = roomData.players?.B || {};
-    const aIds = Array.isArray(playerA.unitIds) ? playerA.unitIds : [];
-    const bIds = Array.isArray(playerB.unitIds) ? playerB.unitIds : [];
+    const unitsA = getOnline2v2PlayerUnits(roomData, "A");
+    const unitsB = getOnline2v2PlayerUnits(roomData, "B");
 
-    const unitsA = aIds.map(id => ctx.getUnitById(id)).filter(Boolean);
-    const unitsB = bIds.map(id => ctx.getUnitById(id)).filter(Boolean);
-
-    ctx.setTeamA({ units: unitsA });
-    ctx.setTeamB({ units: unitsB });
+    setLocalTeamUnits("A", unitsA);
+    setLocalTeamUnits("B", unitsB);
 
     ctx.updateSelectUi();
   }
@@ -306,22 +326,17 @@ export function createOnline2v2RoomController(ctx) {
 
     const playerA = roomData.players?.A || {};
     const playerB = roomData.players?.B || {};
+    const unitsA = getOnline2v2PlayerUnits(roomData, "A");
+    const unitsB = getOnline2v2PlayerUnits(roomData, "B");
 
     if (
       !ctx.isOnlineSpectator() &&
       !ctx.getOnlineBattleStarted() &&
       playerA.ready &&
       playerB.ready &&
-      Array.isArray(playerA.unitIds) &&
-      Array.isArray(playerB.unitIds) &&
-      playerA.unitIds.length >= 2 &&
-      playerB.unitIds.length >= 2
+      unitsA.length >= 2 &&
+      unitsB.length >= 2
     ) {
-      const unitsA = playerA.unitIds.map(id => ctx.getUnitById(id)).filter(Boolean);
-      const unitsB = playerB.unitIds.map(id => ctx.getUnitById(id)).filter(Boolean);
-
-      if (unitsA.length < 2 || unitsB.length < 2) return;
-
       ctx.saveOnlineEncounteredPlayer(roomData);
       ctx.setOnlineBattleStarted(true);
       initOnline2v2Battle(unitsA, unitsB);
@@ -341,6 +356,7 @@ export function createOnline2v2RoomController(ctx) {
     ctx.setOnlineSelectEntered(true);
     ctx.showScreen("select");
     ctx.loadUnitButtons();
+    ctx.updateSelectUi();
   }
 
   function initOnline2v2Battle(unitsA, unitsB) {
