@@ -15,6 +15,7 @@ import { createBattleInitController } from "./js_battle_init_controller.js";
 import { createResetController } from "./js_reset_controller.js";
 import { createUnitLookupController } from "./js_unit_lookup_controller.js";
 import { createTurnActionController } from "./js_turn_action_controller.js";
+import { createCpuTurnGuard } from "./js_cpu_turn_guard.js";
 import { createSpecialActionController } from "./js_special_action_controller.js";
 import { createQteController } from "./js_qte_controller.js";
 import { createBossQteAutoResolver } from "./js_boss_qte_auto_resolver.js";
@@ -184,8 +185,9 @@ let onlineRoomController = null;
 let localModeController = null;
 let playerAccountUi = null;
 let battleOutcomeController = null;
-let bossQteAutoResolver = null;
-let qteController = null;
+let turnActionController = null;
+let cpuTurnGuard = null;
+let unitLookupController = null;
 let specialActionController = null;
 let turnActionController = null;
 let unitLookupController = null;
@@ -1703,6 +1705,13 @@ tickCriticalBoosts,
 renderAttackChoices
 });
 
+cpuTurnGuard = createCpuTurnGuard({
+  getBattleMode: () => battleMode,
+  isTeamBattleMode,
+  getTeam,
+  getPlayerState
+});
+
 twoVtwoBreakthroughController = create2v2BreakthroughController({
   getTeam,
   getOpponentPlayer,
@@ -1724,6 +1733,12 @@ turnActionController = createTurnActionController({
   getOnlineMyPlayer: () => onlineState.myPlayer,
   isOnlineSpectator,
   getCurrentPlayer: () => currentPlayer,
+
+  shouldBlockManualEndTurn: (playerKey) =>
+    cpuTurnGuard ? cpuTurnGuard.shouldBlockManualEndTurn(playerKey) : false,
+
+  getManualEndTurnBlockMessage: () =>
+    cpuTurnGuard ? cpuTurnGuard.getBlockMessage() : "CPUの行動権が残っています。",
 
   executeSlotRaw: () => battleFlow.executeSlot(),
   simulateSlotRaw: () => battleFlow.simulateSlot(),
