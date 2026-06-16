@@ -334,11 +334,14 @@ export function createOnline2v2RoomController(ctx) {
       ctx.applyOnline2v2Action(roomData.action);
     }
 
+    const aReady = playerA.ready === true || idsA.length >= 2;
+    const bReady = playerB.ready === true || idsB.length >= 2;
+
     if (
       !ctx.isOnlineSpectator() &&
       !ctx.getOnlineBattleStarted() &&
-      playerA.ready === true &&
-      playerB.ready === true &&
+      aReady &&
+      bReady &&
       unitsA.length >= 2 &&
       unitsB.length >= 2
     ) {
