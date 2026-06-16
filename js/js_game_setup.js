@@ -267,6 +267,15 @@ HPがもりもり減る代わりに回避に
     return ctx.getBattleMode && String(ctx.getBattleMode()).startsWith("online");
   }
 
+  function isTeamSelectMode() {
+    return (
+      ctx.getBattleMode() === "2v2" ||
+      ctx.getBattleMode() === "challenge2v2" ||
+      ctx.getBattleMode() === "vscpu2v2" ||
+      ctx.getBattleMode() === "online2v2"
+    );
+  }
+
   function getPendingUnit() {
     return typeof ctx.getPendingSelectedUnit === "function"
       ? ctx.getPendingSelectedUnit()
@@ -476,15 +485,14 @@ HPがもりもり減る代わりに回避に
         ctx.selectGuide.textContent = ctx.getSelectingPlayer() === "A"
           ? "PLAYER A の機体を選択"
           : "チャレンジボスを選択";
-      } else if (
-        ctx.getBattleMode() === "challenge2v2" ||
-        ctx.getBattleMode() === "vscpu2v2"
-      ) {
-        ctx.selectGuide.textContent = ctx.getSelectingPlayer() === "A"
-          ? "PLAYER A チームの機体を2機選択"
-          : ctx.getBattleMode() === "vscpu2v2"
-            ? "CPUチームの機体を選択（1体だけならこの編成で開始）"
-            : "チャレンジボスを選択（1体だけならこの編成で開始）";
+   } else if (isTeamSelectMode()) {
+      ctx.selectGuide.textContent = ctx.getSelectingPlayer() === "A"
+        ? "PLAYER A チームの機体を2機選択"
+        : ctx.getBattleMode() === "vscpu2v2"
+          ? "CPUチームの機体を選択（1体だけならこの編成で開始）"
+          : ctx.getBattleMode() === "challenge2v2"
+            ? "チャレンジボスを選択（1体だけならこの編成で開始）"
+            : "PLAYER B チームの機体を2機選択";
       } else {
         ctx.selectGuide.textContent = ctx.getSelectingPlayer() === "A"
           ? "PLAYER A の機体を選択"
@@ -493,11 +501,7 @@ HPがもりもり減る代わりに回避に
     }
 
     if (ctx.selectedUnitsPreview) {
-      if (
-        ctx.getBattleMode() === "2v2" ||
-        ctx.getBattleMode() === "challenge2v2" ||
-        ctx.getBattleMode() === "vscpu2v2"
-      ) {
+      if (isTeamSelectMode()) {
         const teamA = ctx.getTeamA();
         const teamB = ctx.getTeamB();
         const aList = teamA?.units || [];
