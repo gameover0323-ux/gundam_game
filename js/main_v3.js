@@ -2436,9 +2436,11 @@ twoVtwoAdapter,
 
 loadUnitButtons();
 bindMainEvents({
+  getBattleMode: () => battleMode,
   setBattleMode: (value) => {
     battleMode = value;
   },
+
   spectateOnlineRoom,
   showRandomSpectateRooms,
   startOnline1v1Btn,
@@ -2452,6 +2454,7 @@ bindMainEvents({
   showTitle,
 
   onlineRoomController,
+  online2v2RoomController,
   localModeController,
   twoVtwoActions,
   playerAccountUi,
