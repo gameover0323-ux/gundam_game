@@ -5,12 +5,10 @@ export function bindMainEvents(ctx) {
     createOnlineRoomBtn,
     joinOnlineRoomBtn,
     backFromOnlineRoomBtn,
-
     localModeController,
     onlineRoomController,
+    online2v2RoomController,
     playerAccountUi,
-    showRandomSpectateRooms,
-
     showScreen,
     showTitle,
     showPopup,
@@ -26,23 +24,26 @@ export function bindMainEvents(ctx) {
   });
 
   startOnline2v2Btn?.addEventListener("click", () => {
-    showPopup("オンライン2on2はオンライン1on1安定後に実装予定です");
+    ctx.setBattleMode("online2v2");
+    showScreen("onlineRoom");
   });
 
   createOnlineRoomBtn?.addEventListener("click", () => {
+    if (ctx.getBattleMode && ctx.getBattleMode() === "online2v2") {
+      online2v2RoomController.createOnline2v2Room();
+      return;
+    }
+
     onlineRoomController.createOnlineRoom();
   });
 
   joinOnlineRoomBtn?.addEventListener("click", () => {
-  onlineRoomController.joinOnlineRoom();
-});
+    if (ctx.getBattleMode && ctx.getBattleMode() === "online2v2") {
+      online2v2RoomController.joinOnline2v2Room();
+      return;
+    }
 
-document.getElementById("spectateOnlineRoomBtn")?.addEventListener("click", () => {
-    ctx.spectateOnlineRoom();
-  });
-
-  document.getElementById("randomSpectateRoomBtn")?.addEventListener("click", () => {
-    showRandomSpectateRooms();
+    onlineRoomController.joinOnlineRoom();
   });
 
   backFromOnlineRoomBtn?.addEventListener("click", () => {
