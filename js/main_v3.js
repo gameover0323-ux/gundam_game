@@ -587,8 +587,8 @@ function publishOnlineBattleEnd(winnerPlayer) {
 function applyOnlineAction(action) {
   return onlineActionSync.applyOnlineAction(action);
 }
-function applyOnline2v2Action(action) {
-  return online2v2ActionSync.applyOnline2v2Action(action);
+function applyOnline2v2Action(action, battleSnapshot = null) {
+  return online2v2ActionSync.applyOnline2v2Action(action, battleSnapshot);
 }
 function toggleTestMode() {
   if (!canUseTestMode()) {
@@ -702,12 +702,18 @@ function build1v1RenderHandlers(playerKey) {
 function build2v2RenderHandlers(playerKey) {
   const isBossSide = isChallengeMode() && playerKey === "B";
 
-  function canOperateCriticalBoost() {
+  function canOperateOnline2v2Side() {
     if (isOnlineSpectator()) return false;
 
-    if (onlineState.enabled && onlineState.myPlayer !== playerKey) {
+    if (battleMode === "online2v2" && onlineState.myPlayer !== playerKey) {
       return false;
     }
+
+    return true;
+  }
+
+  function canOperateCriticalBoost() {
+    if (!canOperateOnline2v2Side()) return false;
 
     if (currentPlayer !== playerKey) {
       return false;
@@ -720,17 +726,28 @@ function build2v2RenderHandlers(playerKey) {
     return true;
   }
 
+  function canOperateSideButton() {
+    if (!canOperateOnline2v2Side()) {
+      showPopup("自機のみ操作可能");
+      return false;
+    }
+
+    return true;
+  }
+
   return {
     currentPlayer,
     playerKey,
-   canChangeFocus:
+    canChangeFocus:
       isBossSide
         ? false
-        : canChangeFocus(playerKey) &&
+        : canOperateOnline2v2Side() &&
+          canChangeFocus(playerKey) &&
           (!twoVtwoTauntController || twoVtwoTauntController.canChangeFocus(playerKey)),
 
     canUseTauntSystem: () =>
-      twoVtwoTauntController ? twoVtwoTauntController.canUse(playerKey) : false,
+      canOperateOnline2v2Side() &&
+      (twoVtwoTauntController ? twoVtwoTauntController.canUse(playerKey) : false),
 
     getTauntButtonLabel: () =>
       twoVtwoTauntController ? twoVtwoTauntController.getButtonLabel(playerKey) : "挑発",
@@ -742,12 +759,16 @@ function build2v2RenderHandlers(playerKey) {
       twoVtwoTauntController ? twoVtwoTauntController.isDuelTarget(playerKey, unitKey) : false,
 
     onTauntSystemButton: () => {
+      if (!canOperateSideButton()) return;
+
       if (twoVtwoTauntController) {
         twoVtwoTauntController.handleButton(playerKey);
       }
     },
 
     onToggleTeamMode: () => {
+      if (!canOperateSideButton()) return;
+
       if (currentPlayer !== playerKey) {
         showPopup("型変更は自分ターン中のみ可能");
         return;
@@ -757,6 +778,8 @@ function build2v2RenderHandlers(playerKey) {
     },
 
     onSwitchActiveUnit: (unitKey) => {
+      if (!canOperateSideButton()) return;
+
       const team = getTeam(playerKey);
       if (!team || !team[unitKey]) return;
 
@@ -765,6 +788,8 @@ function build2v2RenderHandlers(playerKey) {
     },
 
     onSwitchFocusUnit: (unitKey) => {
+      if (!canOperateSideButton()) return;
+
       const team = getTeam(playerKey);
       if (!team || !team[unitKey]) return;
 
@@ -787,8 +812,12 @@ function build2v2RenderHandlers(playerKey) {
 
     onSlotClick: (slot) => showPopup(slot.desc),
     onSpecialDesc: (special) => showPopup(special.desc),
-    onSpecialExec: (specialKey) => executeSpecial(playerKey, specialKey),
+    onSpecialExec: (specialKey) => {
+      if (!canOperateSideButton()) return;
+      executeSpecial(playerKey, specialKey);
+    },
     canExecuteSpecial: (special, specialKey, stateOverride = null) =>
+      canOperateOnline2v2Side() &&
       canExecuteSpecialForPlayer(playerKey, special, stateOverride),
 
     getCriticalRate: (state) => getCriticalRate(state),
@@ -2437,6 +2466,9 @@ twoVtwoAdapter,
 loadUnitButtons();
 bindMainEvents({
   getBattleMode: () => battleMode,
+  getCurrentPlayer: () => currentPlayer,
+  getOnlineMyPlayer: () => onlineState.myPlayer,
+
   setBattleMode: (value) => {
     battleMode = value;
   },
