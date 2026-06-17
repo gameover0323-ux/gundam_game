@@ -213,8 +213,7 @@ export function createOnlineActionSync(ctx) {
       }
 
       if (action.type === "endTurn") {
-        ctx.endTurnRaw();
-        applySnapshotIfNeeded(battleSnapshot);
+  ctx.endTurnRaw();
       }
     } finally {
       ctx.setApplyingRemote(false);
