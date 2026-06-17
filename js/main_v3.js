@@ -561,30 +561,51 @@ function clearPendingChoice() {
 }
 
 function publishOnlineCriticalBoostAction(ownerPlayer) {
+  if (battleMode === "online2v2") {
+    return online2v2ActionSync.publishOnline2v2CriticalBoostAction(ownerPlayer);
+  }
   return onlineActionSync.publishOnlineCriticalBoostAction(ownerPlayer);
 }
 
 function publishOnlineChoiceAction(choice, selectedValue) {
+  if (battleMode === "online2v2") {
+    return online2v2ActionSync.publishOnline2v2ChoiceAction(choice, selectedValue);
+  }
   return onlineActionSync.publishOnlineChoiceAction(choice, selectedValue);
 }
 
 function publishOnlineSpecialAction(ownerPlayer, specialKey) {
+  if (battleMode === "online2v2") {
+    return online2v2ActionSync.publishOnline2v2SpecialAction(ownerPlayer, specialKey);
+  }
   return onlineActionSync.publishOnlineSpecialAction(ownerPlayer, specialKey);
 }
 
 function publishOnlineQteAction(kind, index) {
+  if (battleMode === "online2v2") {
+    return online2v2ActionSync.publishOnline2v2QteAction(kind, index);
+  }
   return onlineActionSync.publishOnlineQteAction(kind, index);
 }
 
 function publishOnlineEndTurnAction(actorPlayer) {
+  if (battleMode === "online2v2") {
+    return online2v2ActionSync.publishOnline2v2EndTurnAction(actorPlayer);
+  }
   return onlineActionSync.publishOnlineEndTurnAction(actorPlayer);
 }
 
 function publishOnlineSlotAction(ownerPlayer, slotKey) {
+  if (battleMode === "online2v2") {
+    return online2v2ActionSync.publishOnline2v2SlotAction(ownerPlayer, "team", null);
+  }
   return onlineActionSync.publishOnlineSlotAction(ownerPlayer, slotKey);
 }
 
 function publishOnlineBattleEnd(winnerPlayer) {
+  if (battleMode === "online2v2") {
+    return online2v2ActionSync.publishOnline2v2BattleEnd(winnerPlayer);
+  }
   return onlineActionSync.publishOnlineBattleEnd(winnerPlayer);
 }
 
@@ -840,8 +861,15 @@ function build2v2RenderHandlers(playerKey) {
 
       if (!state) return;
 
-      spendEvadeForCritical(state);
-      redrawBattleBoards();
+      const changed = spendEvadeForCritical(state);
+
+if (!changed) {
+  showPopup("回避が足りません");
+  return;
+}
+
+publishOnlineCriticalBoostAction(playerKey);
+redrawBattleBoards();
     }
   };
 }
