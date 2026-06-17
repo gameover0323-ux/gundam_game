@@ -132,7 +132,7 @@ export function createOnline2v2ActionSync(ctx) {
     ctx.renderAttackChoices();
   }
 
-  function applyOnline2v2Action(action) {
+  function applyOnline2v2Action(action, battleSnapshot = null) {
     if (!ctx.isOnlineEnabled() || !action) return;
     if (ctx.getBattleMode() !== "online2v2") return;
     if (typeof action.actionId !== "number") return;
@@ -141,7 +141,13 @@ export function createOnline2v2ActionSync(ctx) {
     ctx.setLastAppliedActionId(action.actionId);
     ctx.setOnlineActionSeq(Math.max(ctx.getOnlineActionSeq(), action.actionId));
 
-    if (action.actor === ctx.getOnlineMyPlayer()) return;
+    if (action.actor === ctx.getOnlineMyPlayer()) {
+  return;
+}
+
+if (battleSnapshot) {
+  applyOnline2v2BattleSnapshot(battleSnapshot);
+}
 
     ctx.setApplyingRemote(true);
 
