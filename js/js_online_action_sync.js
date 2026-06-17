@@ -12,6 +12,12 @@ export function createOnlineActionSync(ctx) {
     return update;
   }
 
+  function applySnapshotIfNeeded(battleSnapshot) {
+    if (!battleSnapshot) return;
+    if (typeof ctx.applyOnlineBattleSnapshot !== "function") return;
+    ctx.applyOnlineBattleSnapshot(battleSnapshot);
+  }
+
   function publishOnlineCriticalBoostAction(ownerPlayer) {
     if (!ctx.isOnlineEnabled()) return;
     if (ctx.isApplyingRemote()) return;
@@ -119,7 +125,7 @@ export function createOnlineActionSync(ctx) {
     }));
   }
 
-  function applyOnlineAction(action) {
+  function applyOnlineAction(action, battleSnapshot = null) {
     if (!ctx.isOnlineEnabled() || !action) return;
     if (typeof action.actionId !== "number") return;
     if (action.actionId <= ctx.getLastAppliedActionId()) return;
@@ -136,7 +142,11 @@ export function createOnlineActionSync(ctx) {
         const actor = ctx.getPlayerState(action.actor);
         if (!actor) return;
 
-        ctx.spendEvadeForCritical(actor);
+        if (typeof ctx.spendEvadeForCritical === "function") {
+          ctx.spendEvadeForCritical(actor);
+        }
+
+        applySnapshotIfNeeded(battleSnapshot);
         ctx.redrawBattleBoards();
         return;
       }
@@ -153,21 +163,25 @@ export function createOnlineActionSync(ctx) {
 
         if (started) {
           ctx.consumeActionCount(actor, 1);
-          ctx.redrawBattleBoards();
         }
 
+        applySnapshotIfNeeded(battleSnapshot);
+        ctx.redrawBattleBoards();
         return;
       }
 
       if (action.type === "special") {
         const specialKey = action.payload?.specialKey;
         if (!specialKey) return;
+
         ctx.executeSpecialRaw(action.actor, specialKey);
+        applySnapshotIfNeeded(battleSnapshot);
         return;
       }
 
       if (action.type === "choice") {
         ctx.resolvePendingChoiceRaw(action.payload?.selectedValue);
+        applySnapshotIfNeeded(battleSnapshot);
         return;
       }
 
@@ -185,18 +199,22 @@ export function createOnlineActionSync(ctx) {
           ctx.checkBattleEnd();
         }
 
+        applySnapshotIfNeeded(battleSnapshot);
         return;
       }
 
       if (action.type === "battleEnd") {
         const winner = action.payload?.winner;
         if (!winner) return;
+
         ctx.finishBattle(winner);
+        applySnapshotIfNeeded(battleSnapshot);
         return;
       }
 
       if (action.type === "endTurn") {
         ctx.endTurnRaw();
+        applySnapshotIfNeeded(battleSnapshot);
       }
     } finally {
       ctx.setApplyingRemote(false);
