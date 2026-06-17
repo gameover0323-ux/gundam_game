@@ -1,7 +1,12 @@
 export function create2v2Core(ctx) {
   function isTeamBattleMode() {
-    const battleMode = ctx.getBattleMode();
-    return battleMode === "2v2" || battleMode === "challenge2v2" || battleMode === "vscpu2v2";
+  const battleMode = ctx.getBattleMode();
+  return (
+    battleMode === "2v2" ||
+    battleMode === "challenge2v2" ||
+    battleMode === "vscpu2v2" ||
+    battleMode === "online2v2"
+  );
   }
 
   function isUnitDefeated(unit) {
