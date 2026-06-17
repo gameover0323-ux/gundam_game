@@ -267,7 +267,7 @@ export function createOnlineRoomController(ctx) {
     ctx.updateSelectUi();
 
     if (!ctx.isOnlineSpectator()) {
-      ctx.applyOnlineAction(roomData.action);
+      ctx.applyOnlineAction(roomData.action, roomData.battleSnapshot || null);
     }
 
     if (
