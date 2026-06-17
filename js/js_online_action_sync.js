@@ -12,13 +12,27 @@ export function createOnlineActionSync(ctx) {
     return update;
   }
 
+  function publishOnlineCriticalBoostAction(ownerPlayer) {
+    if (!ctx.isOnlineEnabled()) return;
+    if (ctx.isApplyingRemote()) return;
+    if (ownerPlayer !== ctx.getOnlineMyPlayer()) return;
+
+    const actionId = ctx.nextOnlineActionSeq();
+    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
+      actionId,
+      actor: ownerPlayer,
+      type: "criticalBoost",
+      payload: {},
+      createdAt: Date.now()
+    }));
+  }
+
   function publishOnlineChoiceAction(choice, selectedValue) {
     if (!ctx.isOnlineEnabled()) return;
     if (ctx.isApplyingRemote()) return;
     if (!choice) return;
 
     const actionId = ctx.nextOnlineActionSeq();
-
     ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
       actionId,
       actor: choice.ownerPlayer,
@@ -38,7 +52,6 @@ export function createOnlineActionSync(ctx) {
     if (ownerPlayer !== ctx.getOnlineMyPlayer()) return;
 
     const actionId = ctx.nextOnlineActionSeq();
-
     ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
       actionId,
       actor: ownerPlayer,
@@ -53,7 +66,6 @@ export function createOnlineActionSync(ctx) {
     if (ctx.isApplyingRemote()) return;
 
     const actionId = ctx.nextOnlineActionSeq();
-
     ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
       actionId,
       actor: ctx.getOnlineMyPlayer(),
@@ -69,7 +81,6 @@ export function createOnlineActionSync(ctx) {
     if (actorPlayer !== ctx.getOnlineMyPlayer()) return;
 
     const actionId = ctx.nextOnlineActionSeq();
-
     ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
       actionId,
       actor: actorPlayer,
@@ -85,7 +96,6 @@ export function createOnlineActionSync(ctx) {
     if (ownerPlayer !== ctx.getOnlineMyPlayer()) return;
 
     const actionId = ctx.nextOnlineActionSeq();
-
     ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
       actionId,
       actor: ownerPlayer,
@@ -100,7 +110,6 @@ export function createOnlineActionSync(ctx) {
     if (ctx.isApplyingRemote()) return;
 
     const actionId = ctx.nextOnlineActionSeq();
-
     ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
       actionId,
       actor: winnerPlayer,
@@ -123,6 +132,15 @@ export function createOnlineActionSync(ctx) {
     ctx.setApplyingRemote(true);
 
     try {
+      if (action.type === "criticalBoost") {
+        const actor = ctx.getPlayerState(action.actor);
+        if (!actor) return;
+
+        ctx.spendEvadeForCritical(actor);
+        ctx.redrawBattleBoards();
+        return;
+      }
+
       if (action.type === "slot") {
         const slotKey = action.payload?.slotKey;
         if (!slotKey) return;
@@ -131,8 +149,8 @@ export function createOnlineActionSync(ctx) {
         if (!actor) return;
 
         ctx.ensureActionState(actor);
-
         const started = ctx.startSlotAction(action.actor, slotKey);
+
         if (started) {
           ctx.consumeActionCount(actor, 1);
           ctx.redrawBattleBoards();
@@ -144,14 +162,12 @@ export function createOnlineActionSync(ctx) {
       if (action.type === "special") {
         const specialKey = action.payload?.specialKey;
         if (!specialKey) return;
-
         ctx.executeSpecialRaw(action.actor, specialKey);
         return;
       }
 
       if (action.type === "choice") {
-        const selectedValue = action.payload?.selectedValue;
-        ctx.resolvePendingChoiceRaw(selectedValue);
+        ctx.resolvePendingChoiceRaw(action.payload?.selectedValue);
         return;
       }
 
@@ -175,7 +191,6 @@ export function createOnlineActionSync(ctx) {
       if (action.type === "battleEnd") {
         const winner = action.payload?.winner;
         if (!winner) return;
-
         ctx.finishBattle(winner);
         return;
       }
@@ -189,6 +204,7 @@ export function createOnlineActionSync(ctx) {
   }
 
   return {
+    publishOnlineCriticalBoostAction,
     publishOnlineChoiceAction,
     publishOnlineSpecialAction,
     publishOnlineQteAction,
