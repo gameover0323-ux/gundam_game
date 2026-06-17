@@ -588,8 +588,8 @@ function publishOnlineBattleEnd(winnerPlayer) {
   return onlineActionSync.publishOnlineBattleEnd(winnerPlayer);
 }
 
-function applyOnlineAction(action) {
-  return onlineActionSync.applyOnlineAction(action);
+function applyOnlineAction(action, battleSnapshot = null) {
+  return onlineActionSync.applyOnlineAction(action, battleSnapshot);
 }
 function applyOnline2v2Action(action, battleSnapshot = null) {
   return online2v2ActionSync.applyOnline2v2Action(action, battleSnapshot);
@@ -1427,12 +1427,13 @@ buildOnlineBattleSnapshot,
 
   updateRoom,
 
-  getPlayerState,
+getPlayerState,
   spendEvadeForCritical,
   ensureActionState,
   consumeActionCount,
   startSlotAction,
   redrawBattleBoards,
+  applyOnlineBattleSnapshot,
 
   executeSpecialRaw: (ownerPlayer, specialKey) =>
     actionLayer.executeSpecial(ownerPlayer, specialKey),
