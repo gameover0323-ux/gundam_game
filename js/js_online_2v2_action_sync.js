@@ -28,78 +28,39 @@ export function createOnline2v2ActionSync(ctx) {
     };
   }
 
-  function publishOnline2v2SlotAction(ownerPlayer, slotMode = "team", unitKey = null) {
+  function publishAction(type, actor, payload = {}) {
     if (!ctx.isOnlineEnabled()) return;
     if (ctx.isApplyingRemote()) return;
     if (ctx.getBattleMode() !== "online2v2") return;
-    if (ownerPlayer !== ctx.getOnlineMyPlayer()) return;
+    if (!ctx.getOnlineRoomId()) return;
 
     const actionId = ctx.nextOnlineActionSeq();
 
     ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
       actionId,
-      actor: ownerPlayer,
-      type: "slot2v2",
-      payload: {
-        slotMode,
-        unitKey
-      },
+      actor,
+      type,
+      payload,
       createdAt: Date.now()
     }));
+  }
+
+  function publishOnline2v2SlotAction(ownerPlayer, slotMode = "team", unitKey = null) {
+    if (ownerPlayer !== ctx.getOnlineMyPlayer()) return;
+    publishAction("slot2v2", ownerPlayer, { slotMode, unitKey });
   }
 
   function publishOnline2v2QteAction(kind, index) {
-    if (!ctx.isOnlineEnabled()) return;
-    if (ctx.isApplyingRemote()) return;
-    if (ctx.getBattleMode() !== "online2v2") return;
-
-    const actionId = ctx.nextOnlineActionSeq();
-
-    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
-      actionId,
-      actor: ctx.getOnlineMyPlayer(),
-      type: "qte2v2",
-      payload: {
-        kind,
-        index
-      },
-      createdAt: Date.now()
-    }));
+    publishAction("qte2v2", ctx.getOnlineMyPlayer(), { kind, index });
   }
 
   function publishOnline2v2EndTurnAction(actorPlayer) {
-    if (!ctx.isOnlineEnabled()) return;
-    if (ctx.isApplyingRemote()) return;
-    if (ctx.getBattleMode() !== "online2v2") return;
     if (actorPlayer !== ctx.getOnlineMyPlayer()) return;
-
-    const actionId = ctx.nextOnlineActionSeq();
-
-    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
-      actionId,
-      actor: actorPlayer,
-      type: "endTurn2v2",
-      payload: {},
-      createdAt: Date.now()
-    }));
+    publishAction("endTurn2v2", actorPlayer, {});
   }
 
   function publishOnline2v2BattleEnd(winnerPlayer) {
-    if (!ctx.isOnlineEnabled()) return;
-    if (ctx.isApplyingRemote()) return;
-    if (ctx.getBattleMode() !== "online2v2") return;
-
-    const actionId = ctx.nextOnlineActionSeq();
-
-    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
-      actionId,
-      actor: winnerPlayer,
-      type: "battleEnd2v2",
-      payload: {
-        winner: winnerPlayer
-      },
-      createdAt: Date.now()
-    }));
+    publishAction("battleEnd2v2", winnerPlayer, { winner: winnerPlayer });
   }
 
   function applyOnline2v2BattleSnapshot(snapshot) {
@@ -112,11 +73,11 @@ export function createOnline2v2ActionSync(ctx) {
     const nextTeamB = ctx.getTeam("B");
 
     if (nextTeamA) {
-      ctx.setPlayerAState(nextTeamA[nextTeamA.activeUnitKey || "unit1"] || nextTeamA.unit1);
+      ctx.setPlayerAState(nextTeamA[nextTeamA.activeUnitKey || "unit1"] || nextTeamA.unit1 || null);
     }
 
     if (nextTeamB) {
-      ctx.setPlayerBState(nextTeamB[nextTeamB.activeUnitKey || "unit1"] || nextTeamB.unit1);
+      ctx.setPlayerBState(nextTeamB[nextTeamB.activeUnitKey || "unit1"] || nextTeamB.unit1 || null);
     }
 
     ctx.setCurrentTurn(Number(snapshot.currentTurn || 1));
@@ -129,7 +90,10 @@ export function createOnline2v2ActionSync(ctx) {
     ctx.setCurrentActionLabel(snapshot.currentActionLabel || "");
 
     ctx.redrawBattleBoards();
-    ctx.renderAttackChoices();
+
+    if (Array.isArray(snapshot.currentAttack) && snapshot.currentAttack.length > 0) {
+      ctx.renderAttackChoices();
+    }
   }
 
   function applyOnline2v2Action(action, battleSnapshot = null) {
@@ -141,65 +105,19 @@ export function createOnline2v2ActionSync(ctx) {
     ctx.setLastAppliedActionId(action.actionId);
     ctx.setOnlineActionSeq(Math.max(ctx.getOnlineActionSeq(), action.actionId));
 
-    if (action.actor === ctx.getOnlineMyPlayer()) {
-  return;
-}
-
-if (battleSnapshot) {
-  applyOnline2v2BattleSnapshot(battleSnapshot);
-
-  if (action.type === "slot2v2") {
-    return;
-  }
-}
+    if (action.actor === ctx.getOnlineMyPlayer()) return;
 
     ctx.setApplyingRemote(true);
 
     try {
-      if (action.type === "slot2v2") {
-        const slotMode = action.payload?.slotMode || "team";
-        const unitKey = action.payload?.unitKey || null;
-
-        if (slotMode === "unit1" || unitKey === "unit1") {
-          ctx.executeSingleTeamSlotRaw("unit1");
-          return;
-        }
-
-        if (slotMode === "unit2" || unitKey === "unit2") {
-          ctx.executeSingleTeamSlotRaw("unit2");
-          return;
-        }
-
-        ctx.executeTeamSlotRaw();
-        return;
-      }
-
-      if (action.type === "qte2v2") {
-        const kind = action.payload?.kind;
-        const index = action.payload?.index;
-
-        if (kind === "hit") {
-          ctx.takeHitRaw(index);
-          ctx.checkBattleEnd();
-        } else if (kind === "evade") {
-          ctx.evadeAttackRaw(index);
-        } else if (kind === "supportDefense") {
-          ctx.supportDefenseAttackRaw(index);
-          ctx.checkBattleEnd();
-        }
-
-        return;
-      }
-
-      if (action.type === "endTurn2v2") {
-        ctx.endTurnRaw();
+      if (battleSnapshot) {
+        applyOnline2v2BattleSnapshot(battleSnapshot);
         return;
       }
 
       if (action.type === "battleEnd2v2") {
         const winner = action.payload?.winner;
-        if (!winner) return;
-        ctx.finishBattle(winner);
+        if (winner) ctx.finishBattle(winner);
       }
     } finally {
       ctx.setApplyingRemote(false);
