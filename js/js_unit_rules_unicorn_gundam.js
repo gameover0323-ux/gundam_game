@@ -297,12 +297,20 @@ export function getUnicornDerivedState(state) {
     `シールド:${state.unicornShieldCount}`
   ];
 
-  if (ntd && typeof ntd.turns === "number" && ntd.turns > 0) {
-    status.push(`NT-D 残${ntd.turns}ターン`);
+if (ntd && typeof ntd.turns === "number" && ntd.turns > 0) {
+    status.push({
+      text: `NT-D 残${ntd.turns}ターン`,
+      color: "#ff3333",
+      bold: true
+    });
   }
 
   if (awaken && typeof awaken.turns === "number" && awaken.turns > 0) {
-    status.push(`NT-D覚醒 残${awaken.turns}ターン`);
+    status.push({
+      text: `NT-D覚醒 残${awaken.turns}ターン`,
+      color: "#7cff3a",
+      bold: true
+    });
   }
 
   const derived = {
