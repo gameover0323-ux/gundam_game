@@ -147,6 +147,10 @@ export function createOnline2v2ActionSync(ctx) {
 
 if (battleSnapshot) {
   applyOnline2v2BattleSnapshot(battleSnapshot);
+
+  if (action.type === "slot2v2") {
+    return;
+  }
 }
 
     ctx.setApplyingRemote(true);
