@@ -314,7 +314,7 @@ function isOnlineSpectator() {
     ctx.updateSelectUi();
   }
 
- function applyOnline2v2RoomData(roomData) {
+function applyOnline2v2RoomData(roomData) {
     if (!ctx.isOnlineEnabled() || !roomData) return;
     if (roomData?.meta?.mode !== "online2v2") return;
 
@@ -330,18 +330,20 @@ function isOnlineSpectator() {
     const unitsA = idsToUnits(idsA);
     const unitsB = idsToUnits(idsB);
 
-    setSelectTeamUnits("A", unitsA);
-    setSelectTeamUnits("B", unitsB);
-    ctx.updateSelectUi();
+    if (!ctx.getOnlineBattleStarted()) {
+      setSelectTeamUnits("A", unitsA);
+      setSelectTeamUnits("B", unitsB);
+      ctx.updateSelectUi();
+    }
 
     if (
-  !isOnlineSpectator() &&
-  typeof ctx.applyOnline2v2Action === "function"
-) {
-  ctx.applyOnline2v2Action(
-    roomData.action,
-    roomData.battleSnapshot || null
-  );
+      !isOnlineSpectator() &&
+      typeof ctx.applyOnline2v2Action === "function"
+    ) {
+      ctx.applyOnline2v2Action(
+        roomData.action,
+        roomData.battleSnapshot || null
+      );
     }
 
     const aReady = playerA.ready === true || idsA.length >= 2;
