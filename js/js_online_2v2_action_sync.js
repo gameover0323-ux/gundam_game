@@ -16,6 +16,7 @@ export function createOnline2v2ActionSync(ctx) {
       battleNotice: ctx.getBattleNotice(),
       currentActionHeader: ctx.getCurrentActionHeader(),
       currentActionLabel: ctx.getCurrentActionLabel(),
+      pendingChoice: typeof ctx.getPendingChoice === "function" ? cloneValue(ctx.getPendingChoice()) : null,
       updatedAt: Date.now()
     };
   }
@@ -28,11 +29,17 @@ export function createOnline2v2ActionSync(ctx) {
     };
   }
 
+  function canPublish(actor) {
+    if (!ctx.isOnlineEnabled()) return false;
+    if (ctx.isApplyingRemote()) return false;
+    if (ctx.getBattleMode() !== "online2v2") return false;
+    if (!ctx.getOnlineRoomId()) return false;
+    if (actor && actor !== ctx.getOnlineMyPlayer()) return false;
+    return true;
+  }
+
   function publishAction(type, actor, payload = {}) {
-    if (!ctx.isOnlineEnabled()) return;
-    if (ctx.isApplyingRemote()) return;
-    if (ctx.getBattleMode() !== "online2v2") return;
-    if (!ctx.getOnlineRoomId()) return;
+    if (!canPublish(actor)) return;
 
     const actionId = ctx.nextOnlineActionSeq();
 
@@ -45,17 +52,36 @@ export function createOnline2v2ActionSync(ctx) {
     }));
   }
 
+  function publishOnline2v2SnapshotAction(type, actor, payload = {}) {
+    publishAction(type, actor, payload);
+  }
+
   function publishOnline2v2SlotAction(ownerPlayer, slotMode = "team", unitKey = null) {
-    if (ownerPlayer !== ctx.getOnlineMyPlayer()) return;
     publishAction("slot2v2", ownerPlayer, { slotMode, unitKey });
+  }
+
+  function publishOnline2v2SpecialAction(ownerPlayer, specialKey) {
+    publishAction("special2v2", ownerPlayer, { specialKey });
+  }
+
+  function publishOnline2v2ChoiceAction(choice, selectedValue) {
+    const actor = choice?.ownerPlayer || ctx.getOnlineMyPlayer();
+    publishAction("choice2v2", actor, {
+      source: choice?.source || null,
+      choiceType: choice?.choiceType || null,
+      selectedValue
+    });
   }
 
   function publishOnline2v2QteAction(kind, index) {
     publishAction("qte2v2", ctx.getOnlineMyPlayer(), { kind, index });
   }
 
+  function publishOnline2v2CriticalBoostAction(ownerPlayer) {
+    publishAction("criticalBoost2v2", ownerPlayer, {});
+  }
+
   function publishOnline2v2EndTurnAction(actorPlayer) {
-    if (actorPlayer !== ctx.getOnlineMyPlayer()) return;
     publishAction("endTurn2v2", actorPlayer, {});
   }
 
@@ -89,10 +115,19 @@ export function createOnline2v2ActionSync(ctx) {
     ctx.setCurrentActionHeader(snapshot.currentActionHeader || "");
     ctx.setCurrentActionLabel(snapshot.currentActionLabel || "");
 
+    if (typeof ctx.setPendingChoice === "function") {
+      ctx.setPendingChoice(cloneValue(snapshot.pendingChoice));
+    }
+
     ctx.redrawBattleBoards();
 
     if (Array.isArray(snapshot.currentAttack) && snapshot.currentAttack.length > 0) {
       ctx.renderAttackChoices();
+      return;
+    }
+
+    if (snapshot.pendingChoice && typeof ctx.renderPendingChoice === "function") {
+      ctx.renderPendingChoice();
     }
   }
 
@@ -108,7 +143,6 @@ export function createOnline2v2ActionSync(ctx) {
     if (action.actor === ctx.getOnlineMyPlayer()) return;
 
     ctx.setApplyingRemote(true);
-
     try {
       if (battleSnapshot) {
         applyOnline2v2BattleSnapshot(battleSnapshot);
@@ -127,8 +161,12 @@ export function createOnline2v2ActionSync(ctx) {
   return {
     buildOnline2v2BattleSnapshot,
     applyOnline2v2BattleSnapshot,
+    publishOnline2v2SnapshotAction,
     publishOnline2v2SlotAction,
+    publishOnline2v2SpecialAction,
+    publishOnline2v2ChoiceAction,
     publishOnline2v2QteAction,
+    publishOnline2v2CriticalBoostAction,
     publishOnline2v2EndTurnAction,
     publishOnline2v2BattleEnd,
     applyOnline2v2Action
