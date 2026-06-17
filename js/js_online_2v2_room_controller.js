@@ -335,10 +335,13 @@ function isOnlineSpectator() {
     ctx.updateSelectUi();
 
     if (
-      !isOnlineSpectator() &&
-      typeof ctx.applyOnline2v2Action === "function"
-    ) {
-      ctx.applyOnline2v2Action(roomData.action);
+  !isOnlineSpectator() &&
+  typeof ctx.applyOnline2v2Action === "function"
+) {
+  ctx.applyOnline2v2Action(
+    roomData.action,
+    roomData.battleSnapshot || null
+  );
     }
 
     const aReady = playerA.ready === true || idsA.length >= 2;
