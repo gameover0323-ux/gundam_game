@@ -134,11 +134,24 @@ export function createUiController(ctx) {
       ctx.renderPlayerState(playerBState, ctx.playerBBox, "PLAYER B", ctx.build1v1RenderHandlers("B"));
     }
 
-    document.getElementById("turnText").textContent = `TURN ${ctx.getCurrentTurn()}`;
-    document.getElementById("turnCounterValue").textContent = String(ctx.getCurrentTurn());
-    document.getElementById("currentPlayer").textContent = `PLAYER ${ctx.getCurrentPlayer()}`;
+    const currentPlayerLabel = `PLAYER ${ctx.getCurrentPlayer()}`;
 
-    updateBattleCenterUi();
+document.getElementById("turnText").textContent = `TURN ${ctx.getCurrentTurn()}`;
+document.getElementById("turnCounterValue").textContent = String(ctx.getCurrentTurn());
+document.getElementById("currentPlayer").textContent = currentPlayerLabel;
+
+const attackLog = document.getElementById("attackLog");
+if (
+  attackLog &&
+  (
+    attackLog.textContent.trim() === "バトル開始待機中" ||
+    attackLog.textContent.trim() === ""
+  )
+) {
+  attackLog.textContent = `現在${currentPlayerLabel}操作待機中`;
+}
+
+updateBattleCenterUi();
   }
 
   return {
