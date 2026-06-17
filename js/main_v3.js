@@ -560,6 +560,10 @@ function clearPendingChoice() {
   pendingChoice = null;
 }
 
+function publishOnlineCriticalBoostAction(ownerPlayer) {
+  return onlineActionSync.publishOnlineCriticalBoostAction(ownerPlayer);
+}
+
 function publishOnlineChoiceAction(choice, selectedValue) {
   return onlineActionSync.publishOnlineChoiceAction(choice, selectedValue);
 }
@@ -686,15 +690,21 @@ function build1v1RenderHandlers(playerKey) {
     getCriticalRate: (state) => getCriticalRate(state),
 
     onCriticalBoost: (state) => {
-      if (!canOperateCriticalBoost()) {
-        showPopup("自機のみ操作可能");
-        return;
-      }
+  if (!canOperateCriticalBoost()) {
+    showPopup("自機のみ操作可能");
+    return;
+  }
 
-      if (!state) return;
+  if (!state) return;
 
-      spendEvadeForCritical(state);
-      redrawBattleBoards();
+  const changed = spendEvadeForCritical(state);
+  if (!changed) {
+    showPopup("回避が足りません");
+    return;
+  }
+
+  publishOnlineCriticalBoostAction(playerKey);
+  redrawBattleBoards();
     }
   };
 }
@@ -1418,6 +1428,7 @@ buildOnlineBattleSnapshot,
   updateRoom,
 
   getPlayerState,
+  spendEvadeForCritical,
   ensureActionState,
   consumeActionCount,
   startSlotAction,
