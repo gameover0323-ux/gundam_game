@@ -416,61 +416,98 @@ HPがもりもり減る代わりに回避に
     }
   }
 
-  function loadUnitButtons() {
-    ctx.unitButtons.innerHTML = "";
-
-    function appendUnitSection(titleText, units, className) {
-      if (!units || units.length <= 0) return;
-
-      const section = document.createElement("div");
-      section.className = className;
-
-      const title = document.createElement("div");
-      title.className = "selectSectionTitle";
-      title.textContent = titleText;
-
-      const buttonArea = document.createElement("div");
-      buttonArea.className = "selectSectionButtons";
-
-      units.forEach(unit => {
-        buttonArea.appendChild(makeUnitButton(unit));
-      });
-
-      section.appendChild(title);
-      section.appendChild(buttonArea);
-      ctx.unitButtons.appendChild(section);
-    }
-
-    if (isVsCpuMode() && ctx.getSelectingPlayer() === "B") {
-      appendUnitSection("CPU機体", ctx.cpus || [], "cpuNormalSection");
-      appendUnitSection("初心者向けCPU", ctx.cpuBeginnerList || [], "cpuBeginnerSection");
-    } else {
-      const normalUnits = getSelectList();
-      const debugUnits = canUseDebugUnit() && !isOnlineMode() ? getDebugUnits() : [];
-
-      appendUnitSection("プレイアブル機体", normalUnits, "playableSection");
-
-      if (debugUnits.length > 0) {
-        appendUnitSection("デバッグ権限", debugUnits, "debugUnitSection");
-      }
-    }
-
-    if (isSelectableEnemy2v2() && ctx.getSelectingPlayer() === "B") {
-      const decideBtn = document.createElement("button");
-      decideBtn.textContent = "この編成で開始";
-      decideBtn.addEventListener("click", () => {
-        const teamB = ctx.getTeamB();
-        const enemyList = teamB?.units || [];
-        if (enemyList.length < 1) return;
-        startChallengePreview2v2(ctx.getTeamA().units, enemyList);
-      });
-      ctx.unitButtons.appendChild(decideBtn);
-    }
-
-    setupFixedButtons();
-    ensureSelectDescriptionBox();
-    updateSelectUi();
+ function getRandomSelectableUnits() {
+  if (isVsCpuMode() && ctx.getSelectingPlayer() === "B") {
+    return [
+      ...(ctx.cpus || []),
+      ...(ctx.cpuBeginnerList || [])
+    ].filter(Boolean);
   }
+
+  const normalUnits = getSelectList();
+  const debugUnits = canUseDebugUnit() && !isOnlineMode() ? getDebugUnits() : [];
+
+  return [
+    ...(normalUnits || []),
+    ...(debugUnits || [])
+  ].filter(Boolean);
+}
+
+function appendRandomSelectButton() {
+  const randomUnits = getRandomSelectableUnits();
+  if (randomUnits.length <= 0) return;
+
+  const randomBtn = document.createElement("button");
+  randomBtn.textContent = "ランダム";
+  randomBtn.addEventListener("click", () => {
+    const index = Math.floor(Math.random() * randomUnits.length);
+    const unit = randomUnits[index];
+    if (!unit) return;
+
+    setPendingUnit(unit);
+    updateSelectUi();
+  });
+
+  ctx.unitButtons.appendChild(randomBtn);
+}
+
+function loadUnitButtons() {
+  ctx.unitButtons.innerHTML = "";
+
+  appendRandomSelectButton();
+
+  function appendUnitSection(titleText, units, className) {
+    if (!units || units.length <= 0) return;
+
+    const section = document.createElement("div");
+    section.className = className;
+
+    const title = document.createElement("div");
+    title.className = "selectSectionTitle";
+    title.textContent = titleText;
+
+    const buttonArea = document.createElement("div");
+    buttonArea.className = "selectSectionButtons";
+
+    units.forEach(unit => {
+      buttonArea.appendChild(makeUnitButton(unit));
+    });
+
+    section.appendChild(title);
+    section.appendChild(buttonArea);
+    ctx.unitButtons.appendChild(section);
+  }
+
+  if (isVsCpuMode() && ctx.getSelectingPlayer() === "B") {
+    appendUnitSection("CPU機体", ctx.cpus || [], "cpuNormalSection");
+    appendUnitSection("初心者向けCPU", ctx.cpuBeginnerList || [], "cpuBeginnerSection");
+  } else {
+    const normalUnits = getSelectList();
+    const debugUnits = canUseDebugUnit() && !isOnlineMode() ? getDebugUnits() : [];
+
+    appendUnitSection("プレイアブル機体", normalUnits, "playableSection");
+
+    if (debugUnits.length > 0) {
+      appendUnitSection("デバッグ権限", debugUnits, "debugUnitSection");
+    }
+  }
+
+  if (isSelectableEnemy2v2() && ctx.getSelectingPlayer() === "B") {
+    const decideBtn = document.createElement("button");
+    decideBtn.textContent = "この編成で開始";
+    decideBtn.addEventListener("click", () => {
+      const teamB = ctx.getTeamB();
+      const enemyList = teamB?.units || [];
+      if (enemyList.length < 1) return;
+      startChallengePreview2v2(ctx.getTeamA().units, enemyList);
+    });
+    ctx.unitButtons.appendChild(decideBtn);
+  }
+
+  setupFixedButtons();
+  ensureSelectDescriptionBox();
+  updateSelectUi();
+}
 
   function updateSelectUi() {
     const pending = getPendingUnit();
