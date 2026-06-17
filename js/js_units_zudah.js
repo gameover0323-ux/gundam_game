@@ -5,7 +5,7 @@ export const zudah = {
   forms: {
     base: {
       name: "ヅダ",
-      hp: 500,
+      hp: 350,
       evadeMax: 6,
       rollableSlotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"],
       ownedSlotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"],
