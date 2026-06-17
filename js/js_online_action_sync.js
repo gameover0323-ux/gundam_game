@@ -1,36 +1,20 @@
 export function createOnlineActionSync(ctx) {
-  function buildRoomUpdateWithSnapshot(action) {
-    const update = {
-      action,
-      "meta/updatedAt": Date.now()
-    };
-
-    if (typeof ctx.buildOnlineBattleSnapshot === "function") {
-      update.battleSnapshot = ctx.buildOnlineBattleSnapshot();
-    }
-
-    return update;
-  }
-
-  function applySnapshotIfNeeded(battleSnapshot) {
-    if (!battleSnapshot) return;
-    if (typeof ctx.applyOnlineBattleSnapshot !== "function") return;
-    ctx.applyOnlineBattleSnapshot(battleSnapshot);
-  }
-
   function publishOnlineCriticalBoostAction(ownerPlayer) {
     if (!ctx.isOnlineEnabled()) return;
     if (ctx.isApplyingRemote()) return;
     if (ownerPlayer !== ctx.getOnlineMyPlayer()) return;
 
     const actionId = ctx.nextOnlineActionSeq();
-    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
-      actionId,
-      actor: ownerPlayer,
-      type: "criticalBoost",
-      payload: {},
-      createdAt: Date.now()
-    }));
+    ctx.updateRoom(ctx.getOnlineRoomId(), {
+      action: {
+        actionId,
+        actor: ownerPlayer,
+        type: "criticalBoost",
+        payload: {},
+        createdAt: Date.now()
+      },
+      "meta/updatedAt": Date.now()
+    });
   }
 
   function publishOnlineChoiceAction(choice, selectedValue) {
@@ -39,17 +23,20 @@ export function createOnlineActionSync(ctx) {
     if (!choice) return;
 
     const actionId = ctx.nextOnlineActionSeq();
-    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
-      actionId,
-      actor: choice.ownerPlayer,
-      type: "choice",
-      payload: {
-        source: choice.source || null,
-        choiceType: choice.choiceType || null,
-        selectedValue
+    ctx.updateRoom(ctx.getOnlineRoomId(), {
+      action: {
+        actionId,
+        actor: choice.ownerPlayer,
+        type: "choice",
+        payload: {
+          source: choice.source || null,
+          choiceType: choice.choiceType || null,
+          selectedValue
+        },
+        createdAt: Date.now()
       },
-      createdAt: Date.now()
-    }));
+      "meta/updatedAt": Date.now()
+    });
   }
 
   function publishOnlineSpecialAction(ownerPlayer, specialKey) {
@@ -58,13 +45,16 @@ export function createOnlineActionSync(ctx) {
     if (ownerPlayer !== ctx.getOnlineMyPlayer()) return;
 
     const actionId = ctx.nextOnlineActionSeq();
-    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
-      actionId,
-      actor: ownerPlayer,
-      type: "special",
-      payload: { specialKey },
-      createdAt: Date.now()
-    }));
+    ctx.updateRoom(ctx.getOnlineRoomId(), {
+      action: {
+        actionId,
+        actor: ownerPlayer,
+        type: "special",
+        payload: { specialKey },
+        createdAt: Date.now()
+      },
+      "meta/updatedAt": Date.now()
+    });
   }
 
   function publishOnlineQteAction(kind, index) {
@@ -72,13 +62,16 @@ export function createOnlineActionSync(ctx) {
     if (ctx.isApplyingRemote()) return;
 
     const actionId = ctx.nextOnlineActionSeq();
-    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
-      actionId,
-      actor: ctx.getOnlineMyPlayer(),
-      type: "qte",
-      payload: { kind, index },
-      createdAt: Date.now()
-    }));
+    ctx.updateRoom(ctx.getOnlineRoomId(), {
+      action: {
+        actionId,
+        actor: ctx.getOnlineMyPlayer(),
+        type: "qte",
+        payload: { kind, index },
+        createdAt: Date.now()
+      },
+      "meta/updatedAt": Date.now()
+    });
   }
 
   function publishOnlineEndTurnAction(actorPlayer) {
@@ -87,13 +80,16 @@ export function createOnlineActionSync(ctx) {
     if (actorPlayer !== ctx.getOnlineMyPlayer()) return;
 
     const actionId = ctx.nextOnlineActionSeq();
-    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
-      actionId,
-      actor: actorPlayer,
-      type: "endTurn",
-      payload: {},
-      createdAt: Date.now()
-    }));
+    ctx.updateRoom(ctx.getOnlineRoomId(), {
+      action: {
+        actionId,
+        actor: actorPlayer,
+        type: "endTurn",
+        payload: {},
+        createdAt: Date.now()
+      },
+      "meta/updatedAt": Date.now()
+    });
   }
 
   function publishOnlineSlotAction(ownerPlayer, slotKey) {
@@ -102,13 +98,16 @@ export function createOnlineActionSync(ctx) {
     if (ownerPlayer !== ctx.getOnlineMyPlayer()) return;
 
     const actionId = ctx.nextOnlineActionSeq();
-    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
-      actionId,
-      actor: ownerPlayer,
-      type: "slot",
-      payload: { slotKey },
-      createdAt: Date.now()
-    }));
+    ctx.updateRoom(ctx.getOnlineRoomId(), {
+      action: {
+        actionId,
+        actor: ownerPlayer,
+        type: "slot",
+        payload: { slotKey },
+        createdAt: Date.now()
+      },
+      "meta/updatedAt": Date.now()
+    });
   }
 
   function publishOnlineBattleEnd(winnerPlayer) {
@@ -116,16 +115,19 @@ export function createOnlineActionSync(ctx) {
     if (ctx.isApplyingRemote()) return;
 
     const actionId = ctx.nextOnlineActionSeq();
-    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
-      actionId,
-      actor: winnerPlayer,
-      type: "battleEnd",
-      payload: { winner: winnerPlayer },
-      createdAt: Date.now()
-    }));
+    ctx.updateRoom(ctx.getOnlineRoomId(), {
+      action: {
+        actionId,
+        actor: winnerPlayer,
+        type: "battleEnd",
+        payload: { winner: winnerPlayer },
+        createdAt: Date.now()
+      },
+      "meta/updatedAt": Date.now()
+    });
   }
 
-  function applyOnlineAction(action, battleSnapshot = null) {
+  function applyOnlineAction(action) {
     if (!ctx.isOnlineEnabled() || !action) return;
     if (typeof action.actionId !== "number") return;
     if (action.actionId <= ctx.getLastAppliedActionId()) return;
@@ -142,11 +144,7 @@ export function createOnlineActionSync(ctx) {
         const actor = ctx.getPlayerState(action.actor);
         if (!actor) return;
 
-        if (typeof ctx.spendEvadeForCritical === "function") {
-          ctx.spendEvadeForCritical(actor);
-        }
-
-        applySnapshotIfNeeded(battleSnapshot);
+        ctx.spendEvadeForCritical(actor);
         ctx.redrawBattleBoards();
         return;
       }
@@ -163,25 +161,21 @@ export function createOnlineActionSync(ctx) {
 
         if (started) {
           ctx.consumeActionCount(actor, 1);
+          ctx.redrawBattleBoards();
         }
 
-        applySnapshotIfNeeded(battleSnapshot);
-        ctx.redrawBattleBoards();
         return;
       }
 
       if (action.type === "special") {
         const specialKey = action.payload?.specialKey;
         if (!specialKey) return;
-
         ctx.executeSpecialRaw(action.actor, specialKey);
-        applySnapshotIfNeeded(battleSnapshot);
         return;
       }
 
       if (action.type === "choice") {
         ctx.resolvePendingChoiceRaw(action.payload?.selectedValue);
-        applySnapshotIfNeeded(battleSnapshot);
         return;
       }
 
@@ -199,21 +193,18 @@ export function createOnlineActionSync(ctx) {
           ctx.checkBattleEnd();
         }
 
-        applySnapshotIfNeeded(battleSnapshot);
         return;
       }
 
       if (action.type === "battleEnd") {
         const winner = action.payload?.winner;
         if (!winner) return;
-
         ctx.finishBattle(winner);
-        applySnapshotIfNeeded(battleSnapshot);
         return;
       }
 
       if (action.type === "endTurn") {
-  ctx.endTurnRaw();
+        ctx.endTurnRaw();
       }
     } finally {
       ctx.setApplyingRemote(false);
