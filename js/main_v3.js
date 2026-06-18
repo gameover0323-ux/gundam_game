@@ -560,9 +560,9 @@ function clearPendingChoice() {
   pendingChoice = null;
 }
 
-function publishOnlineCriticalBoostAction(ownerPlayer) {
+function publishOnlineCriticalBoostAction(ownerPlayer, unitKey = null) {
   if (battleMode === "online2v2") {
-    return online2v2ActionSync.publishOnline2v2CriticalBoostAction(ownerPlayer);
+    return online2v2ActionSync.publishOnline2v2CriticalBoostAction(ownerPlayer, unitKey);
   }
   return onlineActionSync.publishOnlineCriticalBoostAction(ownerPlayer);
 }
@@ -724,7 +724,7 @@ function build1v1RenderHandlers(playerKey) {
     return;
   }
 
-  publishOnlineCriticalBoostAction(playerKey);
+ publishOnlineCriticalBoostAction(playerKey);
   redrawBattleBoards();
     }
   };
@@ -878,7 +878,13 @@ if (!changed) {
   return;
 }
 
-publishOnlineCriticalBoostAction(playerKey);
+const team = getTeam(playerKey);
+const unitKey =
+  team?.unit2 === state ? "unit2" :
+  team?.unit1 === state ? "unit1" :
+  null;
+
+publishOnlineCriticalBoostAction(playerKey, unitKey);
 redrawBattleBoards();
     }
   };
@@ -1059,6 +1065,22 @@ function clampEvadeToMax(state) {
 
 function executeSlot() {
   return turnActionController.executeSlot();
+}
+
+function executeUnit1Slot() {
+  if (onlineState.enabled && onlineState.myPlayer !== currentPlayer) {
+    showPopup("相手のターンです");
+    return;
+  }
+  return twoVtwoActions.executeSingleTeamSlot("unit1");
+}
+
+function executeUnit2Slot() {
+  if (onlineState.enabled && onlineState.myPlayer !== currentPlayer) {
+    showPopup("相手のターンです");
+    return;
+  }
+  return twoVtwoActions.executeSingleTeamSlot("unit2");
 }
 
 function simulateSlot() {
@@ -2556,6 +2578,9 @@ bindMainEvents({
   twoVtwoActions,
   playerAccountUi,
 
+  executeSlot,
+  executeUnit1Slot,
+  executeUnit2Slot,
   simulateSlot,
   endTurn,
   toggleTestMode,
