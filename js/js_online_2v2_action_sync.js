@@ -1,5 +1,6 @@
 export function createOnline2v2ActionSync(ctx) {
   const appliedActionKeys = new Set();
+  let latestSnapshotCreatedAt = 0;
 
   function cloneValue(value) {
     return JSON.parse(JSON.stringify(value ?? null));
@@ -8,7 +9,11 @@ export function createOnline2v2ActionSync(ctx) {
   function getActionKey(action) {
     if (!action) return "";
     if (action.actionKey) return String(action.actionKey);
-    return `${action.actor || "unknown"}:${action.actionId ?? "noid"}`;
+    return `${action.actor || "unknown"}:${action.actionId ?? "noid"}:${action.createdAt ?? 0}`;
+  }
+
+  function getActionCreatedAt(action) {
+    return Number(action?.createdAt || 0);
   }
 
   function buildOnline2v2BattleSnapshot() {
@@ -54,17 +59,20 @@ export function createOnline2v2ActionSync(ctx) {
       ctx.setOnlineActionSeq(nextSeq);
     }
 
+    const now = Date.now();
+
     const action = {
       actionId: nextSeq,
       actionSeq: nextSeq,
-      actionKey: `${actor}:${nextSeq}:${Date.now()}:${Math.random()}`,
+      actionKey: `${actor}:${nextSeq}:${now}:${Math.random()}`,
       actor,
       type,
       payload,
-      createdAt: Date.now()
+      createdAt: now
     };
 
     appliedActionKeys.add(action.actionKey);
+    latestSnapshotCreatedAt = Math.max(latestSnapshotCreatedAt, now);
 
     ctx.updateRoom(
       ctx.getOnlineRoomId(),
@@ -97,7 +105,9 @@ export function createOnline2v2ActionSync(ctx) {
   }
 
   function publishOnline2v2QteAction(kind, index) {
-    publishAction("qte2v2", ctx.getOnlineMyPlayer(), { kind, index });
+    queueMicrotask(() => {
+      publishAction("qte2v2", ctx.getOnlineMyPlayer(), { kind, index });
+    });
   }
 
   function publishOnline2v2CriticalBoostAction(ownerPlayer) {
@@ -105,7 +115,9 @@ export function createOnline2v2ActionSync(ctx) {
   }
 
   function publishOnline2v2EndTurnAction(actorPlayer) {
-    publishAction("endTurn2v2", actorPlayer, {});
+    queueMicrotask(() => {
+      publishAction("endTurn2v2", actorPlayer, {});
+    });
   }
 
   function publishOnline2v2BattleEnd(winnerPlayer) {
@@ -162,6 +174,13 @@ export function createOnline2v2ActionSync(ctx) {
     if (!actionKey) return;
     if (appliedActionKeys.has(actionKey)) return;
 
+    const createdAt = getActionCreatedAt(action);
+
+    if (createdAt > 0 && createdAt < latestSnapshotCreatedAt) {
+      appliedActionKeys.add(actionKey);
+      return;
+    }
+
     appliedActionKeys.add(actionKey);
 
     if (action.actor === ctx.getOnlineMyPlayer()) return;
@@ -169,6 +188,7 @@ export function createOnline2v2ActionSync(ctx) {
     ctx.setApplyingRemote(true);
     try {
       if (battleSnapshot) {
+        latestSnapshotCreatedAt = Math.max(latestSnapshotCreatedAt, createdAt);
         applyOnline2v2BattleSnapshot(battleSnapshot);
         return;
       }
