@@ -60,7 +60,7 @@ export function createBattleFlow(ctx) {
     const baseMax = state.evadeMax;
     const absoluteMax = typeof state.overEvadeAbsoluteMax === "number"
       ? state.overEvadeAbsoluteMax
-      : 50;
+      : 25;
 
     let clampMax = baseMax;
 
