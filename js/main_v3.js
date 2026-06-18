@@ -766,6 +766,12 @@ function build2v2RenderHandlers(playerKey) {
     return true;
   }
 
+  function publishOnline2v2UiSnapshot(type, payload = {}) {
+    if (battleMode !== "online2v2") return;
+    if (!online2v2ActionSync?.publishOnline2v2SnapshotAction) return;
+    online2v2ActionSync.publishOnline2v2SnapshotAction(type, playerKey, payload);
+  }
+
   return {
     currentPlayer,
     playerKey,
@@ -789,11 +795,12 @@ function build2v2RenderHandlers(playerKey) {
     isDuelTarget: (unitKey) =>
       twoVtwoTauntController ? twoVtwoTauntController.isDuelTarget(playerKey, unitKey) : false,
 
-    onTauntSystemButton: () => {
+   onTauntSystemButton: () => {
       if (!canOperateSideButton()) return;
 
       if (twoVtwoTauntController) {
         twoVtwoTauntController.handleButton(playerKey);
+        publishOnline2v2UiSnapshot("tauntUi2v2");
       }
     },
 
@@ -806,6 +813,7 @@ function build2v2RenderHandlers(playerKey) {
       }
 
       toggleTeamMode(playerKey);
+      publishOnline2v2UiSnapshot("toggleTeamMode2v2");
     },
 
     onSwitchActiveUnit: (unitKey) => {
@@ -814,8 +822,9 @@ function build2v2RenderHandlers(playerKey) {
       const team = getTeam(playerKey);
       if (!team || !team[unitKey]) return;
 
-      setActiveUnit(playerKey, unitKey);
+    setActiveUnit(playerKey, unitKey);
       redrawBattleBoards();
+      publishOnline2v2UiSnapshot("switchActiveUnit2v2", { unitKey });
     },
 
     onSwitchFocusUnit: (unitKey) => {
@@ -837,8 +846,9 @@ function build2v2RenderHandlers(playerKey) {
         return;
       }
 
-      setFocusUnit(playerKey, unitKey);
+     setFocusUnit(playerKey, unitKey);
       redrawBattleBoards();
+      publishOnline2v2UiSnapshot("switchFocusUnit2v2", { unitKey });
     },
 
     onSlotClick: (slot) => showPopup(slot.desc),
@@ -1560,6 +1570,12 @@ online2v2ActionSync = createOnline2v2ActionSync({
   setCurrentActionLabel: (value) => {
     currentActionLabel = value;
   },
+
+  getPendingChoice: () => pendingChoice,
+  setPendingChoice: (value) => {
+    pendingChoice = value;
+  },
+  renderPendingChoice,
 
   executeTeamSlotRaw: () => twoVtwoActions.executeTeamSlot(),
   executeSingleTeamSlotRaw: (unitKey) => twoVtwoActions.executeSingleTeamSlot(unitKey),
