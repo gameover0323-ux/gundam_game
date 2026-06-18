@@ -11,7 +11,6 @@ export function bindMainEvents(ctx) {
     playerAccountUi,
     showScreen,
     showTitle,
-    showPopup,
     simulateSlot,
     endTurn,
     toggleTestMode,
@@ -33,7 +32,6 @@ export function bindMainEvents(ctx) {
       online2v2RoomController.createOnline2v2Room();
       return;
     }
-
     onlineRoomController.createOnlineRoom();
   });
 
@@ -42,7 +40,6 @@ export function bindMainEvents(ctx) {
       online2v2RoomController.joinOnline2v2Room();
       return;
     }
-
     onlineRoomController.joinOnlineRoom();
   });
 
@@ -75,14 +72,29 @@ export function bindMainEvents(ctx) {
   });
 
   document.getElementById("executeSlotBtn")?.addEventListener("click", () => {
+    if (typeof ctx.executeSlot === "function") {
+      ctx.executeSlot();
+      return;
+    }
+
     ctx.twoVtwoActions.executeTeamSlot();
   });
 
   document.getElementById("executeUnit1SlotBtn")?.addEventListener("click", () => {
+    if (typeof ctx.executeUnit1Slot === "function") {
+      ctx.executeUnit1Slot();
+      return;
+    }
+
     ctx.twoVtwoActions.executeSingleTeamSlot("unit1");
   });
 
   document.getElementById("executeUnit2SlotBtn")?.addEventListener("click", () => {
+    if (typeof ctx.executeUnit2Slot === "function") {
+      ctx.executeUnit2Slot();
+      return;
+    }
+
     ctx.twoVtwoActions.executeSingleTeamSlot("unit2");
   });
 
