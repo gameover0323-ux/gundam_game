@@ -72,12 +72,21 @@ export function bindMainEvents(ctx) {
   });
 
   document.getElementById("executeSlotBtn")?.addEventListener("click", () => {
-    if (typeof ctx.executeSlot === "function") {
-      ctx.executeSlot();
+    if (ctx.getBattleMode && ctx.getBattleMode() === "online2v2") {
+      if (typeof ctx.executeSlot === "function") {
+        ctx.executeSlot();
+        return;
+      }
+    }
+
+    if (ctx.getBattleMode && ctx.getBattleMode().includes("2v2")) {
+      ctx.twoVtwoActions.executeTeamSlot();
       return;
     }
 
-    ctx.twoVtwoActions.executeTeamSlot();
+    if (typeof ctx.executeSlot === "function") {
+      ctx.executeSlot();
+    }
   });
 
   document.getElementById("executeUnit1SlotBtn")?.addEventListener("click", () => {
