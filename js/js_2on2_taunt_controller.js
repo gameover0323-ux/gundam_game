@@ -397,10 +397,14 @@ PLAYER ${enemyPlayer} の挑発対象を選択
       btn.disabled = isDefeated(unit);
 
       btn.addEventListener("click", () => {
-        const result = startTaunt(ownerPlayer, unitKey);
+       const result = startTaunt(ownerPlayer, unitKey);
         attackLog.textContent = result.message;
         ctx.showPopup(result.message);
         ctx.redrawBattleBoards();
+
+        if (result.ok && typeof ctx.onOnline2v2TauntAction === "function") {
+          ctx.onOnline2v2TauntAction(ownerPlayer, unitKey);
+        }
       });
 
       attackLog.appendChild(btn);
@@ -430,6 +434,10 @@ PLAYER ${ownerPlayer} の決戦機体を選択
         attackLog.textContent = result.message;
         ctx.showPopup(result.message);
         ctx.redrawBattleBoards();
+
+        if (result.ok && typeof ctx.onOnline2v2DuelAction === "function") {
+          ctx.onOnline2v2DuelAction(ownerPlayer, unitKey);
+        }
       });
 
       attackLog.appendChild(btn);
