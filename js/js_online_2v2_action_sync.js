@@ -1,6 +1,14 @@
 export function createOnline2v2ActionSync(ctx) {
+  const appliedActionKeys = new Set();
+
   function cloneValue(value) {
     return JSON.parse(JSON.stringify(value ?? null));
+  }
+
+  function getActionKey(action) {
+    if (!action) return "";
+    if (action.actionKey) return String(action.actionKey);
+    return `${action.actor || "unknown"}:${action.actionId ?? "noid"}:${action.createdAt ?? 0}`;
   }
 
   function buildOnline2v2BattleSnapshot() {
@@ -21,13 +29,13 @@ export function createOnline2v2ActionSync(ctx) {
     };
   }
 
-  function buildRoomUpdate(action, options = {}) {
+  function buildRoomUpdate(action, withSnapshot = false) {
     const update = {
       action,
       "meta/updatedAt": Date.now()
     };
 
-    if (options.withSnapshot) {
+    if (withSnapshot) {
       update.battleSnapshot = buildOnline2v2BattleSnapshot();
     }
 
@@ -43,30 +51,39 @@ export function createOnline2v2ActionSync(ctx) {
     return true;
   }
 
-  function publishAction(type, actor, payload = {}, options = {}) {
+  function publishAction(type, actor, payload = {}, withSnapshot = false) {
     if (!canPublish(actor)) return;
 
-    const actionId = ctx.nextOnlineActionSeq();
+    const nextSeq = Number(ctx.getOnlineActionSeq?.() || 0) + 1;
+    if (typeof ctx.setOnlineActionSeq === "function") {
+      ctx.setOnlineActionSeq(nextSeq);
+    }
 
-    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdate({
-      actionId,
+    const now = Date.now();
+    const action = {
+      actionId: nextSeq,
+      actionSeq: nextSeq,
+      actionKey: `${actor}:${nextSeq}:${now}:${Math.random()}`,
       actor,
       type,
       payload,
-      createdAt: Date.now()
-    }, options));
+      createdAt: now
+    };
+
+    appliedActionKeys.add(action.actionKey);
+    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdate(action, withSnapshot));
   }
 
   function publishOnline2v2SnapshotAction(type, actor, payload = {}) {
-    publishAction(type, actor, payload, { withSnapshot: true });
+    publishAction(type, actor, payload, true);
   }
 
   function publishOnline2v2SlotAction(ownerPlayer, slotMode = "team", unitKey = null) {
-    publishAction("slot2v2", ownerPlayer, { slotMode, unitKey }, { withSnapshot: true });
+    publishAction("slot2v2", ownerPlayer, { slotMode, unitKey }, true);
   }
 
   function publishOnline2v2SpecialAction(ownerPlayer, specialKey) {
-    publishAction("special2v2", ownerPlayer, { specialKey });
+    publishAction("special2v2", ownerPlayer, { specialKey }, false);
   }
 
   function publishOnline2v2ChoiceAction(choice, selectedValue) {
@@ -75,23 +92,23 @@ export function createOnline2v2ActionSync(ctx) {
       source: choice?.source || null,
       choiceType: choice?.choiceType || null,
       selectedValue
-    });
+    }, false);
   }
 
   function publishOnline2v2QteAction(kind, index) {
-    publishAction("qte2v2", ctx.getOnlineMyPlayer(), { kind, index });
+    publishAction("qte2v2", ctx.getOnlineMyPlayer(), { kind, index }, false);
   }
 
-  function publishOnline2v2CriticalBoostAction(ownerPlayer) {
-    publishAction("criticalBoost2v2", ownerPlayer, {});
+  function publishOnline2v2CriticalBoostAction(ownerPlayer, unitKey = null) {
+    publishAction("criticalBoost2v2", ownerPlayer, { unitKey }, false);
   }
 
   function publishOnline2v2EndTurnAction(actorPlayer) {
-    publishAction("endTurn2v2", actorPlayer, {});
+    publishAction("endTurn2v2", actorPlayer, {}, false);
   }
 
   function publishOnline2v2BattleEnd(winnerPlayer) {
-    publishAction("battleEnd2v2", winnerPlayer, { winner: winnerPlayer });
+    publishAction("battleEnd2v2", winnerPlayer, { winner: winnerPlayer }, false);
   }
 
   function applyOnline2v2BattleSnapshot(snapshot) {
@@ -103,13 +120,8 @@ export function createOnline2v2ActionSync(ctx) {
     const nextTeamA = ctx.getTeam("A");
     const nextTeamB = ctx.getTeam("B");
 
-    if (nextTeamA) {
-      ctx.setPlayerAState(nextTeamA[nextTeamA.activeUnitKey || "unit1"] || nextTeamA.unit1 || null);
-    }
-
-    if (nextTeamB) {
-      ctx.setPlayerBState(nextTeamB[nextTeamB.activeUnitKey || "unit1"] || nextTeamB.unit1 || null);
-    }
+    if (nextTeamA) ctx.setPlayerAState(nextTeamA[nextTeamA.activeUnitKey || "unit1"] || nextTeamA.unit1 || null);
+    if (nextTeamB) ctx.setPlayerBState(nextTeamB[nextTeamB.activeUnitKey || "unit1"] || nextTeamB.unit1 || null);
 
     ctx.setCurrentTurn(Number(snapshot.currentTurn || 1));
     ctx.setCurrentPlayer(snapshot.currentPlayer === "B" ? "B" : "A");
@@ -136,21 +148,27 @@ export function createOnline2v2ActionSync(ctx) {
     }
   }
 
+  function getCriticalTarget(action) {
+    const team = ctx.getTeam(action.actor);
+    const unitKey = action.payload?.unitKey;
+    if (team && unitKey && team[unitKey]) return team[unitKey];
+    return ctx.getPlayerState(action.actor);
+  }
+
   function applyOnline2v2Action(action, battleSnapshot = null) {
     if (!ctx.isOnlineEnabled() || !action) return;
     if (ctx.getBattleMode() !== "online2v2") return;
-    if (typeof action.actionId !== "number") return;
-    if (action.actionId <= ctx.getLastAppliedActionId()) return;
 
-    ctx.setLastAppliedActionId(action.actionId);
-    ctx.setOnlineActionSeq(Math.max(ctx.getOnlineActionSeq(), action.actionId));
+    const actionKey = getActionKey(action);
+    if (!actionKey || appliedActionKeys.has(actionKey)) return;
+    appliedActionKeys.add(actionKey);
 
     if (action.actor === ctx.getOnlineMyPlayer()) return;
 
     ctx.setApplyingRemote(true);
     try {
       if (action.type === "criticalBoost2v2") {
-        const actor = ctx.getPlayerState(action.actor);
+        const actor = getCriticalTarget(action);
         if (!actor) return;
         ctx.spendEvadeForCritical(actor);
         ctx.redrawBattleBoards();
@@ -160,16 +178,6 @@ export function createOnline2v2ActionSync(ctx) {
       if (action.type === "slot2v2") {
         if (battleSnapshot) {
           applyOnline2v2BattleSnapshot(battleSnapshot);
-          return;
-        }
-
-        const slotMode = action.payload?.slotMode || "team";
-        const unitKey = action.payload?.unitKey || null;
-
-        if (slotMode === "unit1" || slotMode === "unit2" || unitKey) {
-          ctx.executeSingleTeamSlotRaw(unitKey || slotMode);
-        } else {
-          ctx.executeTeamSlotRaw();
         }
         return;
       }
