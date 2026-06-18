@@ -98,6 +98,18 @@ export function createOnline2v2ActionSync(ctx) {
     publishAction("duel2v2", ownerPlayer, { ownUnitKey });
   }
 
+  function publishOnline2v2BreakthroughStartAction(initiatorPlayer) {
+    publishAction("breakthroughStart2v2", initiatorPlayer, { initiatorPlayer });
+  }
+
+  function publishOnline2v2BreakthroughBetAction(player, value) {
+    publishAction("breakthroughBet2v2", player, { player, value });
+  }
+
+  function publishOnline2v2BreakthroughResultAction(result) {
+    publishAction("breakthroughResult2v2", ctx.getOnlineMyPlayer(), { result });
+  }
+
   function getCriticalTarget(action) {
     const team = ctx.getTeam(action.actor);
     const unitKey = action.payload?.unitKey;
@@ -177,6 +189,27 @@ export function createOnline2v2ActionSync(ctx) {
         return;
       }
 
+      if (action.type === "breakthroughStart2v2") {
+        ctx.renderBreakthroughBetChoiceRaw({
+          initiatorPlayer: action.payload?.initiatorPlayer,
+          suppressOnlinePublish: true
+        });
+        return;
+      }
+
+      if (action.type === "breakthroughBet2v2") {
+        ctx.applyBreakthroughBetRaw(
+          action.payload?.player,
+          action.payload?.value
+        );
+        return;
+      }
+
+      if (action.type === "breakthroughResult2v2") {
+        ctx.renderBreakthroughResultRaw(action.payload?.result);
+        return;
+      }
+
       if (action.type === "special2v2") {
         const specialKey = action.payload?.specialKey;
         if (!specialKey) return;
@@ -233,6 +266,9 @@ export function createOnline2v2ActionSync(ctx) {
     publishOnline2v2FocusUnitAction,
     publishOnline2v2TauntAction,
     publishOnline2v2DuelAction,
+    publishOnline2v2BreakthroughStartAction,
+    publishOnline2v2BreakthroughBetAction,
+    publishOnline2v2BreakthroughResultAction,
     applyOnline2v2Action
   };
 }
