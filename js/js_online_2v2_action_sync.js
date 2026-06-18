@@ -20,9 +20,7 @@ export function createOnline2v2ActionSync(ctx) {
     if (!canPublish(actor)) return;
 
     const nextSeq = Number(ctx.getOnlineActionSeq?.() || 0) + 1;
-    if (typeof ctx.setOnlineActionSeq === "function") {
-      ctx.setOnlineActionSeq(nextSeq);
-    }
+    if (typeof ctx.setOnlineActionSeq === "function") ctx.setOnlineActionSeq(nextSeq);
 
     const now = Date.now();
     const action = {
@@ -48,11 +46,7 @@ export function createOnline2v2ActionSync(ctx) {
   }
 
   function publishOnline2v2SlotAction(ownerPlayer, slotMode = "team", unitKey = null, slotKeys = null) {
-    publishAction("slot2v2", ownerPlayer, {
-      slotMode,
-      unitKey,
-      slotKeys: slotKeys || null
-    });
+    publishAction("slot2v2", ownerPlayer, { slotMode, unitKey, slotKeys: slotKeys || null });
   }
 
   function publishOnline2v2SpecialAction(ownerPlayer, specialKey) {
@@ -61,7 +55,6 @@ export function createOnline2v2ActionSync(ctx) {
 
   function publishOnline2v2ChoiceAction(choice, selectedValue) {
     const actor = choice?.ownerPlayer || ctx.getOnlineMyPlayer();
-
     publishAction("choice2v2", actor, {
       source: choice?.source || null,
       choiceType: choice?.choiceType || null,
@@ -85,15 +78,38 @@ export function createOnline2v2ActionSync(ctx) {
     publishAction("battleEnd2v2", winnerPlayer, { winner: winnerPlayer });
   }
 
+  function publishOnline2v2TeamModeAction(ownerPlayer) {
+    publishAction("teamMode2v2", ownerPlayer, {});
+  }
+
+  function publishOnline2v2ActiveUnitAction(ownerPlayer, unitKey) {
+    publishAction("activeUnit2v2", ownerPlayer, { unitKey });
+  }
+
+  function publishOnline2v2FocusUnitAction(ownerPlayer, unitKey) {
+    publishAction("focusUnit2v2", ownerPlayer, { unitKey });
+  }
+
+  function publishOnline2v2TauntAction(ownerPlayer, targetUnitKey) {
+    publishAction("taunt2v2", ownerPlayer, { targetUnitKey });
+  }
+
+  function publishOnline2v2DuelAction(ownerPlayer, ownUnitKey) {
+    publishAction("duel2v2", ownerPlayer, { ownUnitKey });
+  }
+
   function getCriticalTarget(action) {
     const team = ctx.getTeam(action.actor);
     const unitKey = action.payload?.unitKey;
-
-    if (team && unitKey && team[unitKey]) {
-      return team[unitKey];
-    }
-
+    if (team && unitKey && team[unitKey]) return team[unitKey];
     return ctx.getPlayerState(action.actor);
+  }
+
+  function renderRemoteResult(result) {
+    const message = result?.message || "";
+    if (message && ctx.renderAttackLogText) ctx.renderAttackLogText(message);
+    if (message && ctx.showPopup) ctx.showPopup(message);
+    ctx.redrawBattleBoards();
   }
 
   function applyOnline2v2Action(action) {
@@ -113,7 +129,6 @@ export function createOnline2v2ActionSync(ctx) {
       if (action.type === "criticalBoost2v2") {
         const actor = getCriticalTarget(action);
         if (!actor) return;
-
         ctx.spendEvadeForCritical(actor);
         ctx.redrawBattleBoards();
         return;
@@ -135,10 +150,36 @@ export function createOnline2v2ActionSync(ctx) {
         return;
       }
 
+      if (action.type === "teamMode2v2") {
+        ctx.toggleTeamModeRaw(action.actor);
+        return;
+      }
+
+      if (action.type === "activeUnit2v2") {
+        ctx.setActiveUnitRaw(action.actor, action.payload?.unitKey);
+        return;
+      }
+
+      if (action.type === "focusUnit2v2") {
+        ctx.setFocusUnitRaw(action.actor, action.payload?.unitKey);
+        return;
+      }
+
+      if (action.type === "taunt2v2") {
+        const result = ctx.startTauntRaw(action.actor, action.payload?.targetUnitKey);
+        renderRemoteResult(result);
+        return;
+      }
+
+      if (action.type === "duel2v2") {
+        const result = ctx.startDuelRaw(action.actor, action.payload?.ownUnitKey);
+        renderRemoteResult(result);
+        return;
+      }
+
       if (action.type === "special2v2") {
         const specialKey = action.payload?.specialKey;
         if (!specialKey) return;
-
         ctx.executeSpecialRaw(action.actor, specialKey);
         return;
       }
@@ -161,7 +202,6 @@ export function createOnline2v2ActionSync(ctx) {
           ctx.supportDefenseAttackRaw(index);
           ctx.checkBattleEnd();
         }
-
         return;
       }
 
@@ -188,6 +228,11 @@ export function createOnline2v2ActionSync(ctx) {
     publishOnline2v2CriticalBoostAction,
     publishOnline2v2EndTurnAction,
     publishOnline2v2BattleEnd,
+    publishOnline2v2TeamModeAction,
+    publishOnline2v2ActiveUnitAction,
+    publishOnline2v2FocusUnitAction,
+    publishOnline2v2TauntAction,
+    publishOnline2v2DuelAction,
     applyOnline2v2Action
   };
 }
