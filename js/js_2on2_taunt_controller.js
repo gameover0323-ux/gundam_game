@@ -11,6 +11,10 @@ export function create2v2TauntController(ctx) {
     );
   }
 
+  function getPlayerLabel(playerKey) {
+    return isCpuPlayer(playerKey) ? "CPU" : `PLAYER ${playerKey}`;
+  }
+
   function isDefeated(unit) {
     return !unit || Number(unit.hp || 0) <= 0 || unit.isDefeated === true;
   }
@@ -210,7 +214,7 @@ export function create2v2TauntController(ctx) {
 
     return {
       ok: true,
-      message: `${ownerPlayer === "B" ? "CPU" : `PLAYER ${ownerPlayer}`} が ${targetUnitKey === "unit2" ? "2" : "1"}番機を挑発しました`
+      message: `${getPlayerLabel(ownerPlayer)} が ${targetUnitKey === "unit2" ? "2" : "1"}番機を挑発しました`
     };
   }
 
@@ -285,7 +289,7 @@ export function create2v2TauntController(ctx) {
 
     return {
       ok: true,
-      message: `${ownerPlayer === "B" ? "CPU" : `PLAYER ${ownerPlayer}`} が決戦を受けました`
+      message: `${getPlayerLabel(ownerPlayer)} が決戦を受けました`
     };
   }
 
@@ -397,7 +401,7 @@ PLAYER ${enemyPlayer} の挑発対象を選択
       btn.disabled = isDefeated(unit);
 
       btn.addEventListener("click", () => {
-       const result = startTaunt(ownerPlayer, unitKey);
+        const result = startTaunt(ownerPlayer, unitKey);
         attackLog.textContent = result.message;
         ctx.showPopup(result.message);
         ctx.redrawBattleBoards();
