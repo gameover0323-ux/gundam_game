@@ -1,6 +1,6 @@
 import { unitRulesMap } from "./js_unit_rules_index.js";
 
-export const EVADE_OVER_CAP_LIMIT = 50;
+export const EVADE_OVER_CAP_LIMIT = 25;
 
 function sortSlotKeys(slotKeys) {
   return [...slotKeys].sort((a, b) => {
