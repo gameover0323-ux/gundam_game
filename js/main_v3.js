@@ -1608,8 +1608,17 @@ online2v2ActionSync = createOnline2v2ActionSync({
   resolvePendingChoiceRaw: (selectedValue) =>
     actionLayer.resolvePendingChoice(selectedValue),
 
-  executeTeamSlotRaw: () => twoVtwoActions.executeTeamSlot(),
-  executeSingleTeamSlotRaw: (unitKey) => twoVtwoActions.executeSingleTeamSlot(unitKey),
+executeTeamSlotRaw: (slotKeys = null, options = {}) =>
+    twoVtwoActions.executeTeamSlot({
+      forcedSlotKeys: slotKeys || {},
+      suppressOnlinePublish: options?.suppressOnlinePublish === true
+    }),
+
+  executeSingleTeamSlotRaw: (unitKey, slotKeys = null, options = {}) =>
+    twoVtwoActions.executeSingleTeamSlot(unitKey, {
+      forcedSlotKeys: slotKeys || {},
+      suppressOnlinePublish: options?.suppressOnlinePublish === true
+    }),
 
   takeHitRaw: (index) => attackResolution.takeHit(index),
   evadeAttackRaw: (index) => attackResolution.evadeAttack(index),
@@ -2540,9 +2549,9 @@ twoVtwoAdapter,
   renderAttackChoices,
  renderAttackLogText,
 
-  onOnline2v2SlotAction: (ownerPlayer, slotMode = "team", unitKey = null) => {
+  onOnline2v2SlotAction: (ownerPlayer, slotMode = "team", unitKey = null, slotKeys = null) => {
     if (battleMode === "online2v2") {
-      online2v2ActionSync.publishOnline2v2SlotAction(ownerPlayer, slotMode, unitKey);
+      online2v2ActionSync.publishOnline2v2SlotAction(ownerPlayer, slotMode, unitKey, slotKeys);
     }
   },
 
