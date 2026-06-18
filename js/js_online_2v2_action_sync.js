@@ -1,6 +1,14 @@
 export function createOnline2v2ActionSync(ctx) {
+  const appliedActionKeys = new Set();
+
   function cloneValue(value) {
     return JSON.parse(JSON.stringify(value ?? null));
+  }
+
+  function getActionKey(action) {
+    if (!action) return "";
+    if (action.actionKey) return String(action.actionKey);
+    return `${action.actor || "unknown"}:${action.actionId ?? "noid"}`;
   }
 
   function buildOnline2v2BattleSnapshot() {
@@ -41,15 +49,27 @@ export function createOnline2v2ActionSync(ctx) {
   function publishAction(type, actor, payload = {}) {
     if (!canPublish(actor)) return;
 
-    const actionId = ctx.nextOnlineActionSeq();
+    const nextSeq = Number(ctx.getOnlineActionSeq?.() || 0) + 1;
+    if (typeof ctx.setOnlineActionSeq === "function") {
+      ctx.setOnlineActionSeq(nextSeq);
+    }
 
-    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
-      actionId,
+    const action = {
+      actionId: nextSeq,
+      actionSeq: nextSeq,
+      actionKey: `${actor}:${nextSeq}:${Date.now()}:${Math.random()}`,
       actor,
       type,
       payload,
       createdAt: Date.now()
-    }));
+    };
+
+    appliedActionKeys.add(action.actionKey);
+
+    ctx.updateRoom(
+      ctx.getOnlineRoomId(),
+      buildRoomUpdateWithSnapshot(action)
+    );
   }
 
   function publishOnline2v2SnapshotAction(type, actor, payload = {}) {
@@ -64,17 +84,17 @@ export function createOnline2v2ActionSync(ctx) {
     publishAction("special2v2", ownerPlayer, { specialKey });
   }
 
-function publishOnline2v2ChoiceAction(choice, selectedValue) {
-  const actor = choice?.ownerPlayer || ctx.getOnlineMyPlayer();
+  function publishOnline2v2ChoiceAction(choice, selectedValue) {
+    const actor = choice?.ownerPlayer || ctx.getOnlineMyPlayer();
 
-  queueMicrotask(() => {
-    publishAction("choice2v2", actor, {
-      source: choice?.source || null,
-      choiceType: choice?.choiceType || null,
-      selectedValue
+    queueMicrotask(() => {
+      publishAction("choice2v2", actor, {
+        source: choice?.source || null,
+        choiceType: choice?.choiceType || null,
+        selectedValue
+      });
     });
-  });
-}
+  }
 
   function publishOnline2v2QteAction(kind, index) {
     publishAction("qte2v2", ctx.getOnlineMyPlayer(), { kind, index });
@@ -137,11 +157,12 @@ function publishOnline2v2ChoiceAction(choice, selectedValue) {
   function applyOnline2v2Action(action, battleSnapshot = null) {
     if (!ctx.isOnlineEnabled() || !action) return;
     if (ctx.getBattleMode() !== "online2v2") return;
-    if (typeof action.actionId !== "number") return;
-    if (action.actionId <= ctx.getLastAppliedActionId()) return;
 
-    ctx.setLastAppliedActionId(action.actionId);
-    ctx.setOnlineActionSeq(Math.max(ctx.getOnlineActionSeq(), action.actionId));
+    const actionKey = getActionKey(action);
+    if (!actionKey) return;
+    if (appliedActionKeys.has(actionKey)) return;
+
+    appliedActionKeys.add(actionKey);
 
     if (action.actor === ctx.getOnlineMyPlayer()) return;
 
