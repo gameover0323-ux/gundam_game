@@ -1577,6 +1577,15 @@ online2v2ActionSync = createOnline2v2ActionSync({
   },
   renderPendingChoice,
 
+  getPlayerState,
+  spendEvadeForCritical,
+
+  executeSpecialRaw: (ownerPlayer, specialKey) =>
+    actionLayer.executeSpecial(ownerPlayer, specialKey),
+
+  resolvePendingChoiceRaw: (selectedValue) =>
+    actionLayer.resolvePendingChoice(selectedValue),
+
   executeTeamSlotRaw: () => twoVtwoActions.executeTeamSlot(),
   executeSingleTeamSlotRaw: (unitKey) => twoVtwoActions.executeSingleTeamSlot(unitKey),
 
