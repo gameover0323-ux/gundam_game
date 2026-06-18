@@ -1,19 +1,6 @@
 export function createOnline2v2ActionSync(ctx) {
-  const appliedActionKeys = new Set();
-  let latestSnapshotCreatedAt = 0;
-
   function cloneValue(value) {
     return JSON.parse(JSON.stringify(value ?? null));
-  }
-
-  function getActionKey(action) {
-    if (!action) return "";
-    if (action.actionKey) return String(action.actionKey);
-    return `${action.actor || "unknown"}:${action.actionId ?? "noid"}:${action.createdAt ?? 0}`;
-  }
-
-  function getActionCreatedAt(action) {
-    return Number(action?.createdAt || 0);
   }
 
   function buildOnline2v2BattleSnapshot() {
@@ -34,12 +21,17 @@ export function createOnline2v2ActionSync(ctx) {
     };
   }
 
-  function buildRoomUpdateWithSnapshot(action) {
-    return {
+  function buildRoomUpdate(action, options = {}) {
+    const update = {
       action,
-      battleSnapshot: buildOnline2v2BattleSnapshot(),
       "meta/updatedAt": Date.now()
     };
+
+    if (options.withSnapshot) {
+      update.battleSnapshot = buildOnline2v2BattleSnapshot();
+    }
+
+    return update;
   }
 
   function canPublish(actor) {
@@ -51,41 +43,26 @@ export function createOnline2v2ActionSync(ctx) {
     return true;
   }
 
-  function publishAction(type, actor, payload = {}) {
+  function publishAction(type, actor, payload = {}, options = {}) {
     if (!canPublish(actor)) return;
 
-    const nextSeq = Number(ctx.getOnlineActionSeq?.() || 0) + 1;
-    if (typeof ctx.setOnlineActionSeq === "function") {
-      ctx.setOnlineActionSeq(nextSeq);
-    }
+    const actionId = ctx.nextOnlineActionSeq();
 
-    const now = Date.now();
-
-    const action = {
-      actionId: nextSeq,
-      actionSeq: nextSeq,
-      actionKey: `${actor}:${nextSeq}:${now}:${Math.random()}`,
+    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdate({
+      actionId,
       actor,
       type,
       payload,
-      createdAt: now
-    };
-
-    appliedActionKeys.add(action.actionKey);
-    latestSnapshotCreatedAt = Math.max(latestSnapshotCreatedAt, now);
-
-    ctx.updateRoom(
-      ctx.getOnlineRoomId(),
-      buildRoomUpdateWithSnapshot(action)
-    );
+      createdAt: Date.now()
+    }, options));
   }
 
   function publishOnline2v2SnapshotAction(type, actor, payload = {}) {
-    publishAction(type, actor, payload);
+    publishAction(type, actor, payload, { withSnapshot: true });
   }
 
   function publishOnline2v2SlotAction(ownerPlayer, slotMode = "team", unitKey = null) {
-    publishAction("slot2v2", ownerPlayer, { slotMode, unitKey });
+    publishAction("slot2v2", ownerPlayer, { slotMode, unitKey }, { withSnapshot: true });
   }
 
   function publishOnline2v2SpecialAction(ownerPlayer, specialKey) {
@@ -94,20 +71,15 @@ export function createOnline2v2ActionSync(ctx) {
 
   function publishOnline2v2ChoiceAction(choice, selectedValue) {
     const actor = choice?.ownerPlayer || ctx.getOnlineMyPlayer();
-
-    queueMicrotask(() => {
-      publishAction("choice2v2", actor, {
-        source: choice?.source || null,
-        choiceType: choice?.choiceType || null,
-        selectedValue
-      });
+    publishAction("choice2v2", actor, {
+      source: choice?.source || null,
+      choiceType: choice?.choiceType || null,
+      selectedValue
     });
   }
 
   function publishOnline2v2QteAction(kind, index) {
-    queueMicrotask(() => {
-      publishAction("qte2v2", ctx.getOnlineMyPlayer(), { kind, index });
-    });
+    publishAction("qte2v2", ctx.getOnlineMyPlayer(), { kind, index });
   }
 
   function publishOnline2v2CriticalBoostAction(ownerPlayer) {
@@ -115,9 +87,7 @@ export function createOnline2v2ActionSync(ctx) {
   }
 
   function publishOnline2v2EndTurnAction(actorPlayer) {
-    queueMicrotask(() => {
-      publishAction("endTurn2v2", actorPlayer, {});
-    });
+    publishAction("endTurn2v2", actorPlayer, {});
   }
 
   function publishOnline2v2BattleEnd(winnerPlayer) {
@@ -169,27 +139,71 @@ export function createOnline2v2ActionSync(ctx) {
   function applyOnline2v2Action(action, battleSnapshot = null) {
     if (!ctx.isOnlineEnabled() || !action) return;
     if (ctx.getBattleMode() !== "online2v2") return;
+    if (typeof action.actionId !== "number") return;
+    if (action.actionId <= ctx.getLastAppliedActionId()) return;
 
-    const actionKey = getActionKey(action);
-    if (!actionKey) return;
-    if (appliedActionKeys.has(actionKey)) return;
-
-    const createdAt = getActionCreatedAt(action);
-
-    if (createdAt > 0 && createdAt < latestSnapshotCreatedAt) {
-      appliedActionKeys.add(actionKey);
-      return;
-    }
-
-    appliedActionKeys.add(actionKey);
+    ctx.setLastAppliedActionId(action.actionId);
+    ctx.setOnlineActionSeq(Math.max(ctx.getOnlineActionSeq(), action.actionId));
 
     if (action.actor === ctx.getOnlineMyPlayer()) return;
 
     ctx.setApplyingRemote(true);
     try {
-      if (battleSnapshot) {
-        latestSnapshotCreatedAt = Math.max(latestSnapshotCreatedAt, createdAt);
-        applyOnline2v2BattleSnapshot(battleSnapshot);
+      if (action.type === "criticalBoost2v2") {
+        const actor = ctx.getPlayerState(action.actor);
+        if (!actor) return;
+        ctx.spendEvadeForCritical(actor);
+        ctx.redrawBattleBoards();
+        return;
+      }
+
+      if (action.type === "slot2v2") {
+        if (battleSnapshot) {
+          applyOnline2v2BattleSnapshot(battleSnapshot);
+          return;
+        }
+
+        const slotMode = action.payload?.slotMode || "team";
+        const unitKey = action.payload?.unitKey || null;
+
+        if (slotMode === "unit1" || slotMode === "unit2" || unitKey) {
+          ctx.executeSingleTeamSlotRaw(unitKey || slotMode);
+        } else {
+          ctx.executeTeamSlotRaw();
+        }
+        return;
+      }
+
+      if (action.type === "special2v2") {
+        const specialKey = action.payload?.specialKey;
+        if (!specialKey) return;
+        ctx.executeSpecialRaw(action.actor, specialKey);
+        return;
+      }
+
+      if (action.type === "choice2v2") {
+        ctx.resolvePendingChoiceRaw(action.payload?.selectedValue);
+        return;
+      }
+
+      if (action.type === "qte2v2") {
+        const kind = action.payload?.kind;
+        const index = action.payload?.index;
+
+        if (kind === "hit") {
+          ctx.takeHitRaw(index);
+          ctx.checkBattleEnd();
+        } else if (kind === "evade") {
+          ctx.evadeAttackRaw(index);
+        } else if (kind === "supportDefense") {
+          ctx.supportDefenseAttackRaw(index);
+          ctx.checkBattleEnd();
+        }
+        return;
+      }
+
+      if (action.type === "endTurn2v2") {
+        ctx.endTurnRaw();
         return;
       }
 
