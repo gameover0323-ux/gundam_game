@@ -800,7 +800,6 @@ function build2v2RenderHandlers(playerKey) {
 
       if (twoVtwoTauntController) {
         twoVtwoTauntController.handleButton(playerKey);
-        publishOnline2v2UiSnapshot("tauntUi2v2");
       }
     },
 
@@ -812,8 +811,8 @@ function build2v2RenderHandlers(playerKey) {
         return;
       }
 
-      toggleTeamMode(playerKey);
-      publishOnline2v2UiSnapshot("toggleTeamMode2v2");
+     toggleTeamMode(playerKey);
+      online2v2ActionSync.publishOnline2v2TeamModeAction(playerKey);
     },
 
     onSwitchActiveUnit: (unitKey) => {
@@ -822,9 +821,9 @@ function build2v2RenderHandlers(playerKey) {
       const team = getTeam(playerKey);
       if (!team || !team[unitKey]) return;
 
-    setActiveUnit(playerKey, unitKey);
+   setActiveUnit(playerKey, unitKey);
       redrawBattleBoards();
-      publishOnline2v2UiSnapshot("switchActiveUnit2v2", { unitKey });
+      online2v2ActionSync.publishOnline2v2ActiveUnitAction(playerKey, unitKey);
     },
 
     onSwitchFocusUnit: (unitKey) => {
@@ -846,9 +845,9 @@ function build2v2RenderHandlers(playerKey) {
         return;
       }
 
-     setFocusUnit(playerKey, unitKey);
+    setFocusUnit(playerKey, unitKey);
       redrawBattleBoards();
-      publishOnline2v2UiSnapshot("switchFocusUnit2v2", { unitKey });
+      online2v2ActionSync.publishOnline2v2FocusUnitAction(playerKey, unitKey);
     },
 
     onSlotClick: (slot) => showPopup(slot.desc),
@@ -1365,6 +1364,18 @@ twoVtwoTauntController = create2v2TauntController({
   appendBattleNotice,
   showPopup,
   redrawBattleBoards,
+  onOnline2v2TauntAction: (ownerPlayer, targetUnitKey) => {
+    if (battleMode === "online2v2") {
+      online2v2ActionSync.publishOnline2v2TauntAction(ownerPlayer, targetUnitKey);
+    }
+  },
+
+  onOnline2v2DuelAction: (ownerPlayer, ownUnitKey) => {
+    if (battleMode === "online2v2") {
+      online2v2ActionSync.publishOnline2v2DuelAction(ownerPlayer, ownUnitKey);
+    }
+  },
+
   openBreakthrough: (options = {}) => {
     if (twoVtwoBreakthroughController) {
       twoVtwoBreakthroughController.renderBetChoice(options);
@@ -1593,11 +1604,45 @@ online2v2ActionSync = createOnline2v2ActionSync({
     currentActionLabel = value;
   },
 
-  getPendingChoice: () => pendingChoice,
+getPendingChoice: () => pendingChoice,
   setPendingChoice: (value) => {
     pendingChoice = value;
   },
   renderPendingChoice,
+
+  renderBreakthroughBetChoiceRaw: (options = {}) =>
+    twoVtwoBreakthroughController.renderBetChoice(options),
+
+  applyBreakthroughBetRaw: (player, value) =>
+    twoVtwoBreakthroughController.applyOnlineBet(player, value),
+
+  renderBreakthroughResultRaw: (result) =>
+    twoVtwoBreakthroughController.renderResult(result),
+
+  toggleTeamModeRaw: (playerKey) => {
+    toggleTeamMode(playerKey);
+  },
+
+  setActiveUnitRaw: (playerKey, unitKey) => {
+    if (unitKey !== "unit1" && unitKey !== "unit2") return;
+    setActiveUnit(playerKey, unitKey);
+    redrawBattleBoards();
+  },
+
+  setFocusUnitRaw: (playerKey, unitKey) => {
+    if (unitKey !== "unit1" && unitKey !== "unit2") return;
+    setFocusUnit(playerKey, unitKey);
+    redrawBattleBoards();
+  },
+
+  startTauntRaw: (ownerPlayer, targetUnitKey) =>
+    twoVtwoTauntController.startTaunt(ownerPlayer, targetUnitKey),
+
+  startDuelRaw: (ownerPlayer, ownUnitKey) =>
+    twoVtwoTauntController.startDuel(ownerPlayer, ownUnitKey),
+
+  renderAttackLogText,
+  showPopup,
 
   getPlayerState,
   spendEvadeForCritical,
@@ -1959,6 +2004,7 @@ cpuTurnGuard = createCpuTurnGuard({
 
 twoVtwoBreakthroughController = create2v2BreakthroughController({
   getBattleMode: () => battleMode,
+  getOnlineMyPlayer: () => onlineState.myPlayer,
   getTeam,
   getOpponentPlayer,
   getRollableSlotKeys,
@@ -1972,6 +2018,25 @@ twoVtwoBreakthroughController = create2v2BreakthroughController({
   setCurrentPlayer: (value) => {
     currentPlayer = value;
   },
+
+  onOnline2v2BreakthroughStart: (initiatorPlayer) => {
+    if (battleMode === "online2v2") {
+      online2v2ActionSync.publishOnline2v2BreakthroughStartAction(initiatorPlayer);
+    }
+  },
+
+  onOnline2v2BreakthroughBet: (player, value) => {
+    if (battleMode === "online2v2") {
+      online2v2ActionSync.publishOnline2v2BreakthroughBetAction(player, value);
+    }
+  },
+
+  onOnline2v2BreakthroughResult: (result) => {
+    if (battleMode === "online2v2") {
+      online2v2ActionSync.publishOnline2v2BreakthroughResultAction(result);
+    }
+  },
+
   redrawBattleBoards,
   showPopup
 });
