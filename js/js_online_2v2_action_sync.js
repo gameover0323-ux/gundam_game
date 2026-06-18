@@ -64,14 +64,17 @@ export function createOnline2v2ActionSync(ctx) {
     publishAction("special2v2", ownerPlayer, { specialKey });
   }
 
-  function publishOnline2v2ChoiceAction(choice, selectedValue) {
-    const actor = choice?.ownerPlayer || ctx.getOnlineMyPlayer();
+function publishOnline2v2ChoiceAction(choice, selectedValue) {
+  const actor = choice?.ownerPlayer || ctx.getOnlineMyPlayer();
+
+  queueMicrotask(() => {
     publishAction("choice2v2", actor, {
       source: choice?.source || null,
       choiceType: choice?.choiceType || null,
       selectedValue
     });
-  }
+  });
+}
 
   function publishOnline2v2QteAction(kind, index) {
     publishAction("qte2v2", ctx.getOnlineMyPlayer(), { kind, index });
