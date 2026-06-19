@@ -4,12 +4,6 @@ function isTermDictionaryEnabled() {
   return localStorage.getItem(TERM_DICTIONARY_ENABLED_KEY) !== "false";
 }
 
-const TERM_DICTIONARY_ENABLED_KEY = "gbs_term_dictionary_enabled";
-
-function isTermDictionaryEnabled() {
-  return localStorage.getItem(TERM_DICTIONARY_ENABLED_KEY) !== "false";
-}
-
 export function createSpecTutorialController(ctx = {}) {
   const TITLE_BUTTON_ID = "specTutorialBtn";
   const BATTLE_BUTTON_ID = "battleTermDictionaryBtn";
@@ -41,36 +35,31 @@ export function createSpecTutorialController(ctx = {}) {
     金色の場合「金上限」と呼称する。
     上限を超えた場合にはターン終了時に端数カットされる。
     ただし、変形やスキルで上限が一時的に増えた場合は赤上限となり、保持される。詳しくは→赤上限
-QTEの場合、所持数を1消費して攻撃を無効化する。
-ただし、必中属性の攻撃は回避できない。
-    </p>` },
+    QTEの場合、所持数を1消費して攻撃を無効化する。
+    ただし、必中属性の攻撃は回避できない。</p>` },
     { title: "赤上限", body: `<p>変形先が現在の回避所持数を下回る最大値の時に
     一時的に保持される状態。
-この状態の時は最大値=所持値になり、
-使用などで数値が減ると連動してストック最大値も
-減っていく。
-そのため、変形して所持数を沢山保持してから最大値が少ない形態に移行する戦法ができる。
-    </p>` },
+    この状態の時は最大値=所持値になり、
+    使用などで数値が減ると連動してストック最大値も
+    減っていく。
+    そのため、変形して所持数を沢山保持してから最大値が少ない形態に移行する戦法ができる。</p>` },
     { title: "金上限", body: `<p>回避ストックが赤上限を超え、
     25の値になると文字色が金になる。
     この状態は頭打ちであり、それ以上になると
     端数は強制的にカットされる。
     しかし、2on2統合型では金上限が合わさり、
-    50が最大値となる。
-    </p>` },
+    50が最大値となる。</p>` },
     { title: "会心", body: `<p>初期値は5%。
     被弾を押した直後に抽選され、会心発動時は
     ダメージが2倍になる。
     会心率は回避を1消費すると3ターンの間4%上昇させることができ、
     方法は会心率表示ボタンのタップ。
-    カットされる最大値を超えた回避はここで使おう。
-    </p>` },
+    カットされる最大値を超えた回避はここで使おう。</p>` },
     { title: "特殊行動", body: `<p>各機体固有のスロット行動とは別の手段。
     説明文を読み、それらの特殊行動を使いこなす
     ことで、単なる乱数だけでなく思考と戦略が産まれる。
     格上の機体に勝利するには、用意された特殊行動を
-    適切に使用する必要がある。読み込み、理解しよう。
-    </p>` },
+    適切に使用する必要がある。読み込み、理解しよう。</p>` },
     { title: "EXスロット", body: `<p>特殊行動や条件によって通常のスロットと入れ替わるスロット。
     条件を満たすとスロットの色が赤色になり、
     ガラリと性能が変わる。
@@ -117,34 +106,29 @@ QTEの場合、所持数を1消費して攻撃を無効化する。
     打たれ強く、火力も高い単純明快に強力。
     しかし、[挑発]「決戦」[打破]はこの型では
     対応できない。単純に強いからこそ、この
-    [挑発]や、[決戦]で崩す必要がある。
-    </p>` },
+    [挑発]や、[決戦]で崩す必要がある。</p>` },
     { title: "2on2：フォーカス", body: `<p>フォーカスは、QTEを受ける機体のこと。
     統合型の場合も、メイン受けを指定できる。
     フォーカス設定された機体は文字色が赤くなり、
     パートナーは白になる。
     統合型はどちらも赤くなるが、フォーカスは
     設定しておくとその機体の受けるスキルで
-    被弾、回避をすることが出来る。
-    </p>` },
+    被弾、回避をすることが出来る。</p>` },
     { title: "2on2：援護防御", body: `<p>2on2分散型で使用可能な行動。
     パートナーの回避を1消費して、その攻撃ダメージのみを半減する。
-    単発を、フォーカス機体ではなくパートナーが被弾する。挑発や決戦時にもそのダメージから半減する。
-    </p>` },
+    単発を、フォーカス機体ではなくパートナーが被弾する。挑発や決戦時にもそのダメージから半減する。</p>` },
     { title: "2on2：挑発", body: `<p>2on2分散型でのみ使用可能なシステム。
     相手にフォーカス機体を指定することができる。
     指定機体は文字色が青色になり、
     指定機体をフォーカス機体にして
     分散型にしないと、1.5倍のダメージを受ける。
     従わなくても戦闘は可能。5ターン間効果は続く。
-    この時、決戦が使用可能になる。
-    </p>` },
+    この時、決戦が使用可能になる。</p>` },
     { title: "2on2：決戦", body: `<p>2on2分散型でのみ使用可能なシステム。
     自分の決戦機体を決定し、現在の相手のフォーカス機体をロックする。
     自分も決戦機体がロックされ、5ターン間お互いのフォーカス機体へのダメージが2倍になる。
     決戦機体は文字色がピンク色になる。
-    この時、[打破]が使用可能になる。
-    </p>` },
+    この時、[打破]が使用可能になる。</p>` },
     { title: "2on2：打破", body: `<p>2on2分散型でのみ使用可能なシステム。
     決戦機体をお互いに0～10の数字をベットし、
     その指定した数字のターン分シミュレーションする。
@@ -152,16 +136,14 @@ QTEの場合、所持数を1消費して攻撃を無効化する。
     回復は相手のダメージ量の減算に使われる。
     勝者はボーナス行動権が手に入り、ボーナス行動権はお互いのベット数が多いほど増える。
     打破後は決戦状態が解除。5ターン間のクールタイムが発生する。
-  めちゃくちゃおもしろいからやってみて。
-    </p>` },
+    めちゃくちゃおもしろいからやってみて。</p>` },
     { title: "オンライン対戦", body: `<p>画面1番上にテキストボックスがある。
     これがチャットで、下部の戦闘ログの上に現れる。
     送信すると上書きされる。
     [和平]は、成立すると試合を無かったことにできる。
-    [降伏]は、無条件で自信が敗北する。
+    [降伏]は、無条件で自身が敗北する。
     意図せず回線が切れた場合も降伏扱いになる。
-    戦闘したプレイヤーは、プレイヤーカードに保存される。
-    </p>` }
+    戦闘したプレイヤーは、プレイヤーカードに保存される。</p>` }
   ];
 
   let currentIndex = 0;
@@ -313,24 +295,23 @@ QTEの場合、所持数を1消費して攻撃を無効化する。
     if (panel) panel.style.display = "none";
   }
 
- function updateVisibility() {
-  const titleBtn = ensureTitleButton();
-  const battleBtn = ensureBattleButton();
-  const enabled = isTermDictionaryEnabled();
+  function updateVisibility() {
+    const titleBtn = ensureTitleButton();
+    const battleBtn = ensureBattleButton();
+    const enabled = isTermDictionaryEnabled();
 
-  titleBtn.style.display = enabled ? "" : "none";
-  battleBtn.style.display =
-    enabled && document.getElementById("battle")
-      ? ""
-      : "none";
-}
+    titleBtn.style.display = enabled ? "" : "none";
+    battleBtn.style.display =
+      enabled && document.getElementById("battle")
+        ? ""
+        : "none";
+  }
 
-window.addEventListener("gbs:termDictionarySettingChanged", updateVisibility);
-
-window.addEventListener("gbs:termDictionarySettingChanged", updateVisibility);
+  window.addEventListener("gbs:termDictionarySettingChanged", updateVisibility);
 
   ensureTitleButton();
   ensureBattleButton();
+  updateVisibility();
 
   return {
     ensureButton: ensureTitleButton,
