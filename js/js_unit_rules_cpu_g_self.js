@@ -292,7 +292,11 @@ export function onCpuGSelfAfterSlotResolved(state, slotNumber, payload = {}) {
 
 export function onCpuGSelfActionResolved(attacker, defender, context = {}) {
   ensureCpuGSelfState(attacker);
-  return onGSelfActionResolved(attacker, context);
+  return onGSelfActionResolved(attacker, {
+    ...(context || {}),
+    defender,
+    context
+  });
 }
 
 export function onCpuGSelfDamaged(defender, attacker, context = {}) {
@@ -325,6 +329,11 @@ export function modifyCpuGSelfTakenDamage(defender, attacker, attack, damage, co
 export function modifyCpuGSelfEvadeAttempt(defender, attacker, attack, context = {}) {
   ensureCpuGSelfState(defender);
   return modifyGSelfEvadeAttempt(defender, attacker, attack, context);
+}
+
+export function getCpuGSelfExtraWeaponResult(state, context = {}) {
+  ensureCpuGSelfState(state);
+  return null;
 }
 
 export function onCpuGSelfResolveChoice(state, pendingChoice, selectedValue, context = {}) {
