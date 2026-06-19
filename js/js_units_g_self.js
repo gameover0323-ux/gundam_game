@@ -1,10 +1,10 @@
 export const g_self = {
   id: "g_self",
-  name: "Gセルフ 宇宙用パック",
+  name: "G-セルフ",
   defaultFormId: "space",
   forms: {
     space: {
-      name: "Gセルフ 宇宙用パック",
+      name: "G-セルフ 宇宙用パック",
       hp: 500,
       evadeMax: 6,
       rollableSlotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"],
@@ -23,7 +23,7 @@ export const g_self = {
       ]
     },
     atmospheric: {
-      name: "Gセルフ 大気圏パック",
+      name: "G-セルフ 大気圏パック",
       hp: 500,
       evadeMax: 6,
       rollableSlotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"],
@@ -42,7 +42,7 @@ export const g_self = {
       ]
     },
     reflector: {
-      name: "Gセルフ リフレクターパック",
+      name: "G-セルフ リフレクターパック",
       hp: 500,
       evadeMax: 6,
       rollableSlotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"],
@@ -63,7 +63,7 @@ export const g_self = {
       ]
     },
     tricky: {
-      name: "Gセルフ トリッキーパック",
+      name: "G-セルフ トリッキーパック",
       hp: 500,
       evadeMax: 6,
       rollableSlotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"],
@@ -83,7 +83,7 @@ export const g_self = {
       ]
     },
     high_torque: {
-      name: "Gセルフ 高トルクパック",
+      name: "G-セルフ 高トルクパック",
       hp: 500,
       evadeMax: 2,
       rollableSlotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"],
@@ -104,7 +104,7 @@ export const g_self = {
       ]
     },
     assault: {
-      name: "Gセルフ アサルトパック",
+      name: "G-セルフ アサルトパック",
       hp: 500,
       evadeMax: 3,
       rollableSlotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"],
@@ -123,7 +123,7 @@ export const g_self = {
       ]
     },
     perfect: {
-      name: "Gセルフ・パーフェクトパック",
+      name: "G-セルフ・パーフェクトパック",
       hp: 500,
       evadeMax: 12,
       rollableSlotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"],
