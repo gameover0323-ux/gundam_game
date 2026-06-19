@@ -177,21 +177,34 @@ function addPackEvadeMax(state, packId) {
   applyPackEvadeMax(state);
 }
 
+function getSelectablePackIds(state, options = {}) {
+  ensureGSelfState(state);
+  const includeCurrent = options.includeCurrent === true;
+  return Object.keys(PACK_LABEL).filter(packId => {
+    if (!state.gselfUnlockedPacks[packId]) return false;
+    if (!includeCurrent && packId === state.formId) return false;
+    return true;
+  });
+}
+
+function makePackChoice(state, context = {}) {
+  ensureGSelfState(state);
+  return {
+    choiceType: "generic",
+    source: "gself_pack_change",
+    ownerPlayer: context.ownerPlayer,
+    enemyPlayer: context.enemyPlayer,
+    title: `PLAYER ${context.ownerPlayer || ""} Gセルフ換装`,
+    choices: getSelectablePackIds(state, { includeCurrent: false }).map(packId => ({
+      label: `${PACK_LABEL[packId]}パック`,
+      value: packId
+    }))
+  };
+}
+
 function buildChangeSpecials(state) {
   ensureGSelfState(state);
-  const specials = {};
-  Object.keys(PACK_LABEL).forEach(packId => {
-    if (!state.gselfUnlockedPacks[packId]) return;
-    if (packId === state.formId) return;
-    specials[`gself_change_${packId}`] = {
-      name: `換装:${PACK_LABEL[packId]}`,
-      effectType: `gself_change_${packId}`,
-      timing: "self",
-      actionType: "instant",
-      desc: `${PACK_LABEL[packId]}パックへ換装する。HP・回避現在値は引き継ぐ。`
-    };
-  });
-  return specials;
+  return {};
 }
 
 function poweredSlot(slot, bonus) {
@@ -307,8 +320,14 @@ export function canUseGSelfSpecial(state, specialKey, context = {}) {
   if (effectType === "gself_high_torque_charge") {
     return { allowed: Number(state.hp || 0) > 200, message: Number(state.hp || 0) > 200 ? null : "HPが足りない" };
   }
+  if (effectType === "gself_change_pack") {
+    if (state.formId === "perfect") return { allowed: false, message: "パーフェクトパック中は手動換装できない" };
+    const choices = getSelectablePackIds(state, { includeCurrent: false });
+    return { allowed: choices.length > 0, message: choices.length > 0 ? null : "換装先がない" };
+  }
   if (effectType.startsWith("gself_change_")) {
     const packId = effectType.replace("gself_change_", "");
+    if (state.formId === "perfect") return { allowed: false, message: "パーフェクトパック中は手動換装できない" };
     return { allowed: !!state.gselfUnlockedPacks[packId], message: state.gselfUnlockedPacks[packId] ? null : "未解放" };
   }
   return { allowed: true, message: null };
@@ -372,7 +391,16 @@ export function executeGSelfSpecial(state, specialKey, context = {}) {
     state.gselfOmniLaserActive = !state.gselfOmniLaserActive;
     return { handled: true, redraw: true, message: null };
   }
+  if (effectType === "gself_change_pack") {
+    if (state.formId === "perfect") {
+      return { handled: true, redraw: false, message: "パーフェクトパック中は手動換装できない" };
+    }
+    return { handled: true, redraw: true, message: null, requestChoice: makePackChoice(state, context) };
+  }
   if (effectType.startsWith("gself_change_")) {
+    if (state.formId === "perfect") {
+      return { handled: true, redraw: false, message: "パーフェクトパック中は手動換装できない" };
+    }
     const packId = effectType.replace("gself_change_", "");
     const ok = changePack(state, packId);
     return { handled: true, redraw: true, message: ok ? `${PACK_LABEL[packId]}パックへ換装` : "未解放" };
@@ -488,4 +516,23 @@ export function modifyGSelfTakenDamage(defender, attacker, attack, damage, conte
 export function onGSelfDamaged() { return { redraw: false, message: null }; }
 export function onGSelfEnemyBeforeSlot() { return { redraw: false, message: null }; }
 export function modifyGSelfEvadeAttempt() { return { handled: false }; }
-export function onGSelfResolveChoice() { return { handled: false, redraw: false, message: null }; }
+export function onGSelfResolveChoice(state, pendingChoice, selectedValue, context = {}) {
+  ensureGSelfState(state);
+  if (pendingChoice?.source === "gself_pack_change") {
+    if (state.formId === "perfect") {
+      return { handled: true, redraw: false, message: "パーフェクトパック中は手動換装できない" };
+    }
+    if (!Object.prototype.hasOwnProperty.call(PACK_LABEL, selectedValue)) {
+      return { handled: true, redraw: false, message: "換装先が不正です" };
+    }
+    if (!state.gselfUnlockedPacks[selectedValue]) {
+      return { handled: true, redraw: false, message: "未解放" };
+    }
+    if (selectedValue === state.formId) {
+      return { handled: true, redraw: false, message: "現在のパックです" };
+    }
+    const ok = changePack(state, selectedValue);
+    return { handled: true, redraw: true, message: ok ? `${PACK_LABEL[selectedValue]}パックへ換装` : "換装失敗" };
+  }
+  return { handled: false, redraw: false, message: null };
+}
