@@ -1,6 +1,6 @@
 export const barbatos = {
   id: "barbatos",
-  name: "ガンダム・バルバトス(第4形態)",
+  name: "ガンダム・バルバトス",
   defaultFormId: "form4",
   forms: {
     form4: {
