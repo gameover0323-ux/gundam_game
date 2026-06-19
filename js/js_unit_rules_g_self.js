@@ -473,8 +473,9 @@ export function onGSelfAfterSlotResolved(state, slotNumber, payload = {}) {
   return { redraw: false, message: null };
 }
 
-export function onGSelfActionResolved(state, payload = {}) {
+export function onGSelfActionResolved(state, defender, payload = {}) {
   ensureGSelfState(state);
+
   const usedAttack = Array.isArray(payload?.resolvedAttacks) && payload.resolvedAttacks.length > 0;
   const messages = [];
   let redraw = false;
@@ -487,10 +488,15 @@ export function onGSelfActionResolved(state, payload = {}) {
 
   if (isPhotonTorpedo) {
     const hitCount = Math.max(0, Math.floor(Number(payload?.hitCount || 0)));
+
     if (hitCount > 0) {
       healRuleHp(state, hitCount * 50, payload);
-      reduceEnemyEvadeRule(payload?.defender || payload?.enemyState || null, hitCount * 2, payload);
-      messages.push(`フォトン･トルピード：${hitCount}ヒット、HP${hitCount * 50}回復、相手回避-${hitCount * 2}`);
+      reduceEnemyEvadeRule(defender, hitCount * 2, payload);
+
+      messages.push(
+        `フォトン･トルピード：${hitCount}ヒット、HP${hitCount * 50}回復、相手回避-${hitCount * 2}`
+      );
+
       redraw = true;
     }
   }
@@ -500,11 +506,15 @@ export function onGSelfActionResolved(state, payload = {}) {
     state.gselfReflectorStockDamage = 0;
     state.gselfReflectorStockCount = 0;
     state.gselfPhotonSearcherReady = false;
+
     if (usedAttack) messages.push("Gセルフ攻撃補助を消費");
     redraw = true;
   }
 
-  return { redraw, message: messages.length > 0 ? messages.join("\n") : null };
+  return {
+    redraw,
+    message: messages.length > 0 ? messages.join("\n") : null
+  };
 }
 
 export function onGSelfTurnEnd(state) {
