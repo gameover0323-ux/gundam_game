@@ -10,7 +10,7 @@ async function sha256(text) {
     .join("");
 }
 
-function validateHalfWidthAlnum(value) {
+function isHalfWidthAlnum(value) {
   return /^[A-Za-z0-9]+$/.test(String(value || ""));
 }
 
@@ -20,23 +20,15 @@ function isTermDictionaryEnabled() {
 
 function setTermDictionaryEnabled(enabled) {
   localStorage.setItem(TERM_DICTIONARY_ENABLED_KEY, enabled ? "true" : "false");
-  window.dispatchEvent(new CustomEvent("gbs:termDictionarySettingChanged", {
-    detail: { enabled }
-  }));
+  window.dispatchEvent(new CustomEvent("gbs:termDictionarySettingChanged"));
 }
 
 export function createPlayerAccountUi(ctx) {
   function formatPlayerComment(text) {
-    const raw = String(text || "")
-      .replace(/\s+/g, "")
-      .slice(0, 20);
-
+    const raw = String(text || "").replace(/\s+/g, "").slice(0, 20);
     if (!raw) return "";
-
     const lines = [];
-    for (let i = 0; i < raw.length; i += 10) {
-      lines.push(raw.slice(i, i + 10));
-    }
+    for (let i = 0; i < raw.length; i += 10) lines.push(raw.slice(i, i + 10));
     return lines.join("\n");
   }
 
@@ -50,9 +42,7 @@ export function createPlayerAccountUi(ctx) {
     if (Array.isArray(profile?.favoriteUnitIds)) {
       return profile.favoriteUnitIds.filter(Boolean).slice(0, 3);
     }
-    if (profile?.favoriteUnitId) {
-      return [profile.favoriteUnitId];
-    }
+    if (profile?.favoriteUnitId) return [profile.favoriteUnitId];
     return [];
   }
 
@@ -135,17 +125,15 @@ export function createPlayerAccountUi(ctx) {
   }
 
   function ensureAccountListButton() {
-    const settingsBtn = ensureSettingsButton();
-    const statsBtn = document.getElementById("playerStatsBtn");
-    const insertBase = settingsBtn || statsBtn;
-    if (!insertBase) return null;
+    const baseBtn = ensureSettingsButton() || document.getElementById("playerStatsBtn");
+    if (!baseBtn) return null;
 
     let btn = document.getElementById("accountListBtn");
     if (!btn) {
       btn = document.createElement("button");
       btn.id = "accountListBtn";
       btn.textContent = "アカウントリスト";
-      insertBase.insertAdjacentElement("afterend", btn);
+      baseBtn.insertAdjacentElement("afterend", btn);
       btn.addEventListener("click", ctx.renderAccountListPanel);
     }
 
@@ -168,7 +156,7 @@ export function createPlayerAccountUi(ctx) {
 
     const profile = ctx.getPlayerProfile();
     if (!profile) {
-      ctx.showPopup("ログイン中のみ設定を変更できます");
+      ctx.showPopup("ログイン中のみ設定できます");
       return;
     }
 
@@ -183,37 +171,30 @@ export function createPlayerAccountUi(ctx) {
     panel.style.overflowY = "auto";
 
     panel.innerHTML = `
-      <div style="max-width:560px;margin:0 auto;border:1px solid white;border-radius:10px;padding:14px;background:#050505;">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-          <h2 style="margin:0;">プレイヤー設定</h2>
-          <button id="playerSettingsCloseBtn" type="button">閉じる</button>
-        </div>
+      <div style="max-width:520px;margin:0 auto;border:1px solid white;border-radius:10px;padding:14px;background:#050505;text-align:center;">
+        <h2>プレイヤー設定</h2>
 
         <div style="border-top:1px solid #777;margin-top:12px;padding-top:12px;">
           <h3>用語辞典</h3>
-          <p>戦闘画面中央の「用語」ボタン表示を切り替えます。オンライン対戦中でも、この設定は自分の画面だけに反映されます。</p>
           <button id="termDictionaryToggleBtn" type="button"></button>
         </div>
 
         <div style="border-top:1px solid #777;margin-top:12px;padding-top:12px;">
           <h3>パスワード変更</h3>
-          <p>IDと同じく、半角英数字のみ使用できます。</p>
           <button id="changePasswordBtn" type="button">パスワード変更</button>
+        </div>
+
+        <div style="margin-top:16px;">
+          <button id="playerSettingsCloseBtn" type="button">閉じる</button>
         </div>
       </div>
     `;
 
     document.body.appendChild(panel);
 
-    panel.querySelector("#playerSettingsCloseBtn").addEventListener("click", closeSettingsPanel);
-
-    panel.addEventListener("click", event => {
-      if (event.target === panel) closeSettingsPanel();
-    });
-
     const toggleBtn = panel.querySelector("#termDictionaryToggleBtn");
 
-    function refreshToggleText() {
+    function refreshToggle() {
       toggleBtn.textContent = isTermDictionaryEnabled()
         ? "用語辞典：ON"
         : "用語辞典：OFF";
@@ -221,12 +202,17 @@ export function createPlayerAccountUi(ctx) {
 
     toggleBtn.addEventListener("click", () => {
       setTermDictionaryEnabled(!isTermDictionaryEnabled());
-      refreshToggleText();
+      refreshToggle();
     });
 
     panel.querySelector("#changePasswordBtn").addEventListener("click", handleChangePassword);
+    panel.querySelector("#playerSettingsCloseBtn").addEventListener("click", closeSettingsPanel);
 
-    refreshToggleText();
+    panel.addEventListener("click", event => {
+      if (event.target === panel) closeSettingsPanel();
+    });
+
+    refreshToggle();
   }
 
   async function handleChangePassword() {
@@ -239,7 +225,7 @@ export function createPlayerAccountUi(ctx) {
     const currentPassword = prompt("現在のパスワードを入力してください");
     if (!currentPassword) return;
 
-    if (!validateHalfWidthAlnum(currentPassword.trim())) {
+    if (!isHalfWidthAlnum(currentPassword.trim())) {
       ctx.showPopup("パスワードは半角英数字のみです");
       return;
     }
@@ -250,10 +236,10 @@ export function createPlayerAccountUi(ctx) {
       return;
     }
 
-    const nextPassword = prompt("新しいパスワードを半角英数字で入力してください");
+    const nextPassword = prompt("新しいパスワードを入力してください");
     if (!nextPassword) return;
 
-    if (!validateHalfWidthAlnum(nextPassword.trim())) {
+    if (!isHalfWidthAlnum(nextPassword.trim())) {
       ctx.showPopup("新しいパスワードは半角英数字のみです");
       return;
     }
@@ -330,9 +316,9 @@ export function createPlayerAccountUi(ctx) {
     ctx.logoutPlayer();
     ctx.clearExtraUnlockedUnits();
     ctx.setTestMode(false);
+    closeSettingsPanel();
     updatePlayerCardUi();
     ctx.updateDebugButtonVisibility();
-    closeSettingsPanel();
     ctx.showPopup("ログアウトしました");
   }
 
