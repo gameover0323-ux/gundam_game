@@ -1,3 +1,30 @@
+import { saveCurrentPlayerProfile } from "./js_player_profile.js";
+
+const TERM_DICTIONARY_ENABLED_KEY = "gbs_term_dictionary_enabled";
+
+async function sha256(text) {
+  const data = new TextEncoder().encode(String(text));
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return [...new Uint8Array(hash)]
+    .map(v => v.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function validateHalfWidthAlnum(value) {
+  return /^[A-Za-z0-9]+$/.test(String(value || ""));
+}
+
+function isTermDictionaryEnabled() {
+  return localStorage.getItem(TERM_DICTIONARY_ENABLED_KEY) !== "false";
+}
+
+function setTermDictionaryEnabled(enabled) {
+  localStorage.setItem(TERM_DICTIONARY_ENABLED_KEY, enabled ? "true" : "false");
+  window.dispatchEvent(new CustomEvent("gbs:termDictionarySettingChanged", {
+    detail: { enabled }
+  }));
+}
+
 export function createPlayerAccountUi(ctx) {
   function formatPlayerComment(text) {
     const raw = String(text || "")
@@ -10,7 +37,7 @@ export function createPlayerAccountUi(ctx) {
     for (let i = 0; i < raw.length; i += 10) {
       lines.push(raw.slice(i, i + 10));
     }
-    return lines.join("<br>");
+    return lines.join("\n");
   }
 
   function getUnitTrophyText(profile, unitId) {
@@ -23,11 +50,9 @@ export function createPlayerAccountUi(ctx) {
     if (Array.isArray(profile?.favoriteUnitIds)) {
       return profile.favoriteUnitIds.filter(Boolean).slice(0, 3);
     }
-
     if (profile?.favoriteUnitId) {
       return [profile.favoriteUnitId];
     }
-
     return [];
   }
 
@@ -48,48 +73,79 @@ export function createPlayerAccountUi(ctx) {
       registerBtn.style.display = "";
       logoutBtn.style.display = "none";
       statsBtn.style.display = "none";
+
+      const settingsBtn = document.getElementById("playerSettingsBtn");
+      if (settingsBtn) settingsBtn.style.display = "none";
+
+      const accountListBtn = document.getElementById("accountListBtn");
+      if (accountListBtn) accountListBtn.style.display = "none";
+
       return;
     }
 
-    const titleText = Array.isArray(profile.equippedTitles) && profile.equippedTitles.length > 0
-      ? profile.equippedTitles
-          .map(id => `[${ctx.getTitleName(id)}]`)
-          .join("")
-      : "称号なし";
+    const titleText =
+      Array.isArray(profile.equippedTitles) && profile.equippedTitles.length > 0
+        ? profile.equippedTitles.map(id => `[${ctx.getTitleName(id)}]`).join("")
+        : "称号なし";
 
-    const favoriteUnitText = getFavoriteUnitIds(profile)
-      .map(unitId => `${ctx.getUnitNameById(unitId)}${getUnitTrophyText(profile, unitId)}`)
-      .join("<br>") || "未設定";
+    const favoriteUnitText =
+      getFavoriteUnitIds(profile)
+        .map(unitId => `${ctx.getUnitNameById(unitId)}${getUnitTrophyText(profile, unitId)}`)
+        .join("<br>") || "未設定";
 
-    const commentHtml = formatPlayerComment(profile.comment) || "未設定";
+    const commentHtml = formatPlayerComment(profile.comment).replace(/\n/g, "<br>") || "未設定";
 
     summary.innerHTML = `
-ID：${profile.id}<br>
-名前：${profile.name}<br>
-登録日：${profile.registeredAt}<br>
-権限：${profile.role}<br>
-一言：<br>${commentHtml}<br>
-お気に入り機体：<br>${favoriteUnitText}<br>
-称号：${titleText}
-`;
+      ID：${profile.id}<br>
+      名前：${profile.name}<br>
+      登録日：${profile.registeredAt}<br>
+      権限：${profile.role}<br>
+      一言：<br>
+      ${commentHtml}<br>
+      お気に入り機体：<br>
+      ${favoriteUnitText}<br>
+      称号：${titleText}
+    `;
 
     loginBtn.style.display = "none";
     registerBtn.style.display = "none";
     logoutBtn.style.display = "";
     statsBtn.style.display = "";
+
+    ensureSettingsButton();
     ensureAccountListButton();
   }
 
-  function ensureAccountListButton() {
+  function ensureSettingsButton() {
     const statsBtn = document.getElementById("playerStatsBtn");
     if (!statsBtn) return null;
+
+    let btn = document.getElementById("playerSettingsBtn");
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.id = "playerSettingsBtn";
+      btn.type = "button";
+      btn.textContent = "設定";
+      statsBtn.insertAdjacentElement("afterend", btn);
+      btn.addEventListener("click", renderSettingsPanel);
+    }
+
+    btn.style.display = ctx.getPlayerProfile() ? "" : "none";
+    return btn;
+  }
+
+  function ensureAccountListButton() {
+    const settingsBtn = ensureSettingsButton();
+    const statsBtn = document.getElementById("playerStatsBtn");
+    const insertBase = settingsBtn || statsBtn;
+    if (!insertBase) return null;
 
     let btn = document.getElementById("accountListBtn");
     if (!btn) {
       btn = document.createElement("button");
       btn.id = "accountListBtn";
       btn.textContent = "アカウントリスト";
-      statsBtn.insertAdjacentElement("afterend", btn);
+      insertBase.insertAdjacentElement("afterend", btn);
       btn.addEventListener("click", ctx.renderAccountListPanel);
     }
 
@@ -102,6 +158,125 @@ ID：${profile.id}<br>
     return btn;
   }
 
+  function closeSettingsPanel() {
+    const panel = document.getElementById("playerSettingsPanel");
+    if (panel) panel.remove();
+  }
+
+  function renderSettingsPanel() {
+    closeSettingsPanel();
+
+    const profile = ctx.getPlayerProfile();
+    if (!profile) {
+      ctx.showPopup("ログイン中のみ設定を変更できます");
+      return;
+    }
+
+    const panel = document.createElement("div");
+    panel.id = "playerSettingsPanel";
+    panel.style.position = "fixed";
+    panel.style.inset = "0";
+    panel.style.zIndex = "10000";
+    panel.style.background = "rgba(0,0,0,0.86)";
+    panel.style.color = "white";
+    panel.style.padding = "16px";
+    panel.style.overflowY = "auto";
+
+    panel.innerHTML = `
+      <div style="max-width:560px;margin:0 auto;border:1px solid white;border-radius:10px;padding:14px;background:#050505;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <h2 style="margin:0;">プレイヤー設定</h2>
+          <button id="playerSettingsCloseBtn" type="button">閉じる</button>
+        </div>
+
+        <div style="border-top:1px solid #777;margin-top:12px;padding-top:12px;">
+          <h3>用語辞典</h3>
+          <p>戦闘画面中央の「用語」ボタン表示を切り替えます。オンライン対戦中でも、この設定は自分の画面だけに反映されます。</p>
+          <button id="termDictionaryToggleBtn" type="button"></button>
+        </div>
+
+        <div style="border-top:1px solid #777;margin-top:12px;padding-top:12px;">
+          <h3>パスワード変更</h3>
+          <p>IDと同じく、半角英数字のみ使用できます。</p>
+          <button id="changePasswordBtn" type="button">パスワード変更</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(panel);
+
+    panel.querySelector("#playerSettingsCloseBtn").addEventListener("click", closeSettingsPanel);
+
+    panel.addEventListener("click", event => {
+      if (event.target === panel) closeSettingsPanel();
+    });
+
+    const toggleBtn = panel.querySelector("#termDictionaryToggleBtn");
+
+    function refreshToggleText() {
+      toggleBtn.textContent = isTermDictionaryEnabled()
+        ? "用語辞典：ON"
+        : "用語辞典：OFF";
+    }
+
+    toggleBtn.addEventListener("click", () => {
+      setTermDictionaryEnabled(!isTermDictionaryEnabled());
+      refreshToggleText();
+    });
+
+    panel.querySelector("#changePasswordBtn").addEventListener("click", handleChangePassword);
+
+    refreshToggleText();
+  }
+
+  async function handleChangePassword() {
+    const profile = ctx.getPlayerProfile();
+    if (!profile) {
+      ctx.showPopup("ログイン中のみ変更できます");
+      return;
+    }
+
+    const currentPassword = prompt("現在のパスワードを入力してください");
+    if (!currentPassword) return;
+
+    if (!validateHalfWidthAlnum(currentPassword.trim())) {
+      ctx.showPopup("パスワードは半角英数字のみです");
+      return;
+    }
+
+    const currentHash = await sha256(currentPassword.trim());
+    if (currentHash !== profile.passwordHash) {
+      ctx.showPopup("現在のパスワードが違います");
+      return;
+    }
+
+    const nextPassword = prompt("新しいパスワードを半角英数字で入力してください");
+    if (!nextPassword) return;
+
+    if (!validateHalfWidthAlnum(nextPassword.trim())) {
+      ctx.showPopup("新しいパスワードは半角英数字のみです");
+      return;
+    }
+
+    const confirmPassword = prompt("確認のため、新しいパスワードをもう一度入力してください");
+    if (!confirmPassword) return;
+
+    if (nextPassword.trim() !== confirmPassword.trim()) {
+      ctx.showPopup("新しいパスワードが一致しません");
+      return;
+    }
+
+    profile.passwordHash = await sha256(nextPassword.trim());
+
+    const result = await saveCurrentPlayerProfile();
+    if (!result.ok) {
+      ctx.showPopup("パスワード変更に失敗しました");
+      return;
+    }
+
+    ctx.showPopup("パスワードを変更しました");
+  }
+
   async function handleLogin() {
     const id = prompt("プレイヤーIDを入力してください");
     if (!id) return;
@@ -110,7 +285,6 @@ ID：${profile.id}<br>
     if (!password) return;
 
     const result = await ctx.loginPlayer(id.trim(), password.trim());
-
     if (!result.ok) {
       ctx.showPopup(result.message || "ログインに失敗しました");
       return;
@@ -158,6 +332,7 @@ ID：${profile.id}<br>
     ctx.setTestMode(false);
     updatePlayerCardUi();
     ctx.updateDebugButtonVisibility();
+    closeSettingsPanel();
     ctx.showPopup("ログアウトしました");
   }
 
@@ -167,6 +342,8 @@ ID：${profile.id}<br>
     getFavoriteUnitIds,
     updatePlayerCardUi,
     ensureAccountListButton,
+    ensureSettingsButton,
+    renderSettingsPanel,
     handleLogin,
     handleRegister,
     handleLogout
