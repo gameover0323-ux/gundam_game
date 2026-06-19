@@ -121,6 +121,21 @@ import {
   modifyUnicornTakenDamage,
   onUnicornDispelBoostState
 } from "./js_unit_rules_unicorn_gundam.js";
+
+import { getGSelfDerivedState, 
+        canUseGSelfSpecial, 
+        executeGSelfSpecial, 
+        onGSelfTurnEnd, 
+        onGSelfBeforeSlot, 
+        onGSelfEnemyBeforeSlot,
+        onGSelfAfterSlotResolved,
+        onGSelfActionResolved,
+        onGSelfDamaged, 
+        modifyGSelfTakenDamage, 
+        modifyGSelfEvadeAttempt,
+        onGSelfResolveChoice
+       } from "./js_unit_rules_g_self.js";
+
 import {
   getBarbatosDerivedState,
   canUseBarbatosSpecial,
@@ -321,6 +336,22 @@ import {
   modifyCpuUnicornTakenDamage,
   modifyCpuUnicornEvadeAttempt
 } from "./js_unit_rules_cpu_unicorn_gundam.js";
+
+import { getCpuGSelfDerivedState,
+        canUseCpuGSelfSpecial, 
+        executeCpuGSelfSpecial, 
+        onCpuGSelfTurnEnd, 
+        onCpuGSelfBeforeSlot,
+        onCpuGSelfEnemyBeforeSlot, 
+        onCpuGSelfAfterSlotResolved, 
+        onCpuGSelfActionResolved, 
+        onCpuGSelfDamaged,
+        modifyCpuGSelfTakenDamage,
+        modifyCpuGSelfEvadeAttempt,
+        onCpuGSelfResolveChoice 
+       } from "./js_unit_rules_cpu_g_self.js";
+
+
 import {
   getCpuBarbatosDerivedState,
   onCpuBarbatosBeforeSlot,
@@ -510,6 +541,22 @@ v2_gundam: {
   modifyTakenDamage: modifyUnicornTakenDamage,
   onDispelBoostState: onUnicornDispelBoostState
 },
+
+g_self: {
+  getDerivedState: getGSelfDerivedState,
+  canUseSpecial: canUseGSelfSpecial,
+  executeSpecial: executeGSelfSpecial,
+  onTurnEnd: onGSelfTurnEnd,
+  onBeforeSlot: onGSelfBeforeSlot,
+  onEnemyBeforeSlot: onGSelfEnemyBeforeSlot,
+  onAfterSlotResolved: onGSelfAfterSlotResolved,
+  onActionResolved: onGSelfActionResolved,
+  onDamaged: onGSelfDamaged,
+  modifyTakenDamage: modifyGSelfTakenDamage,
+  modifyEvadeAttempt: modifyGSelfEvadeAttempt,
+  onResolveChoice: onGSelfResolveChoice
+},
+  
 barbatos: {
   getDerivedState: getBarbatosDerivedState,
   canUseSpecial: canUseBarbatosSpecial,
@@ -659,6 +706,22 @@ cpu_unicorn_gundam: {
   modifyTakenDamage: modifyCpuUnicornTakenDamage,
   modifyEvadeAttempt: modifyCpuUnicornEvadeAttempt
 },
+
+cpu_g_self: {
+  getDerivedState: getCpuGSelfDerivedState,
+  canUseSpecial: canUseCpuGSelfSpecial,
+  executeSpecial: executeCpuGSelfSpecial,
+  onTurnEnd: onCpuGSelfTurnEnd,
+  onBeforeSlot: onCpuGSelfBeforeSlot,
+  onEnemyBeforeSlot: onCpuGSelfEnemyBeforeSlot,
+  onAfterSlotResolved: onCpuGSelfAfterSlotResolved,
+  onActionResolved: onCpuGSelfActionResolved,
+  onDamaged: onCpuGSelfDamaged,
+  modifyTakenDamage: modifyCpuGSelfTakenDamage,
+  modifyEvadeAttempt: modifyCpuGSelfEvadeAttempt,
+  onResolveChoice: onCpuGSelfResolveChoice
+},
+  
 cpu_barbatos: {
   getDerivedState: getCpuBarbatosDerivedState,
   onBeforeSlot: onCpuBarbatosBeforeSlot,
