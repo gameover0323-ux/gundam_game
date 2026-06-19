@@ -144,6 +144,18 @@ function reduceEnemyEvade(enemyState, amount) {
   normalizeEvadeCapState(enemyState);
 }
 
+function reduceEnemyEvadeRule(enemyState, amount, context = {}) {
+  const value = Math.max(0, Math.floor(Number(amount || 0)));
+  if (!enemyState || value <= 0) return true;
+  const adapter = getAdapter(context);
+  const enemyPlayer = context?.enemyPlayer || null;
+  if (adapter?.consumeEvade && enemyPlayer) {
+    return adapter.consumeEvade(enemyPlayer, enemyState, value);
+  }
+  reduceEnemyEvade(enemyState, value);
+  return true;
+}
+
 function applyPackEvadeMax(state) {
   if (!state) return;
   const formId = state.formId || "space";
@@ -158,6 +170,10 @@ function applyPackEvadeMax(state) {
 function changePack(state, packId) {
   ensureGSelfState(state);
   if (!state.gselfUnlockedPacks[packId]) return false;
+  const beforeFormId = state.formId || "space";
+  if (beforeFormId !== packId) {
+    clearReflectorStock(state);
+  }
   setForm(state, packId, { preserveHp: true, preserveEvade: true });
   applyPackEvadeMax(state);
   return true;
@@ -228,6 +244,12 @@ function getAttackBaseDamage(attack) {
   return Math.max(0, Number(attack?.damage || 0));
 }
 
+function clearReflectorStock(state) {
+  if (!state) return;
+  state.gselfReflectorStockDamage = 0;
+  state.gselfReflectorStockCount = 0;
+}
+
 function makeOmniLaserSlot() {
   return {
     label: "6EX 全方位レーザー",
@@ -257,7 +279,8 @@ export function getGSelfDerivedState(state) {
   if (state.gselfPhotonShieldBarrier > 0) status.push("フォトン･シールド無効:1回");
 
   const slots = {};
-  const bonus = Math.max(0, Number(state.gselfRocketBoostCount || 0) * 50 + Number(state.gselfReflectorStockDamage || 0));
+  const reflectorBonus = (formId === "reflector" || formId === "perfect") ? Number(state.gselfReflectorStockDamage || 0) : 0;
+  const bonus = Math.max(0, Number(state.gselfRocketBoostCount || 0) * 50 + reflectorBonus);
   const currentSlots = state.slots || {};
   Object.entries(currentSlots).forEach(([slotKey, slot]) => {
     if (slot?.effect?.type !== "attack") return;
@@ -453,14 +476,35 @@ export function onGSelfAfterSlotResolved(state, slotNumber, payload = {}) {
 export function onGSelfActionResolved(state, payload = {}) {
   ensureGSelfState(state);
   const usedAttack = Array.isArray(payload?.resolvedAttacks) && payload.resolvedAttacks.length > 0;
+  const messages = [];
+  let redraw = false;
+
+  const isPhotonTorpedo =
+    state.formId === "perfect" &&
+    (payload?.slotKey === "slot6" || Number(payload?.slotNumber || 0) === 6) &&
+    Array.isArray(payload?.resolvedAttacks) &&
+    payload.resolvedAttacks.some(attack => attack?.special === "gself_photon_torpedo");
+
+  if (isPhotonTorpedo) {
+    const hitCount = Math.max(0, Math.floor(Number(payload?.hitCount || 0)));
+    if (hitCount > 0) {
+      healRuleHp(state, hitCount * 50, payload);
+      reduceEnemyEvadeRule(payload?.defender || payload?.enemyState || null, hitCount * 2, payload);
+      messages.push(`フォトン･トルピード：${hitCount}ヒット、HP${hitCount * 50}回復、相手回避-${hitCount * 2}`);
+      redraw = true;
+    }
+  }
+
   if (state.gselfRocketBoostCount > 0 || state.gselfReflectorStockDamage > 0 || state.gselfPhotonSearcherReady) {
     state.gselfRocketBoostCount = 0;
     state.gselfReflectorStockDamage = 0;
     state.gselfReflectorStockCount = 0;
     state.gselfPhotonSearcherReady = false;
-    return { redraw: true, message: usedAttack ? "Gセルフ攻撃補助を消費" : null };
+    if (usedAttack) messages.push("Gセルフ攻撃補助を消費");
+    redraw = true;
   }
-  return { redraw: false, message: null };
+
+  return { redraw, message: messages.length > 0 ? messages.join("\n") : null };
 }
 
 export function onGSelfTurnEnd(state) {
@@ -516,6 +560,7 @@ export function modifyGSelfTakenDamage(defender, attacker, attack, damage, conte
 export function onGSelfDamaged() { return { redraw: false, message: null }; }
 export function onGSelfEnemyBeforeSlot() { return { redraw: false, message: null }; }
 export function modifyGSelfEvadeAttempt() { return { handled: false }; }
+
 export function onGSelfResolveChoice(state, pendingChoice, selectedValue, context = {}) {
   ensureGSelfState(state);
   if (pendingChoice?.source === "gself_pack_change") {
