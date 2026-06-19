@@ -47,6 +47,7 @@ function ensureGSelfState(state) {
   if (typeof state.gselfReflectorShieldActive !== "boolean") state.gselfReflectorShieldActive = false;
   if (typeof state.gselfPhotonArmorShieldActive !== "boolean") state.gselfPhotonArmorShieldActive = false;
   if (typeof state.gselfPhotonShieldBarrier !== "number") state.gselfPhotonShieldBarrier = 0;
+  if (typeof state.gselfEmergencyEscapeActive !== "boolean") state.gselfEmergencyEscapeActive = false;
   if (typeof state.gselfReflectorStockDamage !== "number") state.gselfReflectorStockDamage = 0;
   if (typeof state.gselfReflectorStockCount !== "number") state.gselfReflectorStockCount = 0;
   if (typeof state.gselfRocketBoostCount !== "number") state.gselfRocketBoostCount = 0;
@@ -94,6 +95,7 @@ function addRuleAction(state, amount, context = {}) {
   if (value <= 0) return true;
   const adapter = getAdapter(context);
   const ownerPlayer = getOwnerPlayer(context);
+  if (adapter?.addAction && ownerPlayer) return adapter.addAction(ownerPlayer, state, value);
   if (adapter?.addActionCount && ownerPlayer) return adapter.addActionCount(ownerPlayer, state, value);
   state.actionCount = Math.max(0, Number(state.actionCount || 0) + value);
   return true;
@@ -354,9 +356,10 @@ export function executeGSelfSpecial(state, specialKey, context = {}) {
   if (effectType === "gself_emergency_escape") {
     state.gselfUnlockedPacks.assault = false;
     state.gselfSpaceShieldActive = false;
-    state.gselfAtmosphericShieldActive = true;
+    state.gselfAtmosphericShieldActive = false;
     state.gselfReflectorShieldActive = false;
     state.gselfPhotonArmorShieldActive = false;
+    state.gselfEmergencyEscapeActive = true;
     changePack(state, "space");
     return { handled: true, redraw: true, message: "緊急離脱：攻撃無効化" };
   }
@@ -438,6 +441,7 @@ export function onGSelfTurnEnd(state) {
   state.gselfAtmosphericShieldActive = false;
   state.gselfReflectorShieldActive = false;
   state.gselfPhotonArmorShieldActive = false;
+  state.gselfEmergencyEscapeActive = false;
   state.gselfPhotonShieldBarrier = 0;
   return { redraw: false, message: null };
 }
@@ -448,7 +452,7 @@ export function modifyGSelfTakenDamage(defender, attacker, attack, damage, conte
     defender.gselfPhotonShieldBarrier -= 1;
     return { damage: 0, cancelled: true, message: "フォトン･シールド：攻撃無効" };
   }
-  if (defender.formId === "assault" && defender.gselfAtmosphericShieldActive) {
+  if (defender.gselfEmergencyEscapeActive) {
     return { damage: 0, cancelled: true, message: "緊急離脱：攻撃無効" };
   }
   if ((defender.formId === "reflector" || defender.formId === "perfect") && shouldReflectAttack(attack) && Number(defender.gselfReflectorStockCount || 0) < 8) {
