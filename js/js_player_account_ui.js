@@ -25,11 +25,17 @@ function setTermDictionaryEnabled(enabled) {
 
 export function createPlayerAccountUi(ctx) {
   function formatPlayerComment(text) {
-    const raw = String(text || "").replace(/\s+/g, "").slice(0, 20);
+    const raw = String(text || "")
+      .replace(/\s+/g, "")
+      .slice(0, 20);
+
     if (!raw) return "";
+
     const lines = [];
-    for (let i = 0; i < raw.length; i += 10) lines.push(raw.slice(i, i + 10));
-    return lines.join("\n");
+    for (let i = 0; i < raw.length; i += 10) {
+      lines.push(raw.slice(i, i + 10));
+    }
+    return lines.join("<br>");
   }
 
   function getUnitTrophyText(profile, unitId) {
@@ -42,7 +48,11 @@ export function createPlayerAccountUi(ctx) {
     if (Array.isArray(profile?.favoriteUnitIds)) {
       return profile.favoriteUnitIds.filter(Boolean).slice(0, 3);
     }
-    if (profile?.favoriteUnitId) return [profile.favoriteUnitId];
+
+    if (profile?.favoriteUnitId) {
+      return [profile.favoriteUnitId];
+    }
+
     return [];
   }
 
@@ -73,29 +83,27 @@ export function createPlayerAccountUi(ctx) {
       return;
     }
 
-    const titleText =
-      Array.isArray(profile.equippedTitles) && profile.equippedTitles.length > 0
-        ? profile.equippedTitles.map(id => `[${ctx.getTitleName(id)}]`).join("")
-        : "称号なし";
+    const titleText = Array.isArray(profile.equippedTitles) && profile.equippedTitles.length > 0
+      ? profile.equippedTitles
+          .map(id => `[${ctx.getTitleName(id)}]`)
+          .join("")
+      : "称号なし";
 
-    const favoriteUnitText =
-      getFavoriteUnitIds(profile)
-        .map(unitId => `${ctx.getUnitNameById(unitId)}${getUnitTrophyText(profile, unitId)}`)
-        .join("<br>") || "未設定";
+    const favoriteUnitText = getFavoriteUnitIds(profile)
+      .map(unitId => `${ctx.getUnitNameById(unitId)}${getUnitTrophyText(profile, unitId)}`)
+      .join("<br>") || "未設定";
 
-    const commentHtml = formatPlayerComment(profile.comment).replace(/\n/g, "<br>") || "未設定";
+    const commentHtml = formatPlayerComment(profile.comment) || "未設定";
 
     summary.innerHTML = `
-      ID：${profile.id}<br>
-      名前：${profile.name}<br>
-      登録日：${profile.registeredAt}<br>
-      権限：${profile.role}<br>
-      一言：<br>
-      ${commentHtml}<br>
-      お気に入り機体：<br>
-      ${favoriteUnitText}<br>
-      称号：${titleText}
-    `;
+ID：${profile.id}<br>
+名前：${profile.name}<br>
+登録日：${profile.registeredAt}<br>
+権限：${profile.role}<br>
+一言：<br>${commentHtml}<br>
+お気に入り機体：<br>${favoriteUnitText}<br>
+称号：${titleText}
+`;
 
     loginBtn.style.display = "none";
     registerBtn.style.display = "none";
@@ -125,7 +133,9 @@ export function createPlayerAccountUi(ctx) {
   }
 
   function ensureAccountListButton() {
-    const baseBtn = ensureSettingsButton() || document.getElementById("playerStatsBtn");
+    const settingsBtn = ensureSettingsButton();
+    const statsBtn = document.getElementById("playerStatsBtn");
+    const baseBtn = settingsBtn || statsBtn;
     if (!baseBtn) return null;
 
     let btn = document.getElementById("accountListBtn");
@@ -271,6 +281,7 @@ export function createPlayerAccountUi(ctx) {
     if (!password) return;
 
     const result = await ctx.loginPlayer(id.trim(), password.trim());
+
     if (!result.ok) {
       ctx.showPopup(result.message || "ログインに失敗しました");
       return;
