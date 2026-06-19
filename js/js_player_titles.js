@@ -382,6 +382,46 @@ export const DEFEAT_TITLE_RULES = [
     [50, "駆逐する"]
   ]
 }),
+
+
+...makeDefeatTitleRules({
+  category: "playable",
+  targetId: "g_self",
+  prefix: "g_self",
+  entries: [
+    [1, "元気のG"],
+    [5, "大気圏"],
+    [10, "パック"],
+    [15, "宇宙用"],
+    [20, "スコード！"],
+    [25, "高トルク"],
+    [30, "レイハントン"],
+    [35, "リフレクター"],
+    [40, "キャピタルガード"],
+    [45, "トリッキー"],
+    [50, "アリアトアシタ！"]
+  ]
+}),
+...makeDefeatTitleRules({
+  category: "cpu",
+  targetId: "cpu_g_self",
+  prefix: "cpu_g_self",
+  entries: [
+    [1, "アサルト"],
+    [5, "なんじゃとて！"],
+    [10, "パーフェクト"],
+    [15, "地球一周"],
+    [20, "するぞー！"],
+    [25, "解らないのかー！"],
+    [30, "ベルリ"],
+    [35, "G"],
+    [40, "レコンギスタ"],
+    [45, "Gセルフ"],
+    [50, "GははじまりのG"]
+  ]
+}),
+
+  
 ...makeDefeatTitleRules({
   category: "playable",
   targetId: "barbatos",
@@ -730,6 +770,8 @@ cpu_v2_gundam: "V2ガンダムのCPU",
 cpu_exia: "ガンダムエクシアのCPU",
     unicorn_gundam: "ユニコーンガンダム",
     cpu_unicorn_gundam: "ユニコーンガンダムのCPU",
+    g_self: "Gセルフ",
+cpu_g_self: "GセルフのCPU",
  barbatos: "ガンダム・バルバトス",
 cpu_barbatos: "ガンダム・バルバトスのCPU",
     aerial: "ガンダム・エアリアル",
@@ -792,6 +834,8 @@ export const TITLE_GROUPS = [
 ["cpu_exia", "CPUガンダムエクシア撃破"],
     ["unicorn_gundam", "ユニコーンガンダム使用"],
     ["cpu_unicorn_gundam", "CPUユニコーンガンダム撃破"],
+["g_self", "Gセルフ使用"],
+["cpu_g_self", "CPU Gセルフ撃破"],
     ["barbatos", "ガンダム・バルバトス使用"],
 ["cpu_barbatos", "CPUガンダム・バルバトス撃破"],
     ["aerial", "ガンダム・エアリアル使用"],
