@@ -4,6 +4,12 @@ function isTermDictionaryEnabled() {
   return localStorage.getItem(TERM_DICTIONARY_ENABLED_KEY) !== "false";
 }
 
+const TERM_DICTIONARY_ENABLED_KEY = "gbs_term_dictionary_enabled";
+
+function isTermDictionaryEnabled() {
+  return localStorage.getItem(TERM_DICTIONARY_ENABLED_KEY) !== "false";
+}
+
 export function createSpecTutorialController(ctx = {}) {
   const TITLE_BUTTON_ID = "specTutorialBtn";
   const BATTLE_BUTTON_ID = "battleTermDictionaryBtn";
@@ -307,7 +313,7 @@ QTEの場合、所持数を1消費して攻撃を無効化する。
     if (panel) panel.style.display = "none";
   }
 
-  function updateVisibility() {
+ function updateVisibility() {
   const titleBtn = ensureTitleButton();
   const battleBtn = ensureBattleButton();
   const enabled = isTermDictionaryEnabled();
@@ -318,6 +324,8 @@ QTEの場合、所持数を1消費して攻撃を無効化する。
       ? ""
       : "none";
 }
+
+window.addEventListener("gbs:termDictionarySettingChanged", updateVisibility);
 
 window.addEventListener("gbs:termDictionarySettingChanged", updateVisibility);
 
