@@ -6,8 +6,10 @@ import {
   onV2ActionResolved,
   onV2Damaged,
   modifyV2TakenDamage,
-  modifyV2EvadeAttempt
+  modifyV2EvadeAttempt,
+  onV2TurnEnd
 } from "./js_unit_rules_v2_gundam.js";
+
 import { setForm, reduceEvade } from "./js_unit_runtime.js";
 import { createAttack } from "./js_battle_system.js";
 
@@ -22,6 +24,7 @@ function canUsePart(state, part) {
 
 function cpuChangeRandom(state) {
   ensureCpuV2State(state);
+
   const candidates = [];
 
   if (canUsePart(state, "assault")) candidates.push("assault");
@@ -37,7 +40,9 @@ function cpuChangeRandom(state) {
 
   const next = candidates[Math.floor(Math.random() * candidates.length)];
   setForm(state, next, { preserveHp: true, preserveEvade: true });
+
   state.hp = Math.min(state.maxHp, state.hp + (next === "assault_buster" || next === "assault_buster_cannon" ? 100 : 50));
+
   return `CPU V2：${state.name}へ換装`;
 }
 
@@ -47,10 +52,13 @@ export function getCpuV2DerivedState(state) {
 
 export function onCpuV2BeforeSlot(state, rolledSlotNumber, context = {}) {
   const base = onV2BeforeSlot(state, rolledSlotNumber, context);
+
   if (Math.random() < 1 / 6) {
     const msg = cpuChangeRandom(state);
+
     return { redraw: true, message: [base?.message, msg].filter(Boolean).join(" / ") };
   }
+
   return base;
 }
 
@@ -60,15 +68,19 @@ export function onCpuV2EnemyBeforeSlot(state, rolledSlotNumber, context = {}) {
 
 export function onCpuV2AfterSlotResolved(state, slotNumber, payload = {}) {
   const base = onV2AfterSlotResolved(state, slotNumber, payload);
+
   if (Number(state.evade || 0) > 0 && Math.random() < Math.min(0.9, Number(state.evade || 0) / 10)) {
     reduceEvade(state, 1);
+
     const add = createAttack(60, 1, { type: "shoot", source: "CPU マルチプルランチャー" });
+
     return {
       redraw: true,
       message: [base?.message, "CPU V2：マルチプルアサルト追撃"].filter(Boolean).join(" / "),
       appendAttacks: [...(base?.appendAttacks || []), ...add]
     };
   }
+
   return base;
 }
 
@@ -98,5 +110,5 @@ export function modifyCpuV2EvadeAttempt(defender, attacker, attack, context = {}
 }
 
 export function onCpuV2TurnEnd(state) {
-  return { redraw: true, message: null };
+  return onV2TurnEnd(state);
 }
