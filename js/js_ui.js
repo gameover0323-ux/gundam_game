@@ -109,6 +109,11 @@ function getStatusLineHtml(status) {
   return `<div>${status}</div>`;
 }
 
+function getUnitDisplayName(state) {
+  if (!state) return "";
+  return `${state.name || ""}${state.displaySuffix || ""}`;
+}
+
 function getEvadeDisplayHtml(state) {
   if (!state) return "回避:-";
 
@@ -173,7 +178,7 @@ export function renderPlayerState(state, container, label, handlers) {
 
   container.innerHTML = `
     <h3>${label}</h3>
-    <div class="unitName">${state.name}${state.displaySuffix || ""}${defeated ? " [撃墜]" : ""}</div>
+    <div class="unitName">${getUnitDisplayName(state)}${defeated ? " [撃墜]" : ""}</div>
     <div>${getHpLineHtml(state)}</div>
     <div>${getEvadeLineHtml(state, false, handlers)}</div>
     ${statusHtml}
@@ -219,9 +224,9 @@ export function renderPlayerState2v2(team, container, label, handlers) {
   if (unit1Defeated && unit2Defeated) {
     container.innerHTML = `
       <h3>${label} [全滅]</h3>
-      <div style="color:#ff6666;font-weight:bold;">1. ${team.unit1?.name || "空き"} [撃墜]</div>
+      <div style="color:#ff6666;font-weight:bold;">1. ${getUnitDisplayName(team.unit1) || "空き"} [撃墜]</div>
       <div>HP:[撃墜]</div>
-      <div style="color:#ff6666;font-weight:bold;">2. ${team.unit2?.name || "空き"} [撃墜]</div>
+      <div style="color:#ff6666;font-weight:bold;">2. ${getUnitDisplayName(team.unit2) || "空き"} [撃墜]</div>
       <div>HP:[撃墜]</div>
     `;
     return;
@@ -256,16 +261,16 @@ export function renderPlayerState2v2(team, container, label, handlers) {
     Math.max(0, Number(team.unit2?.evade || 0));
 
   const getUnitEvadeAbsoluteMax = (unit) => {
-  if (!unit) return 0;
-  if (typeof unit.overEvadeAbsoluteMax === "number") {
-    return Math.max(0, Number(unit.overEvadeAbsoluteMax));
-  }
-  return 25;
-};
+    if (!unit) return 0;
+    if (typeof unit.overEvadeAbsoluteMax === "number") {
+      return Math.max(0, Number(unit.overEvadeAbsoluteMax));
+    }
+    return 25;
+  };
 
-const unifiedEvadeMax =
-getUnitEvadeAbsoluteMax(team.unit1) +
-getUnitEvadeAbsoluteMax(team.unit2);
+  const unifiedEvadeMax =
+    getUnitEvadeAbsoluteMax(team.unit1) +
+    getUnitEvadeAbsoluteMax(team.unit2);
 
   const unifiedHpPercent = unifiedMaxHp > 0
     ? Math.max(0, Math.min(100, Math.floor((unifiedHp / unifiedMaxHp) * 100)))
@@ -346,11 +351,11 @@ getUnitEvadeAbsoluteMax(team.unit2);
       ${team.mode === "unified" ? "分散型へ" : "統合型へ"}
     </button>
 
-    <div style="${unit1NameStyle}">1. ${team.unit1.name}${unit1Defeated ? " [撃墜]" : ""}</div>
+    <div style="${unit1NameStyle}">1. ${getUnitDisplayName(team.unit1)}${unit1Defeated ? " [撃墜]" : ""}</div>
     <div>${getHpLineHtml(team.unit1, team.mode === "unified")}</div>
     <div>${getEvadeLineHtml(team.unit1, team.mode === "unified", handlers, "unit1")}</div>
 
-    <div style="${unit2NameStyle}">2. ${team.unit2 ? team.unit2.name : "空き"}${unit2Defeated ? " [撃墜]" : ""}</div>
+    <div style="${unit2NameStyle}">2. ${team.unit2 ? getUnitDisplayName(team.unit2) : "空き"}${unit2Defeated ? " [撃墜]" : ""}</div>
     <div>${team.unit2 ? getHpLineHtml(team.unit2, team.mode === "unified") : "HP:-"}</div>
     <div>${team.unit2 ? getEvadeLineHtml(team.unit2, team.mode === "unified", handlers, "unit2") : "回避:-"}</div>
 
@@ -366,7 +371,7 @@ getUnitEvadeAbsoluteMax(team.unit2);
 
     ${teamStatusHtml}
 
-    <div ${nameStyle}>${activeState.name}${activeState.displaySuffix || ""}${activeDefeated ? " [撃墜]" : ""}</div>
+    <div ${nameStyle}>${getUnitDisplayName(activeState)}${activeDefeated ? " [撃墜]" : ""}</div>
     <div>${getHpLineHtml(activeState, team.mode === "unified")}</div>
     <div>${getEvadeLineHtml(activeState, team.mode === "unified", handlers, team.activeUnitKey)}</div>
     ${statusHtml}
@@ -518,10 +523,7 @@ export function renderPendingChoiceUI({
     okBtn.addEventListener("click", () => {
       let result = Number(value || 0);
 
-      if (
-        typeof maxValue === "number" &&
-        result > maxValue
-      ) {
+      if (typeof maxValue === "number" && result > maxValue) {
         result = maxValue;
       }
 
