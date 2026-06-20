@@ -132,16 +132,33 @@ function applyBossTrophyRules(profile) {
 
   BOSS_TROPHY_RULES.forEach(rule => {
     Object.entries(unitStats).forEach(([playerUnitId, stats]) => {
-      const vsBoss = stats?.cpu?.vs?.[rule.bossId];
-      const win = Number(vsBoss?.win || 0);
-
-      if (win < rule.unlockAt) return;
-
       if (!profile.trophies.byUnit[playerUnitId]) {
         profile.trophies.byUnit[playerUnitId] = [];
       }
 
       const trophies = profile.trophies.byUnit[playerUnitId];
+
+      if (Array.isArray(rule.twoVtwoTrophies)) {
+        const twoVtwoCpu = stats?.twoVtwo?.cpu;
+        const byPosition = twoVtwoCpu?.defeatedByPosition?.[rule.bossId] || {};
+
+        rule.twoVtwoTrophies.forEach((trophyId, index) => {
+          const win = Number(byPosition[String(index)] || 0);
+          if (win < rule.unlockAt) return;
+
+          if (!trophies.includes(trophyId)) {
+            trophies.push(trophyId);
+            changed = true;
+          }
+        });
+
+        return;
+      }
+
+      const vsBoss = stats?.cpu?.vs?.[rule.bossId];
+      const win = Number(vsBoss?.win || 0);
+
+      if (win < rule.unlockAt) return;
 
       if (!trophies.includes(rule.trophyId)) {
         trophies.push(rule.trophyId);
