@@ -1,4 +1,5 @@
 import { executeUnitExtraWeaponResult } from "./js_unit_runtime.js";
+import { getFrostBrothersDerivedState } from "./js_unit_rules_frost_brothers.js";
 
 export function create2v2Actions(ctx) {
   function isTeamBattleMode() {
@@ -6,7 +7,12 @@ export function create2v2Actions(ctx) {
       ? ctx.isTeamBattleMode()
       : ctx.getBattleMode() === "2v2" ||
           ctx.getBattleMode() === "challenge2v2" ||
+          ctx.getBattleMode() === "vscpu2v2" ||
           ctx.getBattleMode() === "online2v2";
+  }
+
+  function getStateUnitId(state) {
+    return state?.unitId || state?.unit?.id || state?.id || "";
   }
 
   function isUnitDefeated(unit) {
@@ -34,10 +40,56 @@ export function create2v2Actions(ctx) {
     }
   }
 
-  function getActionActor(team) {
+  function getActionActorKey(team) {
     if (!team) return null;
-    if (!isUnitDefeated(team.unit1)) return team.unit1;
-    if (!isUnitDefeated(team.unit2)) return team.unit2;
+    if (!isUnitDefeated(team.unit1)) return "unit1";
+    if (!isUnitDefeated(team.unit2)) return "unit2";
+    return null;
+  }
+
+  function isFrostBrothersTeam(team) {
+    const ids = [getStateUnitId(team?.unit1), getStateUnitId(team?.unit2)];
+    return ids.includes("frost_brothers_vasago_cb") &&
+      ids.includes("frost_brothers_ashtaron_hc");
+  }
+
+  function getUnifiedBossSlotConfig(team, ownerPlayer, forcedSlotKeys = {}) {
+    if (!team || team.mode !== "unified") return null;
+
+    if (isFrostBrothersTeam(team)) {
+      const actorKey = getActionActorKey(team) || "unit1";
+      const actor = team[actorKey];
+
+      const derived = getFrostBrothersDerivedState(actor, {
+        ownerPlayer,
+        team,
+        twoVtwoAdapter: ctx.twoVtwoAdapter || null
+      });
+
+      const slots = derived?.slots || {};
+      const rollableSlotKeys = Array.isArray(derived?.rollableSlotOrder)
+        ? derived.rollableSlotOrder
+        : Object.keys(slots);
+
+      if (rollableSlotKeys.length <= 0) return null;
+
+      const forcedSlotKey =
+        forcedSlotKeys.unified ||
+        forcedSlotKeys[actorKey] ||
+        null;
+
+      const slotKey = forcedSlotKey && slots[forcedSlotKey]
+        ? forcedSlotKey
+        : rollableSlotKeys[Math.floor(Math.random() * rollableSlotKeys.length)];
+
+      return {
+        actorKey,
+        slotKey,
+        slot: slots[slotKey],
+        title: "フロスト兄弟 統合型専用スロット行動"
+      };
+    }
+
     return null;
   }
 
@@ -64,15 +116,22 @@ export function create2v2Actions(ctx) {
       ctx.consumeActionCount(unit, 1);
     }
 
-    const rollableSlotKeys = ctx.getRollableSlotKeys(unit);
-    if (!Array.isArray(rollableSlotKeys) || rollableSlotKeys.length === 0) {
-      pushActionSummary(options, unitKey, `${unit.name} 使用可能スロットなし`);
-      return false;
+    let rollableSlotKeys = null;
+    let slotKey = forcedSlotKey;
+    let slot = options.slotOverride || null;
+
+    if (!slot) {
+      rollableSlotKeys = ctx.getRollableSlotKeys(unit);
+      if (!Array.isArray(rollableSlotKeys) || rollableSlotKeys.length === 0) {
+        pushActionSummary(options, unitKey, `${unit.name} 使用可能スロットなし`);
+        return false;
+      }
+
+      slotKey = forcedSlotKey || rollableSlotKeys[Math.floor(Math.random() * rollableSlotKeys.length)];
+      slot = ctx.getSlotByKey(unit, slotKey);
     }
 
-    const slotKey = forcedSlotKey || rollableSlotKeys[Math.floor(Math.random() * rollableSlotKeys.length)];
-    const slot = ctx.getSlotByKey(unit, slotKey);
-    if (!slot) {
+    if (!slotKey || !slot) {
       pushActionSummary(options, unitKey, `${unit.name} スロット取得失敗`);
       return false;
     }
@@ -90,6 +149,8 @@ export function create2v2Actions(ctx) {
       enemyPlayer,
       enemyPlayerLabel: `PLAYER ${enemyPlayer}`,
       enemyState: defender,
+      team,
+      ownerTeam: team,
       slotKey,
       slot,
       isForcedSlotAction: !!forcedSlotKey,
@@ -106,6 +167,12 @@ export function create2v2Actions(ctx) {
       return false;
     }
 
+    let actualSlot = slot;
+
+    if (typeof beforeResult.modifySlot === "function") {
+      actualSlot = beforeResult.modifySlot(slot) || slot;
+    }
+
     if (defender) {
       const enemyBeforeResult = ctx.executeUnitEnemyBeforeSlot(defender, slotNumber, {
         ownerPlayer: enemyPlayer,
@@ -113,6 +180,8 @@ export function create2v2Actions(ctx) {
         enemyPlayerLabel: `PLAYER ${currentPlayer}`,
         enemyRolledSlotKey: slotKey,
         enemyState: unit,
+        slotKey,
+        slot: actualSlot,
         twoVtwoAdapter: ctx.twoVtwoAdapter || null
       });
 
@@ -121,7 +190,7 @@ export function create2v2Actions(ctx) {
     }
 
     const result = ctx.resolveSlotEffect({
-      slot,
+      slot: actualSlot,
       actor: unit,
       ownerPlayer: currentPlayer,
       twoVtwoAdapter: ctx.twoVtwoAdapter || null
@@ -130,18 +199,22 @@ export function create2v2Actions(ctx) {
     const afterResult = ctx.runAfterSlotResolvedHook(unit, slotNumber, result, {
       ownerPlayer: currentPlayer,
       enemyPlayer,
+      team,
+      ownerTeam: team,
       slotKey,
       slotNumber,
-      slot,
+      slot: actualSlot,
       twoVtwoAdapter: ctx.twoVtwoAdapter || null
     });
 
     const extraResult = executeUnitExtraWeaponResult(unit, {
       ownerPlayer: currentPlayer,
       enemyPlayer,
+      team,
+      ownerTeam: team,
       slotKey,
       slotNumber,
-      slot,
+      slot: actualSlot,
       twoVtwoAdapter: ctx.twoVtwoAdapter || null
     });
 
@@ -175,8 +248,8 @@ export function create2v2Actions(ctx) {
         enemyPlayer,
         slotKey,
         slotNumber,
-        slotLabel: slot.label,
-        slotDesc: slot.desc,
+        slotLabel: actualSlot.label,
+        slotDesc: actualSlot.desc,
         actionLabel,
         totalCount: attacks.length,
         hitCount: 0,
@@ -278,7 +351,9 @@ export function create2v2Actions(ctx) {
     ctx.clearCurrentAction();
 
     if (team.mode === "unified") {
-      const actor = getActionActor(team);
+      const unifiedBossSlot = getUnifiedBossSlotConfig(team, currentPlayer, forcedSlotKeys);
+      const actorKey = unifiedBossSlot?.actorKey || getActionActorKey(team);
+      const actor = actorKey ? team[actorKey] : null;
 
       if (!actor || !ctx.twoVtwoAdapter) {
         ctx.showPopup("統合行動権を参照できません");
@@ -295,6 +370,31 @@ export function create2v2Actions(ctx) {
       if (!ctx.twoVtwoAdapter.consumeAction(currentPlayer, actor, 1)) {
         ctx.showPopup("統合行動権が足りません");
         ctx.redrawBattleBoards();
+        return;
+      }
+
+      if (unifiedBossSlot) {
+        processTeamUnitSlot(team, unifiedBossSlot.actorKey, enemyPlayer, unifiedBossSlot.slotKey, {
+          ownerPlayer: currentPlayer,
+          skipActionCost: true,
+          slotOverride: unifiedBossSlot.slot,
+          actionSummaries
+        });
+
+        finishTeamSlotAction(
+          currentPlayer,
+          enemyPlayer,
+          `PLAYER ${currentPlayer} の${unifiedBossSlot.title}`,
+          actionSummaries
+        );
+
+        if (!options?.suppressOnlinePublish && typeof ctx.onOnline2v2SlotAction === "function") {
+          ctx.onOnline2v2SlotAction(currentPlayer, "team", null, {
+            unified: unifiedBossSlot.slotKey,
+            [unifiedBossSlot.actorKey]: unifiedBossSlot.slotKey
+          });
+        }
+
         return;
       }
 
@@ -376,6 +476,56 @@ export function create2v2Actions(ctx) {
     if (team.mode !== "unified") {
       ctx.showPopup("統合型専用のスロット指定行動です");
       return false;
+    }
+
+    const unifiedBossSlot = getUnifiedBossSlotConfig(team, ownerPlayer, { unified: slotKey });
+    if (unifiedBossSlot) {
+      const actor = team[unifiedBossSlot.actorKey];
+
+      if (!actor) {
+        ctx.showPopup("統合型スロットの使用機体を特定できません");
+        ctx.redrawBattleBoards();
+        return false;
+      }
+
+      if (!options.skipActionCost) {
+        if (!ctx.twoVtwoAdapter?.canConsumeAction?.(ownerPlayer, actor, 1)) {
+          ctx.showPopup("統合行動権が足りません");
+          ctx.redrawBattleBoards();
+          return false;
+        }
+
+        if (!ctx.twoVtwoAdapter.consumeAction(ownerPlayer, actor, 1)) {
+          ctx.showPopup("統合行動権が足りません");
+          ctx.redrawBattleBoards();
+          return false;
+        }
+      }
+
+      const enemyPlayer = ctx.getOpponentPlayer(ownerPlayer);
+      const actionSummaries = [];
+
+      ctx.setCurrentAttack([]);
+      ctx.setCurrentAttackContext(null);
+      ctx.setCurrentAttackContexts([]);
+      ctx.clearBattleNotice();
+      ctx.clearCurrentAction();
+
+      processTeamUnitSlot(team, unifiedBossSlot.actorKey, enemyPlayer, unifiedBossSlot.slotKey, {
+        ownerPlayer,
+        skipActionCost: true,
+        slotOverride: unifiedBossSlot.slot,
+        actionSummaries
+      });
+
+      finishTeamSlotAction(
+        ownerPlayer,
+        enemyPlayer,
+        `PLAYER ${ownerPlayer} の統合型スロット指定行動`,
+        actionSummaries
+      );
+
+      return true;
     }
 
     const targetUnitKey =
