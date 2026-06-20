@@ -303,29 +303,37 @@ export function createAttackResolution(ctx) {
       return;
     }
 
-    if (wasUnifiedBeforeHit && defenderTeamBeforeHit && hitResult && !hitResult.cancelled) {
+  if (wasUnifiedBeforeHit && defenderTeamBeforeHit && hitResult && !hitResult.cancelled) {
       const actualDamage = typeof hitResult.finalDamage === "number"
         ? hitResult.finalDamage
         : damagePreview;
 
-      const unified = defenderTeamBeforeHit.unified || {
-        baseHpA: defenderTeamBeforeHit.unit1?.hp || 0,
-        baseHpB: defenderTeamBeforeHit.unit2?.hp || 0,
-        totalDamage: 0,
-        healA: 0,
-        healB: 0
-      };
-
-      unified.totalDamage =
-        Math.max(0, Number(unified.totalDamage || 0)) +
-        Math.max(0, actualDamage);
-
-      defenderTeamBeforeHit.unified = unified;
       defender.hp = defenderHpBeforeHit;
       defender.isDefeated = false;
+
+      if (
+        ctx.twoVtwoAdapter &&
+        typeof ctx.twoVtwoAdapter.damageHp === "function"
+      ) {
+        ctx.twoVtwoAdapter.damageHp(defenderPlayer, defender, actualDamage);
+      } else {
+        const unified = defenderTeamBeforeHit.unified || {
+          baseHpA: defenderTeamBeforeHit.unit1?.hp || 0,
+          baseHpB: defenderTeamBeforeHit.unit2?.hp || 0,
+          totalDamage: 0,
+          healA: 0,
+          healB: 0
+        };
+
+        unified.totalDamage =
+          Math.max(0, Number(unified.totalDamage || 0)) +
+          Math.max(0, actualDamage);
+
+        defenderTeamBeforeHit.unified = unified;
+      }
     } else {
       markDefeatedIfNeeded(defender);
-    }
+  }
 
     defender.lastDamageTaken = typeof hitResult?.finalDamage === "number"
       ? hitResult.finalDamage
