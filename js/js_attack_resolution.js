@@ -189,7 +189,7 @@ export function createAttackResolution(ctx) {
     return true;
   }
 
-function applyTauntDamageModifier({
+  function applyTauntDamageModifier({
     attackerPlayer,
     defenderPlayer,
     defender,
@@ -246,6 +246,11 @@ function applyTauntDamageModifier({
     }, 0);
 
     const defenderHpBeforeHit = Number(defender?.hp || 0);
+    const defenderTeamBeforeHit = isTeamBattleMode()
+      ? ctx.getTeam(defenderPlayer)
+      : null;
+    const wasUnifiedBeforeHit =
+      !!defenderTeamBeforeHit && defenderTeamBeforeHit.mode === "unified";
 
     const hitResult = ctx.resolveTakeHit({
       attacker,
@@ -263,6 +268,8 @@ function applyTauntDamageModifier({
         });
 
         return ctx.executeUnitModifyTakenDamage(d, a, atk, nextDamage, {
+          ownerPlayer: defenderPlayer,
+          enemyPlayer: attackerPlayer,
           attackerPlayer,
           defenderPlayer,
           attacker,
@@ -270,7 +277,8 @@ function applyTauntDamageModifier({
           currentAttack,
           attackIndex: index,
           currentAttackContext: ctxAtk,
-          currentTotalDamage
+          currentTotalDamage,
+          twoVtwoAdapter: ctx.twoVtwoAdapter || null
         });
       },
       rollCritical: () => {
@@ -295,33 +303,39 @@ function applyTauntDamageModifier({
       return;
     }
 
-    const defenderTeam = ctx.getTeam(defenderPlayer);
+    if (wasUnifiedBeforeHit && defenderTeamBeforeHit && hitResult && !hitResult.cancelled) {
+      const actualDamage = typeof hitResult.finalDamage === "number"
+        ? hitResult.finalDamage
+        : damagePreview;
 
-    if (defenderTeam && defenderTeam.mode === "unified" && hitResult && !hitResult.cancelled) {
-      const actualDamage = typeof hitResult.finalDamage === "number" ? hitResult.finalDamage : damagePreview;
-      const unified = defenderTeam.unified || {
-        baseHpA: defenderTeam.unit1?.hp || 0,
-        baseHpB: defenderTeam.unit2?.hp || 0,
+      const unified = defenderTeamBeforeHit.unified || {
+        baseHpA: defenderTeamBeforeHit.unit1?.hp || 0,
+        baseHpB: defenderTeamBeforeHit.unit2?.hp || 0,
         totalDamage: 0,
         healA: 0,
         healB: 0
       };
 
-      unified.totalDamage = Math.max(0, Number(unified.totalDamage || 0)) + Math.max(0, actualDamage);
-      defenderTeam.unified = unified;
+      unified.totalDamage =
+        Math.max(0, Number(unified.totalDamage || 0)) +
+        Math.max(0, actualDamage);
 
+      defenderTeamBeforeHit.unified = unified;
       defender.hp = defenderHpBeforeHit;
+      defender.isDefeated = false;
     } else {
       markDefeatedIfNeeded(defender);
     }
 
-    defender.lastDamageTaken = typeof hitResult?.finalDamage === "number" ? hitResult.finalDamage : damagePreview;
+    defender.lastDamageTaken = typeof hitResult?.finalDamage === "number"
+      ? hitResult.finalDamage
+      : damagePreview;
 
     if (hitResult?.damageMessage) {
       ctx.appendBattleNotice(hitResult.damageMessage);
     }
 
-    if (isUnitDefeated(defender)) {
+    if (!wasUnifiedBeforeHit && isUnitDefeated(defender)) {
       ctx.appendBattleNotice(`${defender.name}は撃墜された`);
     }
 
@@ -350,7 +364,8 @@ function applyTauntDamageModifier({
       attacker,
       attack,
       currentAttack,
-      attackIndex: index
+      attackIndex: index,
+      twoVtwoAdapter: ctx.twoVtwoAdapter || null
     });
 
     if (currentAttack.length === 0) {
@@ -533,7 +548,7 @@ function applyTauntDamageModifier({
       ctx.twoVtwoTauntSystem &&
       typeof ctx.twoVtwoTauntSystem.modifyDamage === "function"
     ) {
-     damageBeforeSupport = ctx.twoVtwoTauntSystem.modifyDamage({
+      damageBeforeSupport = ctx.twoVtwoTauntSystem.modifyDamage({
         attackerPlayer,
         attackerUnitKey: ctxAtk?.ownerUnitKey || attack?.ownerUnitKey || null,
         defenderPlayer,
@@ -548,7 +563,20 @@ function applyTauntDamageModifier({
       supportUnit,
       attacker,
       attack,
-      baseDamage
+      baseDamage,
+      {
+        ownerPlayer: defenderPlayer,
+        enemyPlayer: attackerPlayer,
+        attackerPlayer,
+        defenderPlayer,
+        attacker,
+        defender: supportUnit,
+        supportDefense: true,
+        currentAttack,
+        attackIndex: index,
+        currentAttackContext: ctxAtk,
+        twoVtwoAdapter: ctx.twoVtwoAdapter || null
+      }
     );
 
     const finalDamage =
@@ -583,7 +611,8 @@ function applyTauntDamageModifier({
       attack,
       currentAttack,
       attackIndex: index,
-      supportDefense: true
+      supportDefense: true,
+      twoVtwoAdapter: ctx.twoVtwoAdapter || null
     });
 
     if (damagedResult.message) {
