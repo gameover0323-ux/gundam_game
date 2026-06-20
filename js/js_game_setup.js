@@ -261,7 +261,16 @@ HPがもりもり減る代わりに回避に
 イグニスは回避性能
 ミスティックは最強性能。
 勝利するとボストロフィー[EX]が
-手に入る。`
+手に入る。`,
+
+"フロスト兄弟": `難易度 ☆☆☆☆☆
+ガンダムヴァサーゴチェストブレイクと
+ガンダムアシュタロンハーミットクラブ。
+猛烈な攻撃量で圧倒してくるため、
+被弾、回避の選択を慎重に判断し、
+挑発を駆使して統合型から分散型に
+切り替えさせて対応しよう。`
+    
   };
 
   function isChallengeMode() {
@@ -314,28 +323,32 @@ HPがもりもり減る代わりに回避に
     return typeof ctx.canUseDebugUnit === "function" && ctx.canUseDebugUnit();
   }
 
-  function getSelectList() {
-    const extraUnits = typeof ctx.getExtraUnlockedUnits === "function"
-      ? ctx.getExtraUnlockedUnits()
-      : [];
+function getSelectList() {
+  const extraUnits = typeof ctx.getExtraUnlockedUnits === "function"
+    ? ctx.getExtraUnlockedUnits()
+    : [];
 
-    if (!isChallengeMode()) {
-      return isOnlineMode() ? ctx.units : [...ctx.units, ...extraUnits];
-    }
-
-    if (isVsCpuMode() && ctx.getSelectingPlayer() === "B") {
-      return [
-        ...(ctx.cpus || []),
-        ...(ctx.cpuBeginnerList || [])
-      ];
-    }
-
-    if (ctx.getSelectingPlayer() === "B") {
-      return ctx.bosses || [];
-    }
-
-    return ctx.units;
+  if (!isChallengeMode()) {
+    return isOnlineMode() ? ctx.units : [...ctx.units, ...extraUnits];
   }
+
+  if (isVsCpuMode() && ctx.getSelectingPlayer() === "B") {
+    return [
+      ...(ctx.cpus || []),
+      ...(ctx.cpuBeginnerList || [])
+    ];
+  }
+
+  if (ctx.getSelectingPlayer() === "B") {
+    if (ctx.getBattleMode() === "challenge2v2") {
+      return ctx.twoVsBosses || [];
+    }
+
+    return ctx.bosses || [];
+  }
+
+  return ctx.units;
+}
 
   function getUnitDescription(unit) {
     if (!unit) return "";
@@ -708,7 +721,7 @@ function loadUnitButtons() {
       return;
     }
 
-    if (mode === "challenge2v2") {
+  if (mode === "challenge2v2") {
       if (!ctx.getTeamA()) ctx.setTeamA({ units: [] });
       if (!ctx.getTeamB()) ctx.setTeamB({ units: [] });
 
@@ -726,6 +739,17 @@ function loadUnitButtons() {
         return;
       }
 
+      if (
+        unit.isTwoVsBossPair &&
+        Array.isArray(unit.units) &&
+        unit.units.length >= 2
+      ) {
+        const teamB = ctx.getTeamB();
+        teamB.units = unit.units.slice(0, 2);
+        startChallengePreview2v2(ctx.getTeamA().units, teamB.units);
+        return;
+      }
+
       const teamB = ctx.getTeamB();
       teamB.units.push(unit);
       updateSelectUi();
@@ -736,8 +760,8 @@ function loadUnitButtons() {
     ctx.initChallenge2v2(unitsA, bossUnits);
   }
 
-  return {
+ return {
     loadUnitButtons,
     updateSelectUi
   };
-        }
+}
