@@ -4,9 +4,11 @@ import {
   reduceEvade,
   normalizeEvadeCapState
 } from "./js_unit_runtime.js";
+
 import { createAttack } from "./js_battle_system.js";
 
 const CHANGE_COOLDOWN = 5;
+const ASSAULT_HIT_BREAK_COUNT = 20;
 
 function ensureV2State(state) {
   if (!state) return;
@@ -14,6 +16,7 @@ function ensureV2State(state) {
   if (typeof state.v2CannonCharge !== "number") state.v2CannonCharge = 0;
   if (typeof state.v2WingGuardActive !== "boolean") state.v2WingGuardActive = false;
   if (typeof state.v2WingGuardCountered !== "boolean") state.v2WingGuardCountered = false;
+  if (typeof state.v2WingGuardOwnerTurnEnds !== "number") state.v2WingGuardOwnerTurnEnds = 0;
   if (typeof state.v2MegaBeamShieldCount !== "number") state.v2MegaBeamShieldCount = 3;
   if (typeof state.v2MegaBeamShieldActive !== "boolean") state.v2MegaBeamShieldActive = false;
   if (typeof state.v2BusterTurnCount !== "number") state.v2BusterTurnCount = 0;
@@ -24,12 +27,18 @@ function ensureV2State(state) {
   if (typeof state.v2CannonCannotEvadeReady !== "boolean") state.v2CannonCannotEvadeReady = false;
   if (typeof state.v2ShootGuardActive !== "boolean") state.v2ShootGuardActive = false;
   if (typeof state.v2DynamicEvadeMax !== "number") state.v2DynamicEvadeMax = -1;
+  if (typeof state.v2AssaultHitTakenCount !== "number") state.v2AssaultHitTakenCount = 0;
   if (typeof state.shieldCount !== "number") state.shieldCount = 3;
   if (typeof state.shieldActive !== "boolean") state.shieldActive = false;
 }
 
 function formId(state) {
   return state?.formId || "v2";
+}
+
+function isAssaultBreakForm(state) {
+  const f = formId(state);
+  return f === "assault" || f === "assault_buster";
 }
 
 function getAdapter(context) {
@@ -65,6 +74,7 @@ function consumeRuleEvade(state, amount, context = {}) {
   }
 
   if (!state || Number(state.evade || 0) < cost) return false;
+
   reduceEvade(state, cost);
   return true;
 }
@@ -79,6 +89,7 @@ function consumeEnemyRuleEvade(defender, amount, context = {}) {
   }
 
   if (!defender || Number(defender.evade || 0) < cost) return false;
+
   reduceEvade(defender, cost);
   return true;
 }
@@ -133,6 +144,7 @@ function getV2BaseEvadeMax(state) {
 
 function ensureV2DynamicEvadeCap(state) {
   ensureV2State(state);
+
   if (!usesV2DynamicEvadeCap(state)) return;
 
   if (state.v2DynamicEvadeMax < 0) {
@@ -141,6 +153,7 @@ function ensureV2DynamicEvadeCap(state) {
 
   state.evadeMax = state.v2DynamicEvadeMax;
   state.maxEvade = state.v2DynamicEvadeMax;
+
   normalizeEvadeCapState(state);
 }
 
@@ -148,6 +161,7 @@ function getV2CurrentEvadeMax(state) {
   if (!usesV2DynamicEvadeCap(state)) {
     return Number(state.evadeMax || state.maxEvade || 0);
   }
+
   ensureV2DynamicEvadeCap(state);
   return Number(state.v2DynamicEvadeMax || 0);
 }
@@ -201,6 +215,7 @@ function addEvadeWithAssaultCapRule(state, amount, context = {}) {
   addRuleEvade(state, amount, context);
 
   const afterEvade = getRuleEvade(state, context);
+
   if (afterEvade > beforeMax) {
     addCap(state, afterEvade - beforeMax);
   }
@@ -224,6 +239,7 @@ function isIgnoreReduction(attack) {
 
 function setUsedFormCooldown(state, usedForm) {
   ensureV2State(state);
+
   const f = usedForm || formId(state);
 
   if (f === "assault") state.v2Cooldowns.assault = CHANGE_COOLDOWN;
@@ -249,12 +265,21 @@ function canUsePart(state, part) {
 
 function changeToV2(state, message = "V2ガンダムへ換装解除", context = {}) {
   setUsedFormCooldown(state, formId(state));
+
   setForm(state, "v2", { preserveHp: true, preserveEvade: true });
+
   state.v2DynamicEvadeMax = -1;
+  state.v2AssaultHitTakenCount = 0;
+
   heal(state, 50, context);
+
   state.v2WingGuardActive = false;
+  state.v2WingGuardCountered = false;
+  state.v2WingGuardOwnerTurnEnds = 0;
   state.v2MegaBeamShieldActive = false;
+
   normalizeEvadeCapState(state);
+
   return message;
 }
 
@@ -272,9 +297,12 @@ function changeForm(state, nextForm, context = {}) {
   if (nextForm === "assault_buster_cannon" && (!canUsePart(state, "assault") || !canUsePart(state, "buster") || !canUsePart(state, "cannon"))) return "V2アサルトバスターキャノンはクールタイム中";
 
   setUsedFormCooldown(state, current);
+
   setForm(state, nextForm, { preserveHp: true, preserveEvade: true });
 
   state.v2DynamicEvadeMax = -1;
+  state.v2AssaultHitTakenCount = isAssaultBreakForm(state) ? 0 : Number(state.v2AssaultHitTakenCount || 0);
+
   if (nextForm === "assault" || nextForm === "assault_buster" || nextForm === "assault_buster_cannon") {
     state.v2DynamicEvadeMax = getV2BaseEvadeMax(state);
     state.evadeMax = state.v2DynamicEvadeMax;
@@ -287,11 +315,13 @@ function changeForm(state, nextForm, context = {}) {
   if (nextForm === "cannon") state.v2CannonHitCount = 0;
 
   normalizeEvadeCapState(state);
+
   return `${state.name} に換装`;
 }
 
 function decrementCooldowns(state) {
   ensureV2State(state);
+
   Object.keys(state.v2Cooldowns).forEach(key => {
     state.v2Cooldowns[key] = Math.max(0, Number(state.v2Cooldowns[key] || 0) - 1);
   });
@@ -306,7 +336,6 @@ function buildChangeChoices(state) {
   }
 
   if (current !== "v2") push("V2ガンダムへ換装解除", current);
-
   if (current !== "assault" && canUsePart(state, "assault")) push("V2アサルトガンダム", "assault");
   if (current !== "buster" && canUsePart(state, "buster")) push("V2バスターガンダム", "buster");
   if (current !== "cannon" && canUsePart(state, "cannon")) push("V2ガンダム(キャノン装備)", "cannon");
@@ -335,6 +364,7 @@ function appendCannonOptions(state, attacks) {
       a.ignoreDefense = true;
       a.addedIgnoreReduction = true;
     });
+
     state.v2CannonIgnoreReductionReady = false;
   }
 
@@ -343,6 +373,7 @@ function appendCannonOptions(state, attacks) {
       a.cannotEvade = true;
       a.addedCannotEvade = true;
     });
+
     state.v2CannonCannotEvadeReady = false;
   }
 
@@ -367,6 +398,10 @@ export function getV2DerivedState(state) {
 
   if (usesV2DynamicEvadeCap(state)) {
     status.push(`回避ストック最大値現在 ${getV2CurrentEvadeMax(state)}`);
+  }
+
+  if (isAssaultBreakForm(state)) {
+    status.push(`被弾解除カウント ${Number(state.v2AssaultHitTakenCount || 0)}/${ASSAULT_HIT_BREAK_COUNT}`);
   }
 
   if (state.v2CannonCharge > 0) status.push(`V2キャノン加算値 +${state.v2CannonCharge}`);
@@ -423,6 +458,7 @@ export function getV2DerivedState(state) {
 
 export function canUseV2Special(state, specialKey, context = {}) {
   ensureV2State(state);
+
   const special = state.specials?.[specialKey];
   if (!special) return { allowed: false, message: "特殊行動データが見つからない" };
 
@@ -458,11 +494,13 @@ export function canUseV2Special(state, specialKey, context = {}) {
 
 export function executeV2Special(state, specialKey, context = {}) {
   ensureV2State(state);
+
   const special = state.specials?.[specialKey];
   if (!special) return { handled: true, redraw: false, message: "特殊行動データが見つからない" };
 
   if (special.effectType === "v2_change_form") {
     const choices = buildChangeChoices(state);
+
     if (choices.length === 0) return { handled: true, redraw: false, message: "選択可能な換装先がない" };
 
     return {
@@ -485,6 +523,7 @@ export function executeV2Special(state, specialKey, context = {}) {
 
     state.v2MegaBeamShieldCount -= 1;
     state.v2MegaBeamShieldActive = true;
+
     return { handled: true, redraw: true, message: `メガビームシールド展開。残り${state.v2MegaBeamShieldCount}` };
   }
 
@@ -514,6 +553,7 @@ export function executeV2Special(state, specialKey, context = {}) {
     }
 
     state.v2CannonIgnoreReductionReady = true;
+
     return { handled: true, redraw: true, message: "出力安定化：次の攻撃に軽減不可付与" };
   }
 
@@ -525,6 +565,7 @@ export function executeV2Special(state, specialKey, context = {}) {
     }
 
     state.v2CannonCannotEvadeReady = true;
+
     return { handled: true, redraw: true, message: "命中補正最大：次の攻撃に必中付与" };
   }
 
@@ -533,6 +574,7 @@ export function executeV2Special(state, specialKey, context = {}) {
 
 export function onV2BeforeSlot(state, rolledSlotNumber, context = {}) {
   ensureV2State(state);
+
   const messages = [];
 
   if (formId(state) === "assault") {
@@ -581,28 +623,22 @@ export function onV2EnemyBeforeSlot(state, rolledSlotNumber, context = {}) {
 
 export function onV2AfterSlotResolved(state, slotNumber, payload = {}) {
   ensureV2State(state);
+
   const resolveResult = payload.resolveResult || payload;
   const customEffectId = resolveResult.customEffectId;
   const context = payload.context || payload;
   const messages = [];
   let appendAttacks = [];
 
-  const resolvedSlotKey =
-    payload.slotKey ||
-    payload.currentAttackContext?.slotKey ||
-    payload.attackContext?.slotKey ||
-    "";
-
-  const resolvedSlotNumber =
-    Number(slotNumber || 0) ||
-    Number(payload.slotNumber || 0) ||
-    (resolvedSlotKey === "slot4" ? 4 : 0);
+  const resolvedSlotKey = payload.slotKey || payload.currentAttackContext?.slotKey || payload.attackContext?.slotKey || "";
+  const resolvedSlotNumber = Number(slotNumber || 0) || Number(payload.slotNumber || 0) || (resolvedSlotKey === "slot4" ? 4 : 0);
 
   state.v2LastSlot4Ready = resolvedSlotNumber === 4 || resolvedSlotKey === "slot4";
 
   if (customEffectId === "v2_wings_guard") {
     state.v2WingGuardActive = true;
     state.v2WingGuardCountered = false;
+    state.v2WingGuardOwnerTurnEnds = 0;
     messages.push("光の翼：次の相手ターン中の全攻撃を無効化");
   }
 
@@ -674,10 +710,15 @@ export function onV2AfterSlotResolved(state, slotNumber, payload = {}) {
 
   if (customEffectId === "v2_ab_slot6") {
     const ev = getRuleEvade(state, context);
+
     state.v2WingGuardActive = true;
     state.v2WingGuardCountered = false;
+    state.v2WingGuardOwnerTurnEnds = 0;
+
     addCap(state, 1);
+
     if (ev > 0) appendAttacks.push(...createAttack(30, ev, { type: "melee", beam: true, source: "光の翼" }));
+
     messages.push("光の翼：次の相手ターン中の全攻撃を無効化、回避ストック最大値+1");
   }
 
@@ -708,6 +749,7 @@ export function onV2AfterSlotResolved(state, slotNumber, payload = {}) {
 
   if (customEffectId === "v2_abc_slot6") {
     const ev = getRuleEvade(state, context);
+
     if (ev > 0) {
       appendAttacks.push(...createAttack(ev * 10, 1, { type: "melee", beam: true, special: "v2_abc_wings_hit", source: "光の翼" }));
     } else {
@@ -726,18 +768,25 @@ export function onV2AfterSlotResolved(state, slotNumber, payload = {}) {
 
 export function onV2ActionResolved(attacker, defender, context = {}) {
   ensureV2State(attacker);
+
   const messages = [];
 
   if (context.slotKey === "slot2" && formId(attacker) === "buster" && context.slotLabel?.includes("2EX")) {
     attacker.v2Buster2ExUsed += 1;
     messages.push(`2EX使用:${attacker.v2Buster2ExUsed}/3`);
-    if (attacker.v2Buster2ExUsed >= 3) messages.push(changeToV2(attacker, "2EXを3回使用：V2ガンダムへ変形、HP50回復", context));
+
+    if (attacker.v2Buster2ExUsed >= 3) {
+      messages.push(changeToV2(attacker, "2EXを3回使用：V2ガンダムへ変形、HP50回復", context));
+    }
   }
 
   if (formId(attacker) === "cannon" && context.hitCount > 0 && (context.slotKey === "slot5" || context.slotKey === "slot6")) {
     attacker.v2CannonHitCount += 1;
     messages.push(`V2キャノン攻撃命中:${attacker.v2CannonHitCount}/3`);
-    if (attacker.v2CannonHitCount >= 3) messages.push(changeToV2(attacker, "攻撃行動3回命中：V2ガンダムへ変形、HP50回復", context));
+
+    if (attacker.v2CannonHitCount >= 3) {
+      messages.push(changeToV2(attacker, "攻撃行動3回命中：V2ガンダムへ変形、HP50回復", context));
+    }
   }
 
   if (context.hitCount > 0 && context.currentAttack?.some?.(a => a?.special === "v2_buster_wings_hit_heal")) {
@@ -756,7 +805,22 @@ export function onV2ActionResolved(attacker, defender, context = {}) {
 
 export function onV2Damaged(defender, attacker, context = {}) {
   ensureV2State(defender);
-  return { redraw: false, message: null };
+
+  if (!isAssaultBreakForm(defender)) {
+    return { redraw: false, message: null };
+  }
+
+  defender.v2AssaultHitTakenCount += 1;
+
+  if (defender.v2AssaultHitTakenCount >= ASSAULT_HIT_BREAK_COUNT) {
+    const message = changeToV2(defender, "20回被弾：V2ガンダムへ換装解除、HP50回復", context);
+    return { redraw: true, message };
+  }
+
+  return {
+    redraw: true,
+    message: `V2被弾解除カウント：${defender.v2AssaultHitTakenCount}/${ASSAULT_HIT_BREAK_COUNT}`
+  };
 }
 
 export function modifyV2TakenDamage(defender, attacker, attack, damage, context = {}) {
@@ -803,12 +867,27 @@ export function modifyV2EvadeAttempt(defender, attacker, attack, context = {}) {
 export function onV2TurnEnd(state) {
   ensureV2State(state);
   decrementCooldowns(state);
+
   state.v2MegaBeamShieldActive = false;
-  state.v2WingGuardActive = false;
-  state.v2WingGuardCountered = false;
+
+  if (state.v2WingGuardActive) {
+    state.v2WingGuardOwnerTurnEnds = Number(state.v2WingGuardOwnerTurnEnds || 0) + 1;
+
+    if (state.v2WingGuardOwnerTurnEnds >= 2) {
+      state.v2WingGuardActive = false;
+      state.v2WingGuardCountered = false;
+      state.v2WingGuardOwnerTurnEnds = 0;
+    }
+  } else {
+    state.v2WingGuardCountered = false;
+    state.v2WingGuardOwnerTurnEnds = 0;
+  }
+
   state.v2ShootGuardActive = false;
   state.v2LastSlot4Ready = false;
+
   if (state.shieldActive) state.shieldActive = false;
+
   return { redraw: true, message: null };
 }
 
