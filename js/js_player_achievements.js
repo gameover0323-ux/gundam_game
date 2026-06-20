@@ -137,43 +137,10 @@ function getNormalBossWinCount(stats, bossId) {
 }
 
 function applyBossTrophyRules(profile) {
-  let changed = false;
-
-  const unitStats = profile?.stats?.units || {};
-
-  BOSS_TROPHY_RULES.forEach(rule => {
-    Object.entries(unitStats).forEach(([playerUnitId, stats]) => {
-      if (!profile.trophies.byUnit[playerUnitId]) {
-        profile.trophies.byUnit[playerUnitId] = [];
-      }
-
-      const trophies = profile.trophies.byUnit[playerUnitId];
-
-      const normalBossWin = getNormalBossWinCount(stats, rule.bossId);
-      const twoVtwoBossWin = getTwoVtwoBossWinCount(stats, rule.bossId);
-      const totalWin = normalBossWin + twoVtwoBossWin;
-
-      if (totalWin < Number(rule.unlockAt || 1)) return;
-
-      if (Array.isArray(rule.twoVtwoTrophies)) {
-        rule.twoVtwoTrophies.forEach(trophyId => {
-          if (!trophies.includes(trophyId)) {
-            trophies.push(trophyId);
-            changed = true;
-          }
-        });
-
-        return;
-      }
-
-      if (rule.trophyId && !trophies.includes(rule.trophyId)) {
-        trophies.push(rule.trophyId);
-        changed = true;
-      }
-    });
-  });
-
-  return changed;
+  // トロフィーの「解放条件」は stats から判定する。
+  // profile.trophies.byUnit は「装備中トロフィー」だけを保存する。
+  // ここで自動追加すると、トロフィーカスタムで外しても保存時に復活するため禁止。
+  return false;
 }
 
 export function updatePlayerAchievements(profile) {
