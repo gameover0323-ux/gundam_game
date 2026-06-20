@@ -294,21 +294,48 @@ export function createBattleFlow(ctx) {
     actor.shieldActive = false;
     enemyState.shieldActive = false;
 
-    if (ctx.isTeamBattleMode && ctx.isTeamBattleMode()) {
-      const actorTeam = ctx.getTeam ? ctx.getTeam(actorPlayer) : null;
+let turnEndResult = { redraw: false, message: null, requestChoice: null };
 
-      if (actorTeam) {
-        clampTeamEvadeToMax(actorTeam);
+if (ctx.isTeamBattleMode && ctx.isTeamBattleMode()) {
+  const actorTeam = ctx.getTeam ? ctx.getTeam(actorPlayer) : null;
 
-        if (ctx.twoVtwoTauntSystem && typeof ctx.twoVtwoTauntSystem.tickTeam === "function") {
-          ctx.twoVtwoTauntSystem.tickTeam(actorTeam);
-        }
-      } else {
-        clampEvadeToMax(actor);
-      }
-    } else {
-      clampEvadeToMax(actor);
+  if (actorTeam) {
+    clampTeamEvadeToMax(actorTeam);
+
+    if (ctx.twoVtwoTauntSystem && typeof ctx.twoVtwoTauntSystem.tickTeam === "function") {
+      ctx.twoVtwoTauntSystem.tickTeam(actorTeam);
     }
+
+    const teamUnits = [actorTeam.unit1, actorTeam.unit2].filter(Boolean);
+    const turnEndMessages = [];
+
+    teamUnits.forEach((unit) => {
+      if (typeof ctx.tickCriticalBoosts === "function") {
+        ctx.tickCriticalBoosts(unit);
+      }
+
+      unit.lastSlotKey = null;
+
+      const result = ctx.executeUnitTurnEnd(unit, {
+        ownerPlayer: actorPlayer,
+        enemyPlayer,
+        enemyPlayerLabel: `PLAYER ${enemyPlayer}`,
+        enemyPredictableSlotKeys: ctx.getPredictableSlotKeys(enemyState),
+        twoVtwoAdapter: ctx.twoVtwoAdapter || null
+      });
+
+      if (result?.message) turnEndMessages.push(result.message);
+
+      if (!turnEndResult.requestChoice && result?.requestChoice) {
+        turnEndResult.requestChoice = result.requestChoice;
+      }
+
+      turnEndResult.redraw = turnEndResult.redraw || !!result?.redraw;
+    });
+
+    turnEndResult.message = turnEndMessages.join("\n") || null;
+  } else {
+    clampEvadeToMax(actor);
 
     if (typeof ctx.tickCriticalBoosts === "function") {
       ctx.tickCriticalBoosts(actor);
@@ -316,12 +343,31 @@ export function createBattleFlow(ctx) {
 
     actor.lastSlotKey = null;
 
-    const turnEndResult = ctx.executeUnitTurnEnd(actor, {
+    turnEndResult = ctx.executeUnitTurnEnd(actor, {
       ownerPlayer: actorPlayer,
       enemyPlayer,
       enemyPlayerLabel: `PLAYER ${enemyPlayer}`,
-      enemyPredictableSlotKeys: ctx.getPredictableSlotKeys(enemyState)
+      enemyPredictableSlotKeys: ctx.getPredictableSlotKeys(enemyState),
+      twoVtwoAdapter: ctx.twoVtwoAdapter || null
     });
+  }
+} else {
+  clampEvadeToMax(actor);
+
+  if (typeof ctx.tickCriticalBoosts === "function") {
+    ctx.tickCriticalBoosts(actor);
+  }
+
+  actor.lastSlotKey = null;
+
+  turnEndResult = ctx.executeUnitTurnEnd(actor, {
+    ownerPlayer: actorPlayer,
+    enemyPlayer,
+    enemyPlayerLabel: `PLAYER ${enemyPlayer}`,
+    enemyPredictableSlotKeys: ctx.getPredictableSlotKeys(enemyState),
+    twoVtwoAdapter: ctx.twoVtwoAdapter || null
+  });
+}
 
     actor.isConfusedTurn = false;
     actor.confuseHits = 0;
