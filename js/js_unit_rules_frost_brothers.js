@@ -220,3 +220,85 @@ export function modifyFrostBrothersEvadeAttempt(defender, attacker, attack, cont
 
   return { handled: false };
 }
+export function onFrostBrothersTeamTurnStart(team, context = {}) {
+  if (!team) return { redraw: false, message: null };
+
+  const unitIds = [
+    team.unit1?.unitId,
+    team.unit2?.unitId
+  ];
+
+  const isFrostBrothers =
+    unitIds.includes("frost_brothers_vasago_cb") &&
+    unitIds.includes("frost_brothers_ashtaron_hc");
+
+  if (!isFrostBrothers) {
+    return { redraw: false, message: null };
+  }
+
+  const unit1Alive =
+    team.unit1 &&
+    Number(team.unit1.hp || 0) > 0 &&
+    team.unit1.isDefeated !== true;
+
+  const unit2Alive =
+    team.unit2 &&
+    Number(team.unit2.hp || 0) > 0 &&
+    team.unit2.isDefeated !== true;
+
+  const bothAlive = unit1Alive && unit2Alive;
+
+  if (!bothAlive) {
+    if (team.mode === "unified") {
+      if (typeof context.exitUnified === "function") {
+        context.exitUnified(team);
+      } else {
+        team.mode = "split";
+      }
+
+      return {
+        redraw: true,
+        message: "片方が撃墜されたためフロスト兄弟は分散型へ移行"
+      };
+    }
+
+    return { redraw: false, message: null };
+  }
+
+  const tauntState = team.tauntState || {};
+  const tauntLocked =
+    Number(tauntState.tauntTurns || 0) > 0 ||
+    tauntState.duelActive === true;
+
+  if (tauntLocked) {
+    if (team.mode === "unified") {
+      if (typeof context.exitUnified === "function") {
+        context.exitUnified(team);
+      } else {
+        team.mode = "split";
+      }
+
+      return {
+        redraw: true,
+        message: "挑発中のためフロスト兄弟は分散型へ移行"
+      };
+    }
+
+    return { redraw: false, message: null };
+  }
+
+  if (team.mode !== "unified" && Math.random() < 0.6) {
+    if (typeof context.enterUnified === "function") {
+      context.enterUnified(team);
+    } else {
+      team.mode = "unified";
+    }
+
+    return {
+      redraw: true,
+      message: "フロスト兄弟は統合型へ移行"
+    };
+  }
+
+  return { redraw: false, message: null };
+}
