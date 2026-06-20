@@ -50,6 +50,31 @@ export function createBattleRecordController(ctx) {
       .filter(Boolean);
   }
 
+  function getDefeatedTeamRecordIds(team) {
+    if (!team) return [];
+
+    const units = [team.unit1, team.unit2].filter(Boolean);
+    const unitIds = units
+      .map(unit => getUnitIdFromState(unit))
+      .filter(Boolean);
+
+    const bossGroupIds = units
+      .map(unit => unit?.bossGroupId)
+      .filter(Boolean);
+
+    const uniqueBossGroupIds = [...new Set(bossGroupIds)];
+
+    if (
+      uniqueBossGroupIds.length === 1 &&
+      bossGroupIds.length === units.length &&
+      unitIds.length >= 2
+    ) {
+      return [uniqueBossGroupIds[0]];
+    }
+
+    return unitIds;
+  }
+
   function get1v1UnitId(playerKey) {
     return getUnitIdFromState(ctx.getPlayerStateRaw(playerKey));
   }
@@ -69,7 +94,11 @@ export function createBattleRecordController(ctx) {
 
     if (ctx.isTeamBattleMode()) {
       const playerUnitIds = getTeamUnitIds(recordPlayer);
-      const defeatedUnitIds = getTeamUnitIds(opponentPlayer);
+      const opponentTeam = ctx.getTeam(opponentPlayer);
+      const defeatedUnitIds =
+        ctx.getBattleMode() === "challenge2v2"
+          ? getDefeatedTeamRecordIds(opponentTeam)
+          : getTeamUnitIds(opponentPlayer);
 
       if (playerUnitIds.length === 0 || defeatedUnitIds.length === 0) return;
 
@@ -143,8 +172,6 @@ export function createBattleRecordController(ctx) {
 
   async function saveBattleResultForCurrentPlayer(winnerPlayer) {
     if (ctx.isTeamBattleMode()) {
-      if (ctx.getBattleMode() === "challenge2v2") return;
-
       const playerSide = ctx.isOnlineEnabled() ? ctx.getOnlineMyPlayer() : "A";
       const opponentSide = playerSide === "A" ? "B" : "A";
 
@@ -158,10 +185,13 @@ export function createBattleRecordController(ctx) {
         playerTeam.unit2?.unitId
       ].filter(Boolean);
 
-      const defeatedUnitIds = [
-        opponentTeam.unit1?.unitId,
-        opponentTeam.unit2?.unitId
-      ].filter(Boolean);
+      const defeatedUnitIds =
+        ctx.getBattleMode() === "challenge2v2"
+          ? getDefeatedTeamRecordIds(opponentTeam)
+          : [
+              opponentTeam.unit1?.unitId,
+              opponentTeam.unit2?.unitId
+            ].filter(Boolean);
 
       const result = winnerPlayer === playerSide ? "win" : "lose";
 
@@ -169,7 +199,8 @@ export function createBattleRecordController(ctx) {
         modeKey: get2v2StatsModeKey(),
         playerUnitIds,
         defeatedUnitIds,
-        result
+        result,
+        opponentCategory: getOpponentCategoryByMode()
       });
 
       return;
