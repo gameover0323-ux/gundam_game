@@ -76,7 +76,15 @@ readFeedbackList,
 deleteFeedback
 } from "./js_online_firebase.js";
 import { onlineState } from "./js_online_state.js";
-import { unitList, bossList, cpuList, cpuBeginnerList, debugUnitList } from "./js_units_index.js";
+import {
+  unitList,
+  bossList,
+  twoVsBossList,
+  twoVsBossUnitList,
+  cpuList,
+  cpuBeginnerList,
+  debugUnitList
+} from "./js_units_index.js";
 import {
   createBattleState,
   applyUnitDerivedState,
@@ -1204,9 +1212,10 @@ onlineState.isSpectator = false;
   showTitle
 });
 unitLookupController = createUnitLookupController({
-  getAllUnits: () => [
+getAllUnits: () => [
     ...unitList,
     ...bossList,
+    ...twoVsBossUnitList,
     ...cpuList,
     ...cpuBeginnerList,
     ...debugUnitList
@@ -2502,6 +2511,7 @@ battleInitController = createBattleInitController({
 gameSetup = createGameSetup({
   units,
   bosses: bossList,
+  twoVsBosses: twoVsBossList,
   cpus: cpuList,
   cpuBeginnerList,
   debugUnits: debugUnitList,
