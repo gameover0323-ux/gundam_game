@@ -97,6 +97,7 @@ import {
   executeUnitCanUseSpecial,
   executeUnitResolveChoice,
   executeUnitTurnEnd,
+  executeTeamTurnStartRules,
   executeUnitBeforeSlot,
   executeUnitEnemyBeforeSlot,
   executeUnitAfterSlotResolved,
@@ -1998,6 +1999,17 @@ setCurrentAttackContexts,
   getPredictableSlotKeys,
 
   executeUnitTurnEnd,
+  executeTeamTurnStartRules: (playerKey) => {
+    const team = getTeam(playerKey);
+    return executeTeamTurnStartRules(team, {
+      ownerPlayer: playerKey,
+      enemyPlayer: getOpponentPlayer(playerKey),
+      twoVtwoAdapter,
+      twoVtwoTauntSystem: twoVtwoTauntController,
+      enterUnified: (targetTeam) => twoVtwoHelpers.enterUnified(targetTeam),
+      exitUnified: (targetTeam) => twoVtwoHelpers.exitUnified(targetTeam)
+    });
+  },
 tickCriticalBoosts,
   showPopup,
   getCurrentAttack,
