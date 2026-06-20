@@ -29,7 +29,12 @@ export function createBattleRecordController(ctx) {
   }
 
   function getUnitIdFromState(state) {
-    return state?.unitId || state?.id || state?.unit?.id || "";
+    return state?.unitId || state?.unit?.id || state?.id || "";
+  }
+
+  function getBattleRecordIdFromState(state) {
+    if (!state || state.battleRecordIgnore === true) return "";
+    return state.battleRecordId || state.unitId || state?.unit?.id || state.id || "";
   }
 
   function getBossGroupIdFromState(state) {
@@ -46,30 +51,15 @@ export function createBattleRecordController(ctx) {
       .filter(Boolean);
   }
 
-  function getDefeatedTeamRecordIds(team) {
+ function getDefeatedTeamRecordIds(team) {
     if (!team) return [];
 
-    const units = [team.unit1, team.unit2].filter(Boolean);
-
-    const unitIds = units
-      .map(unit => getUnitIdFromState(unit))
+    const ids = [team.unit1, team.unit2]
+      .filter(Boolean)
+      .map(unit => getBattleRecordIdFromState(unit))
       .filter(Boolean);
 
-    const groupIds = units
-      .map(unit => getBossGroupIdFromState(unit))
-      .filter(Boolean);
-
-    const uniqueGroupIds = [...new Set(groupIds)];
-
-    if (
-      uniqueGroupIds.length === 1 &&
-      groupIds.length === units.length &&
-      unitIds.length >= 2
-    ) {
-      return [...new Set([uniqueGroupIds[0], ...unitIds])];
-    }
-
-    return [...new Set(unitIds)];
+    return [...new Set(ids)];
   }
 
   function get1v1UnitId(playerKey) {
