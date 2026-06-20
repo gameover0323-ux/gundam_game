@@ -26,10 +26,7 @@ function unlockTitle(profile, titleId) {
   ensureProfileAchievementState(profile);
 
   if (!titleId) return false;
-
-  if (profile.titles.unlocked[titleId]) {
-    return false;
-  }
+  if (profile.titles.unlocked[titleId]) return false;
 
   profile.titles.unlocked[titleId] = true;
   return true;
@@ -39,10 +36,7 @@ function unlockFlag(profile, flag) {
   ensureProfileAchievementState(profile);
 
   if (!flag) return false;
-
-  if (profile.unlocks[flag]) {
-    return false;
-  }
+  if (profile.unlocks[flag]) return false;
 
   profile.unlocks[flag] = true;
   return true;
@@ -53,6 +47,7 @@ function getDefeatedCount(profile, category, targetId) {
   const categoryBucket = defeated[category] || {};
   return Number(categoryBucket[targetId] || 0);
 }
+
 function getUnitUsedCount(profile, unitId) {
   const units = profile?.stats?.units || {};
   const unitStats = units[unitId] || {};
@@ -66,6 +61,7 @@ function getTitleRuleProgress(profile, rule) {
 
   return getDefeatedCount(profile, rule.category, rule.targetId);
 }
+
 function ensureDefaultTitles(profile) {
   let changed = false;
 
@@ -91,7 +87,6 @@ function ensureDefaultTitles(profile) {
 
   return changed;
 }
-
 
 function applyDefeatTitleRules(profile) {
   let changed = false;
@@ -125,6 +120,22 @@ function applyUnlockRules(profile) {
   return changed;
 }
 
+function getTwoVtwoBossWinCount(stats, bossId) {
+  const buckets = [
+    stats?.twoVtwo?.offline,
+    stats?.twoVtwo?.cpu,
+    stats?.twoVtwo?.online
+  ];
+
+  return buckets.reduce((sum, bucket) => {
+    return sum + Number(bucket?.defeated?.[bossId] || 0);
+  }, 0);
+}
+
+function getNormalBossWinCount(stats, bossId) {
+  return Number(stats?.cpu?.vs?.[bossId]?.win || 0);
+}
+
 function applyBossTrophyRules(profile) {
   let changed = false;
 
@@ -138,19 +149,13 @@ function applyBossTrophyRules(profile) {
 
       const trophies = profile.trophies.byUnit[playerUnitId];
 
+      const normalBossWin = getNormalBossWinCount(stats, rule.bossId);
+      const twoVtwoBossWin = getTwoVtwoBossWinCount(stats, rule.bossId);
+      const totalWin = normalBossWin + twoVtwoBossWin;
+
+      if (totalWin < Number(rule.unlockAt || 1)) return;
+
       if (Array.isArray(rule.twoVtwoTrophies)) {
-        const twoVtwoBuckets = [
-          stats?.twoVtwo?.offline,
-          stats?.twoVtwo?.cpu,
-          stats?.twoVtwo?.online
-        ];
-
-        const win = twoVtwoBuckets.reduce((sum, bucket) => {
-          return sum + Number(bucket?.defeated?.[rule.bossId] || 0);
-        }, 0);
-
-        if (win < rule.unlockAt) return;
-
         rule.twoVtwoTrophies.forEach(trophyId => {
           if (!trophies.includes(trophyId)) {
             trophies.push(trophyId);
@@ -161,22 +166,7 @@ function applyBossTrophyRules(profile) {
         return;
       }
 
-      const normalBossWin =
-        Number(stats?.cpu?.vs?.[rule.bossId]?.win || 0);
-
-      const twoVtwoBossWin = [
-        stats?.twoVtwo?.offline,
-        stats?.twoVtwo?.cpu,
-        stats?.twoVtwo?.online
-      ].reduce((sum, bucket) => {
-        return sum + Number(bucket?.defeated?.[rule.bossId] || 0);
-      }, 0);
-
-      const win = normalBossWin + twoVtwoBossWin;
-
-      if (win < rule.unlockAt) return;
-
-      if (!trophies.includes(rule.trophyId)) {
+      if (rule.trophyId && !trophies.includes(rule.trophyId)) {
         trophies.push(rule.trophyId);
         changed = true;
       }
@@ -185,6 +175,7 @@ function applyBossTrophyRules(profile) {
 
   return changed;
 }
+
 export function updatePlayerAchievements(profile) {
   if (!profile) return { changed: false };
 
