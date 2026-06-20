@@ -145,14 +145,13 @@ function applyBossTrophyRules(profile) {
           stats?.twoVtwo?.online
         ];
 
-        rule.twoVtwoTrophies.forEach((trophyId, index) => {
-          const win = twoVtwoBuckets.reduce((sum, bucket) => {
-            const byPosition = bucket?.defeatedByPosition?.[rule.bossId] || {};
-            return sum + Number(byPosition[String(index)] || 0);
-          }, 0);
+        const win = twoVtwoBuckets.reduce((sum, bucket) => {
+          return sum + Number(bucket?.defeated?.[rule.bossId] || 0);
+        }, 0);
 
-          if (win < rule.unlockAt) return;
+        if (win < rule.unlockAt) return;
 
+        rule.twoVtwoTrophies.forEach(trophyId => {
           if (!trophies.includes(trophyId)) {
             trophies.push(trophyId);
             changed = true;
@@ -162,8 +161,18 @@ function applyBossTrophyRules(profile) {
         return;
       }
 
-      const vsBoss = stats?.cpu?.vs?.[rule.bossId];
-      const win = Number(vsBoss?.win || 0);
+      const normalBossWin =
+        Number(stats?.cpu?.vs?.[rule.bossId]?.win || 0);
+
+      const twoVtwoBossWin = [
+        stats?.twoVtwo?.offline,
+        stats?.twoVtwo?.cpu,
+        stats?.twoVtwo?.online
+      ].reduce((sum, bucket) => {
+        return sum + Number(bucket?.defeated?.[rule.bossId] || 0);
+      }, 0);
+
+      const win = normalBossWin + twoVtwoBossWin;
 
       if (win < rule.unlockAt) return;
 
