@@ -9,6 +9,22 @@ export function createBossQteAutoResolver(ctx) {
     return Math.random() < rate;
   }
 
+  function getUnifiedData(team) {
+    if (!team) return null;
+
+    if (!team.unified) {
+      team.unified = {
+        baseHpA: Number(team.unit1?.hp || 0),
+        baseHpB: Number(team.unit2?.hp || 0),
+        totalDamage: 0,
+        healA: 0,
+        healB: 0
+      };
+    }
+
+    return team.unified;
+  }
+
   function autoResolveBossQteIfNeeded() {
     if (!ctx.isChallengeMode()) return false;
 
@@ -21,9 +37,20 @@ export function createBossQteAutoResolver(ctx) {
     const currentAttack = ctx.getCurrentAttack();
     if (!currentAttack || currentAttack.length === 0) return false;
 
-    const attacker = ctx.getPlayerState("A");
-    const defender = ctx.getCombatTargetState("B");
+    const attackerPlayer = "A";
+    const defenderPlayer = "B";
+
+    const attacker = ctx.getPlayerState(attackerPlayer);
+    const defender = ctx.getCombatTargetState(defenderPlayer);
     if (!attacker || !defender) return false;
+
+    const defenderTeam =
+      typeof ctx.getTeam === "function"
+        ? ctx.getTeam(defenderPlayer)
+        : null;
+
+    const isUnifiedDefender =
+      !!defenderTeam && defenderTeam.mode === "unified";
 
     const damageBySource = new Map();
     let totalDamage = 0;
@@ -35,23 +62,43 @@ export function createBossQteAutoResolver(ctx) {
         attack?.sourceLabel || `${attacker.name} ${context.slotNumber}.${context.slotLabel}`;
       const baseDamage = attack ? attack.damage : 0;
 
+      const evadeContext = {
+        attacker,
+        defender,
+        currentAttack,
+        attackIndex: 0,
+        attackerPlayer,
+        defenderPlayer,
+        ownerPlayer: defenderPlayer,
+        enemyPlayer: attackerPlayer,
+        currentAttackContext: context,
+        isCpuAutoResolve: true,
+        twoVtwoAdapter: ctx.twoVtwoAdapter || null
+      };
+
       const customEvade = ctx.executeUnitModifyEvadeAttempt(
         defender,
         attacker,
         attack,
-        {
-          attacker,
-          defender,
-          currentAttack,
-          attackIndex: 0,
-          currentAttackContext: context,
-          isCpuAutoResolve: true
-        }
+        evadeContext
       );
 
       if (customEvade && customEvade.handled) {
         if (customEvade.ok) {
-          defender.evade -= customEvade.consumeEvade || 0;
+          const cost = Number(customEvade.consumeEvade || 0);
+
+          if (cost > 0) {
+            if (
+              customEvade.consumeByAdapter &&
+              ctx.twoVtwoAdapter &&
+              typeof ctx.twoVtwoAdapter.consumeEvade === "function"
+            ) {
+              ctx.twoVtwoAdapter.consumeEvade(defenderPlayer, defender, cost);
+            } else {
+              defender.evade = Math.max(0, Number(defender.evade || 0) - cost);
+            }
+          }
+
           currentAttack.splice(0, 1);
           context.evadeCount++;
 
@@ -61,57 +108,95 @@ export function createBossQteAutoResolver(ctx) {
 
           continue;
         }
-      } else {
-        if (shouldCpuUseEvade(defender)) {
-          const evadeResult = ctx.resolveEvadeAttack({
-            defender,
-            currentAttack,
-            attackIndex: 0
-          });
+      } else if (!attack?.cannotEvade && shouldCpuUseEvade(defender)) {
+        const evadeResult = ctx.resolveEvadeAttack({
+          defender,
+          currentAttack,
+          attackIndex: 0
+        });
 
-          if (evadeResult.ok) {
-            context.evadeCount++;
-            continue;
-          }
+        if (evadeResult.ok) {
+          context.evadeCount++;
+          continue;
         }
       }
 
+      const defenderHpBeforeHit = Number(defender.hp || 0);
+
       const hitResult = ctx.resolveTakeHit({
-  attacker,
-  defender,
-  currentAttack,
-  attackIndex: 0,
-  modifyTakenDamage: (d, a, atk, dmg) =>
-    ctx.executeUnitModifyTakenDamage(d, a, atk, dmg),
-  rollCritical: () => {
-  return typeof ctx.rollCritical === "function"
-    ? ctx.rollCritical(attacker)
-    : false;
-}
-});
+        attacker,
+        defender,
+        currentAttack,
+        attackIndex: 0,
+        modifyTakenDamage: (d, a, atk, dmg) =>
+          ctx.executeUnitModifyTakenDamage(d, a, atk, dmg, {
+            ownerPlayer: defenderPlayer,
+            enemyPlayer: attackerPlayer,
+            attackerPlayer,
+            defenderPlayer,
+            attacker,
+            defender,
+            currentAttack,
+            attackIndex: 0,
+            currentAttackContext: context,
+            isCpuAutoResolve: true,
+            twoVtwoAdapter: ctx.twoVtwoAdapter || null
+          }),
+        rollCritical: () => {
+          return typeof ctx.rollCritical === "function"
+            ? ctx.rollCritical(attacker)
+            : false;
+        }
+      });
 
-      if (!hitResult || !hitResult.cancelled) {
-        const finalDamage =
-          typeof hitResult?.finalDamage === "number"
-            ? hitResult.finalDamage
-            : baseDamage;
-
-        totalDamage += finalDamage;
-        hitCount++;
-
-        damageBySource.set(
-          sourceLabel,
-          (damageBySource.get(sourceLabel) || 0) + finalDamage
-        );
-
+      if (!hitResult || hitResult.cancelled) {
         if (hitResult?.damageMessage) {
           ctx.appendBattleNotice(hitResult.damageMessage);
         }
+        continue;
+      }
 
-        const damagedResult = ctx.executeUnitOnDamaged(defender, attacker);
-        if (damagedResult.message) {
-          ctx.appendBattleNotice(damagedResult.message);
-        }
+      const finalDamage =
+        typeof hitResult.finalDamage === "number"
+          ? hitResult.finalDamage
+          : baseDamage;
+
+      if (isUnifiedDefender) {
+        const unified = getUnifiedData(defenderTeam);
+        unified.totalDamage =
+          Math.max(0, Number(unified.totalDamage || 0)) +
+          Math.max(0, finalDamage);
+
+        defender.hp = defenderHpBeforeHit;
+        defender.isDefeated = false;
+      }
+
+      totalDamage += finalDamage;
+      hitCount++;
+
+      damageBySource.set(
+        sourceLabel,
+        (damageBySource.get(sourceLabel) || 0) + finalDamage
+      );
+
+      if (hitResult.damageMessage) {
+        ctx.appendBattleNotice(hitResult.damageMessage);
+      }
+
+      const damagedResult = ctx.executeUnitOnDamaged(defender, attacker, {
+        ownerPlayer: defenderPlayer,
+        enemyPlayer: attackerPlayer,
+        defender,
+        attacker,
+        attack,
+        currentAttack,
+        attackIndex: 0,
+        isCpuAutoResolve: true,
+        twoVtwoAdapter: ctx.twoVtwoAdapter || null
+      });
+
+      if (damagedResult.message) {
+        ctx.appendBattleNotice(damagedResult.message);
       }
     }
 
