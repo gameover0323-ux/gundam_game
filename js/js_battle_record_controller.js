@@ -29,11 +29,11 @@ export function createBattleRecordController(ctx) {
   }
 
   function getUnitIdFromState(state) {
-    return state?.unitId || state?.unit?.id || state?.id || "";
+    return state?.unitId || state?.id || state?.unit?.id || "";
   }
 
   function getBossGroupIdFromState(state) {
-    return state?.bossGroupId || state?.unit?.bossGroupId || state?.baseUnit?.bossGroupId || "";
+    return state?.bossGroupId || state?.unit?.bossGroupId || "";
   }
 
   function getTeamUnitIds(playerKey) {
@@ -50,8 +50,15 @@ export function createBattleRecordController(ctx) {
     if (!team) return [];
 
     const units = [team.unit1, team.unit2].filter(Boolean);
-    const unitIds = units.map(getUnitIdFromState).filter(Boolean);
-    const groupIds = units.map(getBossGroupIdFromState).filter(Boolean);
+
+    const unitIds = units
+      .map(unit => getUnitIdFromState(unit))
+      .filter(Boolean);
+
+    const groupIds = units
+      .map(unit => getBossGroupIdFromState(unit))
+      .filter(Boolean);
+
     const uniqueGroupIds = [...new Set(groupIds)];
 
     if (
@@ -59,10 +66,10 @@ export function createBattleRecordController(ctx) {
       groupIds.length === units.length &&
       unitIds.length >= 2
     ) {
-      return [uniqueGroupIds[0], ...unitIds];
+      return [...new Set([uniqueGroupIds[0], ...unitIds])];
     }
 
-    return unitIds;
+    return [...new Set(unitIds)];
   }
 
   function get1v1UnitId(playerKey) {
@@ -72,8 +79,10 @@ export function createBattleRecordController(ctx) {
   async function recordBattleResultIfNeeded(winnerPlayer) {
     const profile = ctx.getPlayerProfile();
     if (!profile) return;
+    if (ctx.getIsTestMode && ctx.getIsTestMode()) return;
 
     const opponentCategory = getOpponentCategoryForBattle();
+
     const recordPlayer = ctx.isOnlineEnabled() && ctx.getOnlineMyPlayer()
       ? ctx.getOnlineMyPlayer()
       : "A";
@@ -137,14 +146,18 @@ export function createBattleRecordController(ctx) {
     ctx.setOnlineEncounterSaved(true);
     ctx.setCurrentOnlineOpponentPlayerId(enemy.profileId);
 
-    if (!profile.encounteredPlayers) profile.encounteredPlayers = {};
+    if (!profile.encounteredPlayers) {
+      profile.encounteredPlayers = {};
+    }
 
     const old = profile.encounteredPlayers[enemy.profileId] || {};
 
     profile.encounteredPlayers[enemy.profileId] = {
       profileId: enemy.profileId,
       profileName: enemy.profileName || old.profileName || enemy.profileId,
-      equippedTitles: Array.isArray(enemy.equippedTitles) ? enemy.equippedTitles : [],
+      equippedTitles: Array.isArray(enemy.equippedTitles)
+        ? enemy.equippedTitles
+        : [],
       count: (old.count || 0) + 1,
       lastMatchedAt: new Date().toISOString()
     };
