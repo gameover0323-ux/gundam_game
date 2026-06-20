@@ -713,7 +713,7 @@ export function rollCritical(state) {
   return Math.random() * 100 < getCriticalRate(state);
 }
 
-export function applyUnitDerivedState(state) {
+export function applyUnitDerivedState(state, context = {}) {
   setBaseFromCurrentForm(state);
 
   const rules = unitRulesMap[state.unitId];
@@ -721,7 +721,7 @@ export function applyUnitDerivedState(state) {
   let derived = null;
 
   if (rules && rules.getDerivedState) {
-    derived = rules.getDerivedState(state);
+    derived = rules.getDerivedState(state, context);
   }
 
   applyDerivedStateResult(state, derived);
