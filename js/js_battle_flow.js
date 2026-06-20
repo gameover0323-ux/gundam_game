@@ -132,11 +132,26 @@ export function createBattleFlow(ctx) {
 
     const cpuTeam = ctx.getTeam("B");
 
-    if (cpuTeam) {
-      const nextFocus = pickRandomAliveUnitKey(cpuTeam);
-      cpuTeam.focusUnitKey = nextFocus;
-      cpuTeam.activeUnitKey = nextFocus;
-    }
+ if (cpuTeam) {
+  const lockedFocus =
+    ctx.twoVtwoTauntSystem &&
+    typeof ctx.twoVtwoTauntSystem.getLockedFocusUnitKey === "function"
+      ? ctx.twoVtwoTauntSystem.getLockedFocusUnitKey("B")
+      : null;
+
+  if (lockedFocus && cpuTeam[lockedFocus] && isAliveUnit(cpuTeam[lockedFocus])) {
+    cpuTeam.focusUnitKey = lockedFocus;
+    cpuTeam.activeUnitKey = lockedFocus;
+  } else if (
+    !ctx.twoVtwoTauntSystem ||
+    typeof ctx.twoVtwoTauntSystem.canChangeFocus !== "function" ||
+    ctx.twoVtwoTauntSystem.canChangeFocus("B")
+  ) {
+    const nextFocus = pickRandomAliveUnitKey(cpuTeam);
+    cpuTeam.focusUnitKey = nextFocus;
+    cpuTeam.activeUnitKey = nextFocus;
+  }
+}
 
     if (
       ctx.twoVtwoTauntSystem &&
