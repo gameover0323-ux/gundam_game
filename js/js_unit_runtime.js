@@ -621,8 +621,12 @@ export function createBattleState(unit) {
   const initialSlots = cloneSlots(defaultForm.slots);
   const initialSpecials = cloneSpecials(defaultForm.specials, defaultForm.specialOrder);
 
-  return {
+ return {
     unitId: unit.id,
+    isBoss: unit.isBoss === true,
+    isTwoVsBossUnit: unit.isTwoVsBossUnit === true,
+    bossGroupId: unit.bossGroupId || "",
+    trophyCode: unit.trophyCode || "",
     forms,
     formOrder,
     formId: defaultFormId,
