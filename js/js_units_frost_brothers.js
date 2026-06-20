@@ -1,5 +1,6 @@
 export const frost_brothers_vasago_cb = {
   id: "frost_brothers_vasago_cb",
+  battleRecordId: "frost_brothers",
   name: "ガンダムヴァサーゴ(チェストブレイク)",
   shortName: "ヴァサーゴCB",
   maxHp: 800,
@@ -31,6 +32,8 @@ export const frost_brothers_vasago_cb = {
 
 export const frost_brothers_ashtaron_hc = {
   id: "frost_brothers_ashtaron_hc",
+  battleRecordId: "frost_brothers",
+  battleRecordIgnore: true,
   name: "ガンダムアシュタロン(ハーミットクラブ)",
   shortName: "アシュタロンHC",
   maxHp: 1000,
