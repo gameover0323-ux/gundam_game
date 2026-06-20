@@ -121,10 +121,10 @@ export function createBattleFlow(ctx) {
     return aliveKeys[Math.floor(Math.random() * aliveKeys.length)];
   }
 
-  function setupCpu2v2TurnStart() {
+function setupCpu2v2TurnStart() {
     if (
       !ctx.getBattleMode ||
-      ctx.getBattleMode() !== "vscpu2v2" ||
+      !["vscpu2v2", "challenge2v2"].includes(ctx.getBattleMode()) ||
       ctx.getCurrentPlayer() !== "B"
     ) {
       return;
@@ -132,26 +132,38 @@ export function createBattleFlow(ctx) {
 
     const cpuTeam = ctx.getTeam("B");
 
- if (cpuTeam) {
-  const lockedFocus =
-    ctx.twoVtwoTauntSystem &&
-    typeof ctx.twoVtwoTauntSystem.getLockedFocusUnitKey === "function"
-      ? ctx.twoVtwoTauntSystem.getLockedFocusUnitKey("B")
-      : null;
+    if (cpuTeam) {
+      const lockedFocus =
+        ctx.twoVtwoTauntSystem &&
+        typeof ctx.twoVtwoTauntSystem.getLockedFocusUnitKey === "function"
+          ? ctx.twoVtwoTauntSystem.getLockedFocusUnitKey("B")
+          : null;
 
-  if (lockedFocus && cpuTeam[lockedFocus] && isAliveUnit(cpuTeam[lockedFocus])) {
-    cpuTeam.focusUnitKey = lockedFocus;
-    cpuTeam.activeUnitKey = lockedFocus;
-  } else if (
-    !ctx.twoVtwoTauntSystem ||
-    typeof ctx.twoVtwoTauntSystem.canChangeFocus !== "function" ||
-    ctx.twoVtwoTauntSystem.canChangeFocus("B")
-  ) {
-    const nextFocus = pickRandomAliveUnitKey(cpuTeam);
-    cpuTeam.focusUnitKey = nextFocus;
-    cpuTeam.activeUnitKey = nextFocus;
-  }
-}
+      if (lockedFocus && cpuTeam[lockedFocus] && isAliveUnit(cpuTeam[lockedFocus])) {
+        cpuTeam.focusUnitKey = lockedFocus;
+        cpuTeam.activeUnitKey = lockedFocus;
+      } else if (
+        !ctx.twoVtwoTauntSystem ||
+        typeof ctx.twoVtwoTauntSystem.canChangeFocus !== "function" ||
+        ctx.twoVtwoTauntSystem.canChangeFocus("B")
+      ) {
+        const nextFocus = pickRandomAliveUnitKey(cpuTeam);
+        cpuTeam.focusUnitKey = nextFocus;
+        cpuTeam.activeUnitKey = nextFocus;
+      }
+    }
+
+    const teamStartResult =
+      typeof ctx.executeTeamTurnStartRules === "function"
+        ? ctx.executeTeamTurnStartRules("B")
+        : null;
+
+    if (
+      teamStartResult?.message &&
+      typeof ctx.appendBattleNotice === "function"
+    ) {
+      ctx.appendBattleNotice(teamStartResult.message);
+    }
 
     if (
       ctx.twoVtwoTauntSystem &&
