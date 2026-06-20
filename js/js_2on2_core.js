@@ -1,12 +1,12 @@
 export function create2v2Core(ctx) {
   function isTeamBattleMode() {
-  const battleMode = ctx.getBattleMode();
-  return (
-    battleMode === "2v2" ||
-    battleMode === "challenge2v2" ||
-    battleMode === "vscpu2v2" ||
-    battleMode === "online2v2"
-  );
+    const battleMode = ctx.getBattleMode();
+    return (
+      battleMode === "2v2" ||
+      battleMode === "challenge2v2" ||
+      battleMode === "vscpu2v2" ||
+      battleMode === "online2v2"
+    );
   }
 
   function isUnitDefeated(unit) {
@@ -19,6 +19,21 @@ export function create2v2Core(ctx) {
       unit.hp = 0;
       unit.isDefeated = true;
     }
+  }
+
+  function copySourceMetaToBattleState(state, sourceUnit) {
+    if (!state || !sourceUnit) return state;
+
+    if (!state.unitId && sourceUnit.id) state.unitId = sourceUnit.id;
+    if (!state.id && sourceUnit.id) state.id = sourceUnit.id;
+
+    if (sourceUnit.bossGroupId) state.bossGroupId = sourceUnit.bossGroupId;
+    if (sourceUnit.trophyCode) state.trophyCode = sourceUnit.trophyCode;
+    if (sourceUnit.isTwoVsBossUnit) state.isTwoVsBossUnit = true;
+    if (sourceUnit.isBoss) state.isBoss = true;
+
+    state.unit = sourceUnit;
+    return state;
   }
 
   function ensureTeamActionMode(team) {
@@ -40,8 +55,10 @@ export function create2v2Core(ctx) {
   function getAliveUnitKey(team, preferKey = "unit1") {
     if (!team) return null;
 
-    markDefeatedIfNeeded(team.unit1);
-    markDefeatedIfNeeded(team.unit2);
+    if (team.mode !== "unified") {
+      markDefeatedIfNeeded(team.unit1);
+      markDefeatedIfNeeded(team.unit2);
+    }
 
     if (preferKey === "unit2" && !isUnitDefeated(team.unit2)) return "unit2";
     if (preferKey === "unit1" && !isUnitDefeated(team.unit1)) return "unit1";
@@ -294,15 +311,31 @@ export function create2v2Core(ctx) {
   }
 
   function createTeam(unit1, unit2) {
+    const state1 = copySourceMetaToBattleState(ctx.createBattleState(unit1), unit1);
+    const state2 = copySourceMetaToBattleState(ctx.createBattleState(unit2), unit2);
+
     return {
-      unit1: ctx.createBattleState(unit1),
-      unit2: ctx.createBattleState(unit2),
+      unit1: state1,
+      unit2: state2,
       mode: "split",
       activeUnitKey: "unit1",
       focusUnitKey: "unit1",
       actionModeLock: "",
       unifiedBaseActionCount: 1,
       unifiedActionCount: 1,
+      modeChangeLockedThisTurn: false,
+      tauntState: {
+        tauntTargetPlayer: null,
+        tauntTargetUnitKey: null,
+        tauntOwnerPlayer: null,
+        tauntTurns: 0,
+        duelActive: false,
+        duelAUnitKey: null,
+        duelBUnitKey: null,
+        duelTurns: 0,
+        cooldown: 0,
+        disabledThisTurn: false
+      },
       unified: {
         baseHpA: 0,
         baseHpB: 0,
