@@ -16,6 +16,15 @@ import { zudah } from "./js_units_zudah.js";
 import { devil_gundam } from "./js_units_devil_gundam.js";
 import { extreme_gundam } from "./js_units_extreme_gundam.js";
 
+
+//2vsボス機体//
+import {
+  frost_brothers,
+  frost_brothers_vasago_cb,
+  frost_brothers_ashtaron_hc
+} from "./js_units_frost_brothers.js";
+
+
 //初心者向け//
 import { cpu_zaku_ii_soldier } from "./js_units_cpu_zaku_ii_soldier.js";
 import { cpu_gouf } from "./js_units_cpu_gouf.js";
@@ -61,6 +70,14 @@ export const bossList = [
   devil_gundam,
   extreme_gundam
 ];
+
+export const twoVsBossList = [ frost_brothers ];
+
+export const twoVsBossUnitList = [
+  frost_brothers_vasago_cb,
+  frost_brothers_ashtaron_hc
+];
+
 
 export const cpuList = [
   cpu_gundam_mc,
