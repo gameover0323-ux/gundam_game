@@ -783,24 +783,38 @@ export function executeUnitTurnEnd(state, context = {}) {
   const beforeEvade = state.evade;
   const beforeCap = state.overEvadeCap;
   const beforeMode = state.overEvadeMode;
-
   const rules = unitRulesMap[state.unitId];
-
-  const result =
-    rules && rules.onTurnEnd
-      ? rules.onTurnEnd(state, context)
-      : { redraw: false, message: null };
-
+  const result = rules && rules.onTurnEnd ? rules.onTurnEnd(state, context) : { redraw: false, message: null };
   clampGoldEvadeAtTurnEnd(state);
+  const changed = beforeEvade !== state.evade || beforeCap !== state.overEvadeCap || beforeMode !== state.overEvadeMode;
+  return { ...result, redraw: !!result.redraw || changed };
+}
 
-  const changed =
-    beforeEvade !== state.evade ||
-    beforeCap !== state.overEvadeCap ||
-    beforeMode !== state.overEvadeMode;
+export function executeTeamTurnStartRules(team, context = {}) {
+  if (!team) return { redraw: false, message: null };
+
+  const handlers = [];
+
+  [team.unit1, team.unit2].forEach((unit) => {
+    const rules = unitRulesMap[unit?.unitId];
+    if (!rules || typeof rules.onTeamTurnStart !== "function") return;
+    if (!handlers.includes(rules.onTeamTurnStart)) {
+      handlers.push(rules.onTeamTurnStart);
+    }
+  });
+
+  let redraw = false;
+  const messages = [];
+
+  handlers.forEach((handler) => {
+    const result = handler(team, context) || {};
+    if (result.redraw) redraw = true;
+    if (result.message) messages.push(result.message);
+  });
 
   return {
-    ...result,
-    redraw: !!result.redraw || changed
+    redraw,
+    message: messages.join("\n") || null
   };
 }
 
