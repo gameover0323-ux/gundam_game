@@ -625,6 +625,8 @@ export function createBattleState(unit) {
     unitId: unit.id,
     battleRecordId: unit.battleRecordId || unit.id,
     battleRecordIgnore: unit.battleRecordIgnore === true,
+    bossGroupId: unit.bossGroupId || "",
+    trophyCode: unit.trophyCode || "",
     forms,
     formOrder,
     formId: defaultFormId,
