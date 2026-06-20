@@ -112,18 +112,49 @@ export function createUiController(ctx) {
   }
 
   function redrawBattleBoards() {
-    if (ctx.isTeamBattleMode()) {
-      const teamA = ctx.getTeam("A");
-      const teamB = ctx.getTeam("B");
+  if (ctx.isTeamBattleMode()) {
+    const teamA = ctx.getTeam("A");
+    const teamB = ctx.getTeam("B");
 
-      if (teamA?.unit1) ctx.applyUnitDerivedState(teamA.unit1);
-      if (teamA?.unit2) ctx.applyUnitDerivedState(teamA.unit2);
-      if (teamB?.unit1) ctx.applyUnitDerivedState(teamB.unit1);
-      if (teamB?.unit2) ctx.applyUnitDerivedState(teamB.unit2);
+    if (teamA?.unit1) {
+      ctx.applyUnitDerivedState(teamA.unit1, {
+        ownerPlayer: "A",
+        ownerUnitKey: "unit1",
+        team: teamA,
+        twoVtwoAdapter: ctx.twoVtwoAdapter || null
+      });
+    }
 
-      ctx.renderPlayerState2v2(teamA, ctx.playerABox, "PLAYER A", ctx.build2v2RenderHandlers("A"));
-      ctx.renderPlayerState2v2(teamB, ctx.playerBBox, "PLAYER B", ctx.build2v2RenderHandlers("B"));
-    } else {
+    if (teamA?.unit2) {
+      ctx.applyUnitDerivedState(teamA.unit2, {
+        ownerPlayer: "A",
+        ownerUnitKey: "unit2",
+        team: teamA,
+        twoVtwoAdapter: ctx.twoVtwoAdapter || null
+      });
+    }
+
+    if (teamB?.unit1) {
+      ctx.applyUnitDerivedState(teamB.unit1, {
+        ownerPlayer: "B",
+        ownerUnitKey: "unit1",
+        team: teamB,
+        twoVtwoAdapter: ctx.twoVtwoAdapter || null
+      });
+    }
+
+    if (teamB?.unit2) {
+      ctx.applyUnitDerivedState(teamB.unit2, {
+        ownerPlayer: "B",
+        ownerUnitKey: "unit2",
+        team: teamB,
+        twoVtwoAdapter: ctx.twoVtwoAdapter || null
+      });
+    }
+
+    ctx.renderPlayerState2v2(teamA, ctx.playerABox, "PLAYER A", ctx.build2v2RenderHandlers("A"));
+    ctx.renderPlayerState2v2(teamB, ctx.playerBBox, "PLAYER B", ctx.build2v2RenderHandlers("B"));
+  } else {
       const playerAState = ctx.getPlayerStateRaw("A");
       const playerBState = ctx.getPlayerStateRaw("B");
 
