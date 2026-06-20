@@ -207,6 +207,18 @@ import {
   modifyExtremeGundamTakenDamage,
   modifyExtremeGundamEvadeAttempt
 } from "./js_unit_rules_extreme_gundam.js";
+
+
+//2vsボス機体//
+import {
+  getFrostBrothersDerivedState,
+  onFrostBrothersBeforeSlot,
+  onFrostBrothersAfterSlotResolved,
+  modifyFrostBrothersTakenDamage,
+  modifyFrostBrothersEvadeAttempt
+} from "./js_unit_rules_frost_brothers.js";
+
+
 //初心者向け//
 import {
   getCpuZakuIiSoldierDerivedState,
@@ -837,6 +849,22 @@ extreme_gundam: {
   onDamaged: onExtremeGundamDamaged,
   modifyTakenDamage: modifyExtremeGundamTakenDamage,
   modifyEvadeAttempt: modifyExtremeGundamEvadeAttempt
-}
+},
+frost_brothers_vasago_cb: {
+  getDerivedState: getFrostBrothersDerivedState,
+  onBeforeSlot: onFrostBrothersBeforeSlot,
+  onAfterSlotResolved: onFrostBrothersAfterSlotResolved,
+  modifyTakenDamage: modifyFrostBrothersTakenDamage,
+  modifyEvadeAttempt: modifyFrostBrothersEvadeAttempt
+},
 
+frost_brothers_ashtaron_hc: {
+  getDerivedState: getFrostBrothersDerivedState,
+  onBeforeSlot: onFrostBrothersBeforeSlot,
+  onAfterSlotResolved: onFrostBrothersAfterSlotResolved,
+  modifyTakenDamage: modifyFrostBrothersTakenDamage,
+  modifyEvadeAttempt: modifyFrostBrothersEvadeAttempt
+}
 };
+
+
