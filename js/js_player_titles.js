@@ -683,7 +683,6 @@ export const DEFEAT_TITLE_RULES = [
 ];
 
 export const BOSS_TROPHY_RULES = [
-export const BOSS_TROPHY_RULES = [
   {
     bossId: "devil_gundam",
     trophyId: "D",
