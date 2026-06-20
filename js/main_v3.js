@@ -1837,6 +1837,8 @@ bossQteAutoResolver = createBossQteAutoResolver({
 
   getPlayerState,
   getCombatTargetState,
+  getTeam,
+  twoVtwoAdapter,
 
   appendBattleNotice,
   finishCurrentAttackResolution,
