@@ -316,22 +316,25 @@ export function createPlayerStatsUi(ctx) {
   }
 
   function sanitizeEquippedBossTrophies(profile) {
-    if (!profile?.trophies?.byUnit) return false;
+  if (!profile) return false;
 
-    let changed = false;
+  if (!profile.equippedTrophies) profile.equippedTrophies = {};
+  if (!profile.equippedTrophies.byUnit) profile.equippedTrophies.byUnit = {};
 
-    Object.keys(profile.trophies.byUnit).forEach(unitId => {
-      const unlocked = getUnlockedBossTrophiesForUnit(profile, unitId);
-      const current = profile.trophies.byUnit[unitId] || [];
-      const filtered = current.filter(trophyId => unlocked.includes(trophyId));
+  let changed = false;
 
-      if (filtered.length !== current.length) {
-        profile.trophies.byUnit[unitId] = filtered;
-        changed = true;
-      }
-    });
+  Object.keys(profile.equippedTrophies.byUnit).forEach(unitId => {
+    const unlocked = getUnlockedBossTrophiesForUnit(profile, unitId);
+    const current = profile.equippedTrophies.byUnit[unitId] || [];
+    const filtered = current.filter(trophyId => unlocked.includes(trophyId));
 
-    return changed;
+    if (filtered.length !== current.length) {
+      profile.equippedTrophies.byUnit[unitId] = filtered;
+      changed = true;
+    }
+  });
+
+  return changed;
   }
 
   async function renderTitleCustomizePanel() {
