@@ -105,3 +105,14 @@ export const cpuBeginnerList = [
 export const debugUnitList = [
   daisy_ogre_ciel
 ];
+
+
+export const allUnitList = [
+  ...unitList,
+  ...bossList,
+  ...twoVsBossList,
+  ...twoVsBossUnitList,
+  ...cpuBeginnerList,
+  ...cpuList,
+  ...debugUnitList
+];
