@@ -1,3 +1,7 @@
+function getStateUnitId(state) {
+  return state?.unitId || state?.unit?.id || state?.id || "";
+}
+
 function ensureFrostState(state) {
   if (!state) return;
   if (typeof state.frostVasagoMegaSonicExCount !== "number") state.frostVasagoMegaSonicExCount = 0;
@@ -8,30 +12,89 @@ function isAlive(unit) {
   return unit && Number(unit.hp || 0) > 0 && unit.isDefeated !== true;
 }
 
-function getPartner(state, context = {}) {
-  const team = context.twoVtwoAdapter?.getOwnerTeam?.(context.ownerPlayer) || null;
-  if (!team) return null;
-  if (state?.id === "frost_brothers_vasago_cb") return team.unit2;
-  if (state?.id === "frost_brothers_ashtaron_hc") return team.unit1;
+function getTeamFromContext(context = {}) {
+  if (context.team) return context.team;
+  if (context.ownerTeam) return context.ownerTeam;
+
+  if (
+    context.twoVtwoAdapter &&
+    typeof context.twoVtwoAdapter.getOwnerTeam === "function" &&
+    context.ownerPlayer
+  ) {
+    return context.twoVtwoAdapter.getOwnerTeam(context.ownerPlayer);
+  }
+
   return null;
+}
+
+function getPartner(state, context = {}) {
+  const team = getTeamFromContext(context);
+  if (!team) return null;
+
+  const id = getStateUnitId(state);
+
+  if (id === "frost_brothers_vasago_cb") return team.unit2;
+  if (id === "frost_brothers_ashtaron_hc") return team.unit1;
+
+  return null;
+}
+
+function isUnifiedContext(context = {}) {
+  const team = getTeamFromContext(context);
+  if (team?.mode === "unified") return true;
+
+  if (
+    context.twoVtwoAdapter &&
+    typeof context.twoVtwoAdapter.isUnifiedOwner === "function" &&
+    context.ownerPlayer
+  ) {
+    return context.twoVtwoAdapter.isUnifiedOwner(context.ownerPlayer);
+  }
+
+  return false;
 }
 
 function getUnifiedSlots() {
   return {
-    slot1: { label: "突貫格闘連携", desc: "50ダメージ×5回。格闘、軽減不可", effect: { type: "attack", damage: 50, count: 5, attackType: "melee", ignoreReduction: true } },
-    slot2: { label: "捕縛格闘", desc: "70ダメージ。格闘。被弾時、次の攻撃に必中付与。命中時、行動権+1", effect: { type: "attack", damage: 70, count: 1, attackType: "melee", effectId: "frost_unified_bind" } },
-    slot3: { label: "連携射撃", desc: "30ダメージ×7回。射撃、ビーム", effect: { type: "attack", damage: 30, count: 7, attackType: "shoot", beam: true } },
-    slot4: { label: "回復", desc: "HP160回復", effect: { type: "heal", amount: 160 } },
-    slot5: { label: "収束火線砲", desc: "250ダメージ。射撃", effect: { type: "attack", damage: 250, count: 1, attackType: "shoot" } },
-    slot6: { label: "サテライトランチャー", desc: "600ダメージ。射撃、ビーム、軽減不可", effect: { type: "attack", damage: 600, count: 1, attackType: "shoot", beam: true, ignoreReduction: true } }
+    slot1: {
+      label: "突貫格闘連携",
+      desc: "50ダメージ×5回。格闘、軽減不可",
+      effect: { type: "attack", damage: 50, count: 5, attackType: "melee", ignoreReduction: true }
+    },
+    slot2: {
+      label: "捕縛格闘",
+      desc: "70ダメージ。格闘。被弾時、次の攻撃に必中付与。命中時、行動権+1",
+      effect: { type: "attack", damage: 70, count: 1, attackType: "melee", effectId: "frost_unified_bind" }
+    },
+    slot3: {
+      label: "連携射撃",
+      desc: "30ダメージ×7回。射撃、ビーム",
+      effect: { type: "attack", damage: 30, count: 7, attackType: "shoot", beam: true }
+    },
+    slot4: {
+      label: "回復",
+      desc: "HP160回復",
+      effect: { type: "heal", amount: 160 }
+    },
+    slot5: {
+      label: "収束火線砲",
+      desc: "250ダメージ。射撃",
+      effect: { type: "attack", damage: 250, count: 1, attackType: "shoot" }
+    },
+    slot6: {
+      label: "サテライトランチャー",
+      desc: "600ダメージ。射撃、ビーム、軽減不可",
+      effect: { type: "attack", damage: 600, count: 1, attackType: "shoot", beam: true, ignoreReduction: true }
+    }
   };
 }
 
 export function getFrostBrothersDerivedState(state, context = {}) {
   ensureFrostState(state);
 
+  const id = getStateUnitId(state);
   const partner = getPartner(state, context);
-  const isUnified = context.twoVtwoAdapter?.isUnifiedOwner?.(context.ownerPlayer);
+  const isUnified = isUnifiedContext(context);
 
   if (isUnified && isAlive(partner)) {
     return {
@@ -47,7 +110,7 @@ export function getFrostBrothersDerivedState(state, context = {}) {
     };
   }
 
-  if (state.id === "frost_brothers_vasago_cb") {
+  if (id === "frost_brothers_vasago_cb") {
     const slots = {};
 
     if (state.frostVasagoMegaSonicExCount > 0) {
@@ -74,8 +137,9 @@ export function getFrostBrothersDerivedState(state, context = {}) {
     return { status, slots };
   }
 
-  if (state.id === "frost_brothers_ashtaron_hc") {
+  if (id === "frost_brothers_ashtaron_hc") {
     const slots = {};
+
     if (!isAlive(partner)) {
       slots.slot3 = {
         label: "3EX ギガンティックシザース格闘",
@@ -97,28 +161,31 @@ export function getFrostBrothersDerivedState(state, context = {}) {
 export function onFrostBrothersBeforeSlot(state, slotNumber, context = {}) {
   ensureFrostState(state);
 
-  const team = context.twoVtwoAdapter?.getOwnerTeam?.(context.ownerPlayer);
-  const partner = getPartner(state, context);
+  const team = getTeamFromContext(context);
 
   if (
     team &&
     team.mode === "unified" &&
     (!isAlive(team.unit1) || !isAlive(team.unit2))
   ) {
-    if (typeof context.twoVtwoAdapter?.exitUnified === "function") {
-      context.twoVtwoAdapter.exitUnified(team);
+    if (typeof context.exitUnified === "function") {
+      context.exitUnified(team);
+    } else {
+      team.mode = "split";
     }
-    team.mode = "split";
+
     return { redraw: true, message: "片方が撃墜されたため統合型を解除" };
   }
 
   if (state.frostNextAttackCannotEvade) {
     state.frostNextAttackCannotEvade = false;
+
     return {
       redraw: true,
       message: `${state.name} の次攻撃に必中付与`,
       modifySlot: (slot) => {
         if (!slot?.effect || slot.effect.type !== "attack") return slot;
+
         return {
           ...slot,
           effect: {
@@ -150,11 +217,16 @@ export function onFrostBrothersAfterSlotResolved(state, slotNumber, payload = {}
 
   if (effectId === "frost_vasago_mega_sonic_ex") {
     state.frostVasagoMegaSonicExCount += 1;
+
     if (state.frostVasagoMegaSonicExCount >= 4) {
       state.frostVasagoMegaSonicExCount = 0;
       return { redraw: true, message: "メガソニック砲3回使用：通常6へ戻る" };
     }
-    return { redraw: true, message: `メガソニック砲使用：${state.frostVasagoMegaSonicExCount - 1}/3` };
+
+    return {
+      redraw: true,
+      message: `メガソニック砲使用：${state.frostVasagoMegaSonicExCount - 1}/3`
+    };
   }
 
   if (
@@ -162,10 +234,12 @@ export function onFrostBrothersAfterSlotResolved(state, slotNumber, payload = {}
     Number(resolveResult.hitCount || context.hitCount || 0) > 0
   ) {
     const partner = getPartner(state, context);
+
     if (partner) {
       ensureFrostState(partner);
       partner.frostNextAttackCannotEvade = true;
     }
+
     return { redraw: true, message: "シザース捕縛：ヴァサーゴの次攻撃に必中付与" };
   }
 
@@ -173,8 +247,27 @@ export function onFrostBrothersAfterSlotResolved(state, slotNumber, payload = {}
     effectId === "frost_unified_bind" &&
     Number(resolveResult.hitCount || context.hitCount || 0) > 0
   ) {
-    state.frostNextAttackCannotEvade = true;
-    context.twoVtwoAdapter?.addActionCount?.(context.ownerPlayer, state, 1);
+    const team = getTeamFromContext(context);
+
+    if (team?.unit1) {
+      ensureFrostState(team.unit1);
+      team.unit1.frostNextAttackCannotEvade = true;
+    }
+
+    if (team?.unit2) {
+      ensureFrostState(team.unit2);
+      team.unit2.frostNextAttackCannotEvade = true;
+    }
+
+    if (
+      context.twoVtwoAdapter &&
+      typeof context.twoVtwoAdapter.addActionCount === "function"
+    ) {
+      context.twoVtwoAdapter.addActionCount(context.ownerPlayer, state, 1);
+    } else {
+      state.actionCount = Number(state.actionCount || 0) + 1;
+    }
+
     return { redraw: true, message: "捕縛格闘命中：次攻撃に必中付与 / 行動権+1" };
   }
 
@@ -184,8 +277,9 @@ export function onFrostBrothersAfterSlotResolved(state, slotNumber, payload = {}
 export function modifyFrostBrothersTakenDamage(defender, attacker, attack, damage, context = {}) {
   ensureFrostState(defender);
 
+  const id = getStateUnitId(defender);
   const partner = getPartner(defender, context);
-  const isUnified = context.twoVtwoAdapter?.isUnifiedOwner?.(context.ownerPlayer);
+  const isUnified = isUnifiedContext(context);
 
   if (isUnified) {
     return {
@@ -194,7 +288,7 @@ export function modifyFrostBrothersTakenDamage(defender, attacker, attack, damag
     };
   }
 
-  if (defender.id === "frost_brothers_ashtaron_hc" && isAlive(partner)) {
+  if (id === "frost_brothers_ashtaron_hc" && isAlive(partner)) {
     return {
       damage: Math.floor(Number(damage || 0) * 0.7),
       message: "アシュタロン特性：被ダメージ30%軽減"
@@ -209,23 +303,30 @@ export function modifyFrostBrothersEvadeAttempt(defender, attacker, attack, cont
 
   if (attack?.cannotEvade) return { handled: false };
 
+  const id = getStateUnitId(defender);
   const partner = getPartner(defender, context);
-  const isUnified = context.twoVtwoAdapter?.isUnifiedOwner?.(context.ownerPlayer);
+  const isUnified = isUnifiedContext(context);
 
-  if (isUnified || (defender.id === "frost_brothers_vasago_cb" && isAlive(partner))) {
+  if (isUnified || (id === "frost_brothers_vasago_cb" && isAlive(partner))) {
     if (Math.random() < 0.3) {
-      return { handled: true, ok: true, consumeEvade: 0, message: "フロスト兄弟特性：自動回避" };
+      return {
+        handled: true,
+        ok: true,
+        consumeEvade: 0,
+        message: "フロスト兄弟特性：自動回避"
+      };
     }
   }
 
   return { handled: false };
 }
+
 export function onFrostBrothersTeamTurnStart(team, context = {}) {
   if (!team) return { redraw: false, message: null };
 
   const unitIds = [
-    team.unit1?.unitId,
-    team.unit2?.unitId
+    getStateUnitId(team.unit1),
+    getStateUnitId(team.unit2)
   ];
 
   const isFrostBrothers =
@@ -236,17 +337,7 @@ export function onFrostBrothersTeamTurnStart(team, context = {}) {
     return { redraw: false, message: null };
   }
 
-  const unit1Alive =
-    team.unit1 &&
-    Number(team.unit1.hp || 0) > 0 &&
-    team.unit1.isDefeated !== true;
-
-  const unit2Alive =
-    team.unit2 &&
-    Number(team.unit2.hp || 0) > 0 &&
-    team.unit2.isDefeated !== true;
-
-  const bothAlive = unit1Alive && unit2Alive;
+  const bothAlive = isAlive(team.unit1) && isAlive(team.unit2);
 
   if (!bothAlive) {
     if (team.mode === "unified") {
