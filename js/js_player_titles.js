@@ -643,7 +643,7 @@ export const DEFEAT_TITLE_RULES = [
     ]
   }),
 
-  ...makeDefeatTitleRules({
+...makeDefeatTitleRules({
     category: "boss",
     targetId: "extreme_gundam",
     prefix: "extreme_gundam",
@@ -660,9 +660,29 @@ export const DEFEAT_TITLE_RULES = [
       [45, "VS"],
       [50, "EX"]
     ]
+  }),
+
+  ...makeDefeatTitleRules({
+    category: "boss",
+    targetId: "frost_brothers",
+    prefix: "frost_brothers",
+    entries: [
+      [1, "フロスト"],
+      [5, "ヴァサーゴ"],
+      [10, "アシュタロン"],
+      [15, "私の愛馬は"],
+      [20, "凶暴です"],
+      [25, "兄さん"],
+      [30, "オルバよ"],
+      [35, "ハーミットクラブ"],
+      [40, "チェストブレイク"],
+      [45, "兄弟"],
+      [50, "僕らの求めた戦争"]
+    ]
   })
 ];
 
+export const BOSS_TROPHY_RULES = [
 export const BOSS_TROPHY_RULES = [
   {
     bossId: "devil_gundam",
@@ -679,6 +699,12 @@ export const BOSS_TROPHY_RULES = [
     unlockAt: 1,
     playableUnlockAt: 50,
     unlockFlag: "playable_extreme_gundam"
+  },
+  {
+    bossId: "frost_brothers",
+    label: "CB/HC",
+    unlockAt: 1,
+    twoVtwoTrophies: ["CB", "HC"]
   }
 ];
 
@@ -784,7 +810,8 @@ cpu_zudah: "ヅダのCPU",
     cpu_gouf: "グフ",
     cpu_mobile_ginn: "モビルジン",
     devil_gundam: "デビルガンダム",
-    extreme_gundam: "エクストリームガンダム"
+    extreme_gundam: "エクストリームガンダム",
+    frost_brothers: "フロスト兄弟"
   };
 
   const targetName = nameMap[rule.targetId] || rule.targetId;
@@ -847,8 +874,9 @@ export const TITLE_GROUPS = [
     ["cpu_zaku_ii_soldier", "ザクⅡ(一般兵)撃破"],
     ["cpu_gouf", "グフ撃破"],
     ["cpu_mobile_ginn", "モビルジン撃破"],
-    ["devil_gundam", "デビルガンダム撃破"],
-    ["extreme_gundam", "エクストリームガンダム撃破"]
+  ["devil_gundam", "デビルガンダム撃破"],
+    ["extreme_gundam", "エクストリームガンダム撃破"],
+    ["frost_brothers", "フロスト兄弟撃破"]
   ].map(([prefix, label]) => ({
     groupId: prefix,
     label,
