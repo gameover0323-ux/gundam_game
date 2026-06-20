@@ -54,6 +54,47 @@ function isUnifiedContext(context = {}) {
   return false;
 }
 
+function exitUnifiedSafely(team, context = {}, message) {
+  if (!team || team.mode !== "unified") {
+    return { redraw: false, message: null };
+  }
+
+  if (typeof context.exitUnified === "function") {
+    context.exitUnified(team);
+    return { redraw: true, message };
+  }
+
+  if (
+    context.twoVtwoAdapter &&
+    typeof context.twoVtwoAdapter.exitUnified === "function"
+  ) {
+    context.twoVtwoAdapter.exitUnified(team);
+    return { redraw: true, message };
+  }
+
+  return {
+    redraw: false,
+    message: "統合型解除関数を参照できないため、分散型へ移行できません"
+  };
+}
+
+function enterUnifiedSafely(team, context = {}) {
+  if (!team || team.mode === "unified") return false;
+
+  if (typeof context.enterUnified === "function") {
+    return context.enterUnified(team);
+  }
+
+  if (
+    context.twoVtwoAdapter &&
+    typeof context.twoVtwoAdapter.enterUnified === "function"
+  ) {
+    return context.twoVtwoAdapter.enterUnified(team);
+  }
+
+  return false;
+}
+
 function getUnifiedSlots() {
   return {
     slot1: {
@@ -105,7 +146,7 @@ export function getFrostBrothersDerivedState(state, context = {}) {
         "被ダメージ30%軽減"
       ],
       slots: getUnifiedSlots(),
-      slotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"],
+      ownedSlotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"],
       rollableSlotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"]
     };
   }
@@ -168,13 +209,11 @@ export function onFrostBrothersBeforeSlot(state, slotNumber, context = {}) {
     team.mode === "unified" &&
     (!isAlive(team.unit1) || !isAlive(team.unit2))
   ) {
-    if (typeof context.exitUnified === "function") {
-      context.exitUnified(team);
-    } else {
-      team.mode = "split";
-    }
-
-    return { redraw: true, message: "片方が撃墜されたため統合型を解除" };
+    return exitUnifiedSafely(
+      team,
+      context,
+      "片方が撃墜されたため統合型を解除"
+    );
   }
 
   if (state.frostNextAttackCannotEvade) {
@@ -341,16 +380,11 @@ export function onFrostBrothersTeamTurnStart(team, context = {}) {
 
   if (!bothAlive) {
     if (team.mode === "unified") {
-      if (typeof context.exitUnified === "function") {
-        context.exitUnified(team);
-      } else {
-        team.mode = "split";
-      }
-
-      return {
-        redraw: true,
-        message: "片方が撃墜されたためフロスト兄弟は分散型へ移行"
-      };
+      return exitUnifiedSafely(
+        team,
+        context,
+        "片方が撃墜されたためフロスト兄弟は分散型へ移行"
+      );
     }
 
     return { redraw: false, message: null };
@@ -363,26 +397,24 @@ export function onFrostBrothersTeamTurnStart(team, context = {}) {
 
   if (tauntLocked) {
     if (team.mode === "unified") {
-      if (typeof context.exitUnified === "function") {
-        context.exitUnified(team);
-      } else {
-        team.mode = "split";
-      }
-
-      return {
-        redraw: true,
-        message: "挑発中のためフロスト兄弟は分散型へ移行"
-      };
+      return exitUnifiedSafely(
+        team,
+        context,
+        "挑発中のためフロスト兄弟は分散型へ移行"
+      );
     }
 
     return { redraw: false, message: null };
   }
 
   if (team.mode !== "unified" && Math.random() < 0.6) {
-    if (typeof context.enterUnified === "function") {
-      context.enterUnified(team);
-    } else {
-      team.mode = "unified";
+    const changed = enterUnifiedSafely(team, context);
+
+    if (!changed) {
+      return {
+        redraw: false,
+        message: "統合型移行関数を参照できないため、フロスト兄弟は統合型へ移行できません"
+      };
     }
 
     return {
