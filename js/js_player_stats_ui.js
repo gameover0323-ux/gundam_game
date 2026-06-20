@@ -7,6 +7,20 @@ export function createPlayerStatsUi(ctx) {
     return `Win ${win} Lose ${lose} 勝率${rate}%`;
   }
 
+  function getDisplayNameById(unitId) {
+    const rawName = ctx.getUnitNameById ? ctx.getUnitNameById(unitId) : unitId;
+    if (rawName && rawName !== unitId) return rawName;
+
+    const groups = ctx.getTitleGroups ? ctx.getTitleGroups() : [];
+    const group = groups.find(item => item.groupId === unitId);
+
+    if (group?.label) {
+      return String(group.label).replace(/(使用|撃破)$/g, "");
+    }
+
+    return unitId;
+  }
+
   function renderDefeatedList(defeated = {}) {
     const entries = Object.entries(defeated);
 
@@ -16,13 +30,11 @@ export function createPlayerStatsUi(ctx) {
 
     return entries
       .sort((a, b) => b[1] - a[1])
-      .map(([unitId, count]) => {
-        return `
-          <div class="player-stats-line">
-            ${ctx.getUnitNameById(unitId)}：${count}撃破
-          </div>
-        `;
-      })
+      .map(([unitId, count]) => `
+        <div class="player-stats-line">
+          ${getDisplayNameById(unitId)}：${count}撃破
+        </div>
+      `)
       .join("");
   }
 
@@ -35,9 +47,63 @@ export function createPlayerStatsUi(ctx) {
 
     return entries
       .map(([unitId, record]) => {
-        return `<div class="player-stats-line">vs ${ctx.getUnitNameById(unitId)}：${formatWinLose(record)}</div>`;
+        return `<div class="player-stats-line">vs ${getDisplayNameById(unitId)}：${formatWinLose(record)}</div>`;
       })
       .join("");
+  }
+
+  function getTwoVtwoBossWinCount(unitStats, bossId) {
+    const buckets = [
+      unitStats?.twoVtwo?.offline,
+      unitStats?.twoVtwo?.cpu,
+      unitStats?.twoVtwo?.online
+    ];
+
+    return buckets.reduce((sum, bucket) => {
+      return sum + Number(bucket?.defeated?.[bossId] || 0);
+    }, 0);
+  }
+
+  function getUnlockedBossTrophiesForUnit(profile, unitId) {
+    const unitStats = profile?.stats?.units?.[unitId] || {};
+    const vs = unitStats?.cpu?.vs || {};
+
+    const unlocked = [];
+
+    ctx.getBossTrophyRules().forEach(rule => {
+      const normalBossWin = Number(vs?.[rule.bossId]?.win || 0);
+      const twoVtwoBossWin = getTwoVtwoBossWinCount(unitStats, rule.bossId);
+      const totalWin = normalBossWin + twoVtwoBossWin;
+
+      if (totalWin < Number(rule.unlockAt || 1)) return;
+
+      if (Array.isArray(rule.twoVtwoTrophies)) {
+        rule.twoVtwoTrophies.forEach(trophyId => {
+          if (!unlocked.includes(trophyId)) unlocked.push(trophyId);
+        });
+        return;
+      }
+
+      if (rule.trophyId && !unlocked.includes(rule.trophyId)) {
+        unlocked.push(rule.trophyId);
+      }
+    });
+
+    return unlocked;
+  }
+
+  function getBossTrophyLabel(trophyId) {
+    const rules = ctx.getBossTrophyRules();
+
+    const normalRule = rules.find(rule => rule.trophyId === trophyId);
+    if (normalRule) return normalRule.label || trophyId;
+
+    const twoVtwoRule = rules.find(rule =>
+      Array.isArray(rule.twoVtwoTrophies) &&
+      rule.twoVtwoTrophies.includes(trophyId)
+    );
+
+    return twoVtwoRule ? trophyId : trophyId;
   }
 
   function renderEncounteredPlayerList(encounteredPlayers = {}) {
@@ -123,7 +189,7 @@ export function createPlayerStatsUi(ctx) {
       return `
         <details>
           <summary>
-            ${ctx.getUnitNameById(unitId)}
+            ${getDisplayNameById(unitId)}
             ${ctx.getUnitTrophyText(profile, unitId)}
             使用回数 ${unitStats.used || 0}
           </summary>
@@ -249,14 +315,6 @@ export function createPlayerStatsUi(ctx) {
     }
   }
 
-  function getUnlockedBossTrophiesForUnit(profile, unitId) {
-    const vs = profile?.stats?.units?.[unitId]?.cpu?.vs || {};
-
-    return ctx.getBossTrophyRules()
-      .filter(rule => Number(vs?.[rule.bossId]?.win || 0) >= Number(rule.unlockAt || 1))
-      .map(rule => rule.trophyId);
-  }
-
   function sanitizeEquippedBossTrophies(profile) {
     if (!profile?.trophies?.byUnit) return false;
 
@@ -274,11 +332,6 @@ export function createPlayerStatsUi(ctx) {
     });
 
     return changed;
-  }
-
-  function getBossTrophyLabel(trophyId) {
-    const rule = ctx.getBossTrophyRules().find(rule => rule.trophyId === trophyId);
-    return rule?.label || trophyId;
   }
 
   async function renderTitleCustomizePanel() {
@@ -520,7 +573,9 @@ export function createPlayerStatsUi(ctx) {
     panel.style.display = "";
   }
 
-  function renderTrophyCustomizePanel() {
+  async function renderTrophyCustomizePanel() {
+    await refreshPlayerAchievementsNow();
+
     const profile = ctx.getPlayerProfile();
     if (!profile) return;
 
@@ -529,7 +584,7 @@ export function createPlayerStatsUi(ctx) {
     if (!panel || !content) return;
 
     if (sanitizeEquippedBossTrophies(profile)) {
-      savePlayerCustomizeState();
+      await savePlayerCustomizeState();
     }
 
     const unitStats = profile.stats?.units || {};
@@ -545,7 +600,7 @@ export function createPlayerStatsUi(ctx) {
 
         return `
           <details>
-            <summary>${ctx.getUnitNameById(unitId)} ${equippedTrophies.join("")}</summary>
+            <summary>${getDisplayNameById(unitId)} ${equippedTrophies.join("")}</summary>
             <div class="trophy-button-area">
               ${unlockedTrophies.map(trophyId => {
                 const owned = equippedTrophies.includes(trophyId);
@@ -666,7 +721,7 @@ export function createPlayerStatsUi(ctx) {
           ${rows || `<tr><td colspan="7">登録アカウントなし</td></tr>`}
         </tbody>
       </table>
-    <button id="openFeedbackViewerBtn">意見・要望一覧</button>
+      <button id="openFeedbackViewerBtn">意見・要望一覧</button>
       <button id="backToStatsFromAccountListBtn">戦績に戻る</button>
     `;
 
