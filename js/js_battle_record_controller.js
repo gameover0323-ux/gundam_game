@@ -20,8 +20,7 @@ export function createBattleRecordController(ctx) {
   }
 
   function getBattleRecordMode() {
-    if (ctx.isOnlineEnabled()) return "online";
-    return "offline";
+    return getBattleRecordModeKey();
   }
 
   function get2v2StatsModeKey() {
@@ -37,10 +36,6 @@ export function createBattleRecordController(ctx) {
     return state.battleRecordId || state.unitId || state?.unit?.id || state.id || "";
   }
 
-  function getBossGroupIdFromState(state) {
-    return state?.bossGroupId || state?.unit?.bossGroupId || "";
-  }
-
   function getTeamUnitIds(playerKey) {
     const team = ctx.getTeam(playerKey);
     if (!team) return [];
@@ -51,7 +46,7 @@ export function createBattleRecordController(ctx) {
       .filter(Boolean);
   }
 
- function getDefeatedTeamRecordIds(team) {
+  function getDefeatedTeamRecordIds(team) {
     if (!team) return [];
 
     const ids = [team.unit1, team.unit2]
@@ -62,8 +57,12 @@ export function createBattleRecordController(ctx) {
     return [...new Set(ids)];
   }
 
-  function get1v1UnitId(playerKey) {
+  function get1v1PlayerUnitId(playerKey) {
     return getUnitIdFromState(ctx.getPlayerStateRaw(playerKey));
+  }
+
+  function get1v1OpponentRecordId(playerKey) {
+    return getBattleRecordIdFromState(ctx.getPlayerStateRaw(playerKey));
   }
 
   async function recordBattleResultIfNeeded(winnerPlayer) {
@@ -73,9 +72,10 @@ export function createBattleRecordController(ctx) {
 
     const opponentCategory = getOpponentCategoryForBattle();
 
-    const recordPlayer = ctx.isOnlineEnabled() && ctx.getOnlineMyPlayer()
-      ? ctx.getOnlineMyPlayer()
-      : "A";
+    const recordPlayer =
+      ctx.isOnlineEnabled() && ctx.getOnlineMyPlayer()
+        ? ctx.getOnlineMyPlayer()
+        : "A";
 
     const opponentPlayer = ctx.getOpponentPlayer(recordPlayer);
     const result = winnerPlayer === recordPlayer ? "win" : "lose";
@@ -83,11 +83,7 @@ export function createBattleRecordController(ctx) {
     if (ctx.isTeamBattleMode()) {
       const playerUnitIds = getTeamUnitIds(recordPlayer);
       const opponentTeam = ctx.getTeam(opponentPlayer);
-
-      const defeatedUnitIds =
-        ctx.getBattleMode() === "challenge2v2"
-          ? getDefeatedTeamRecordIds(opponentTeam)
-          : getTeamUnitIds(opponentPlayer);
+      const defeatedUnitIds = getDefeatedTeamRecordIds(opponentTeam);
 
       if (playerUnitIds.length === 0 || defeatedUnitIds.length === 0) return;
 
@@ -102,8 +98,8 @@ export function createBattleRecordController(ctx) {
       return;
     }
 
-    const playerUnitId = get1v1UnitId(recordPlayer);
-    const opponentUnitId = get1v1UnitId(opponentPlayer);
+    const playerUnitId = get1v1PlayerUnitId(recordPlayer);
+    const opponentUnitId = get1v1OpponentRecordId(opponentPlayer);
 
     if (!playerUnitId || !opponentUnitId) return;
 
@@ -170,8 +166,9 @@ export function createBattleRecordController(ctx) {
     getBattleRecordMode,
     get2v2StatsModeKey,
     getUnitIdFromState,
+    getBattleRecordIdFromState,
     getTeamUnitIds,
-    get1v1UnitId,
+    get1v1UnitId: get1v1PlayerUnitId,
     recordBattleResultIfNeeded,
     saveOnlineEncounteredPlayer,
     saveBattleResultForCurrentPlayer
