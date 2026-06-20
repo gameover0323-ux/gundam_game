@@ -419,8 +419,11 @@ export function onExiaBeforeSlot(state, rolledSlotNumber, context = {}) {
   return { redraw: false, message: null };
 }
 
-export function onExiaTurnEnd(state) {
+export function onExiaTurnEnd(state, context = {}) {
   ensureExiaState(state);
+
+  const transAmMessage = payTransAmTurnCost(state, context);
+
   state.exiaTransAmCostPaidThisTurn = false;
   state.exiaTransAmExtraActionsThisTurn = 0;
   state.exiaTurnDamageDealt = 0;
@@ -429,12 +432,21 @@ export function onExiaTurnEnd(state) {
     state.exiaRepairTransAmActive = false;
     state.exiaRepairRestAfterBoost = false;
     state.exiaSkipNextTurn = true;
-    return { redraw: true, message: "リペアTRANS-AM終了。次の自分ターン行動不能" };
+
+    return {
+      redraw: true,
+      message: transAmMessage
+        ? `${transAmMessage}\nリペアTRANS-AM終了。次の自分ターン行動不能`
+        : "リペアTRANS-AM終了。次の自分ターン行動不能"
+    };
+  }
+
+  if (transAmMessage) {
+    return { redraw: true, message: transAmMessage };
   }
 
   return { redraw: false, message: null };
 }
-
 export function onExiaAfterSlotResolved(state, slotNumber, payload = {}) {
   ensureExiaState(state);
   const resolveResult = payload.resolveResult || payload;
