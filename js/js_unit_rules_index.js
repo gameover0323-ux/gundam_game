@@ -214,10 +214,10 @@ import {
   getFrostBrothersDerivedState,
   onFrostBrothersBeforeSlot,
   onFrostBrothersAfterSlotResolved,
+  onFrostBrothersTeamTurnStart,
   modifyFrostBrothersTakenDamage,
   modifyFrostBrothersEvadeAttempt
 } from "./js_unit_rules_frost_brothers.js";
-
 
 //初心者向け//
 import {
@@ -854,6 +854,7 @@ frost_brothers_vasago_cb: {
   getDerivedState: getFrostBrothersDerivedState,
   onBeforeSlot: onFrostBrothersBeforeSlot,
   onAfterSlotResolved: onFrostBrothersAfterSlotResolved,
+  onTeamTurnStart: onFrostBrothersTeamTurnStart,
   modifyTakenDamage: modifyFrostBrothersTakenDamage,
   modifyEvadeAttempt: modifyFrostBrothersEvadeAttempt
 },
@@ -862,9 +863,9 @@ frost_brothers_ashtaron_hc: {
   getDerivedState: getFrostBrothersDerivedState,
   onBeforeSlot: onFrostBrothersBeforeSlot,
   onAfterSlotResolved: onFrostBrothersAfterSlotResolved,
+  onTeamTurnStart: onFrostBrothersTeamTurnStart,
   modifyTakenDamage: modifyFrostBrothersTakenDamage,
   modifyEvadeAttempt: modifyFrostBrothersEvadeAttempt
 }
 };
-
 
