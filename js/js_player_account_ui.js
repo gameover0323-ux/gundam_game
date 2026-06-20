@@ -38,11 +38,11 @@ export function createPlayerAccountUi(ctx) {
     return lines.join("<br>");
   }
 
-  function getUnitTrophyText(profile, unitId) {
-    const trophies = profile?.trophies?.byUnit?.[unitId] || [];
-    if (!trophies.length) return "";
-    return trophies.join("");
-  }
+function getUnitTrophyText(profile, unitId) {
+  const trophies = profile?.equippedTrophies?.byUnit?.[unitId] || [];
+  if (!trophies.length) return "";
+  return trophies.join("");
+}
 
   function getFavoriteUnitIds(profile) {
     if (Array.isArray(profile?.favoriteUnitIds)) {
