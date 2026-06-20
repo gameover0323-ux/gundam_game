@@ -40,6 +40,13 @@ export function createBattleRecordController(ctx) {
     return state?.unitId || state?.unit?.id || state?.id || "";
   }
 
+  function getBossGroupIdFromState(state) {
+    return state?.bossGroupId ||
+      state?.unit?.bossGroupId ||
+      state?.baseUnit?.bossGroupId ||
+      "";
+  }
+
   function getTeamUnitIds(playerKey) {
     const team = ctx.getTeam(playerKey);
     if (!team) return [];
@@ -54,12 +61,13 @@ export function createBattleRecordController(ctx) {
     if (!team) return [];
 
     const units = [team.unit1, team.unit2].filter(Boolean);
+
     const unitIds = units
       .map(unit => getUnitIdFromState(unit))
       .filter(Boolean);
 
     const bossGroupIds = units
-      .map(unit => unit?.bossGroupId)
+      .map(unit => getBossGroupIdFromState(unit))
       .filter(Boolean);
 
     const uniqueBossGroupIds = [...new Set(bossGroupIds)];
@@ -95,6 +103,7 @@ export function createBattleRecordController(ctx) {
     if (ctx.isTeamBattleMode()) {
       const playerUnitIds = getTeamUnitIds(recordPlayer);
       const opponentTeam = ctx.getTeam(opponentPlayer);
+
       const defeatedUnitIds =
         ctx.getBattleMode() === "challenge2v2"
           ? getDefeatedTeamRecordIds(opponentTeam)
@@ -181,16 +190,16 @@ export function createBattleRecordController(ctx) {
       if (!playerTeam || !opponentTeam) return;
 
       const playerUnitIds = [
-        playerTeam.unit1?.unitId,
-        playerTeam.unit2?.unitId
+        getUnitIdFromState(playerTeam.unit1),
+        getUnitIdFromState(playerTeam.unit2)
       ].filter(Boolean);
 
       const defeatedUnitIds =
         ctx.getBattleMode() === "challenge2v2"
           ? getDefeatedTeamRecordIds(opponentTeam)
           : [
-              opponentTeam.unit1?.unitId,
-              opponentTeam.unit2?.unitId
+              getUnitIdFromState(opponentTeam.unit1),
+              getUnitIdFromState(opponentTeam.unit2)
             ].filter(Boolean);
 
       const result = winnerPlayer === playerSide ? "win" : "lose";
@@ -221,8 +230,8 @@ export function createBattleRecordController(ctx) {
 
     await ctx.recordBattleResult({
       mode: getBattleRecordMode(),
-      playerUnitId: playerState.unitId,
-      opponentUnitId: opponentState.unitId,
+      playerUnitId: getUnitIdFromState(playerState),
+      opponentUnitId: getUnitIdFromState(opponentState),
       opponentPlayerId: ctx.getCurrentOnlineOpponentPlayerId(),
       opponentCategory: getOpponentCategoryByMode(),
       result: winnerPlayer === playerSide ? "win" : "lose"
