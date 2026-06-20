@@ -36,7 +36,6 @@ function lockActionMode(team, mode) {
 
   if (mode === "unified") {
     team.mode = "unified";
-
     if (team.unit1) team.unit1.actionCount = 0;
     if (team.unit2) team.unit2.actionCount = 0;
   }
@@ -48,6 +47,11 @@ function canUseActionMode(team, mode) {
 
   if (!team.actionModeLock) return true;
   return team.actionModeLock === mode;
+}
+
+function getUnifiedMaxHpRaw(team) {
+  if (!team) return 0;
+  return clampNumber(team.unit1?.maxHp) + clampNumber(team.unit2?.maxHp);
 }
 
 function getUnifiedData(team) {
@@ -63,7 +67,39 @@ function getUnifiedData(team) {
     };
   }
 
-  return team.unified;
+  const unified = team.unified;
+
+  if (typeof unified.baseHpA !== "number") unified.baseHpA = 0;
+  if (typeof unified.baseHpB !== "number") unified.baseHpB = 0;
+  if (typeof unified.totalDamage !== "number") unified.totalDamage = 0;
+  if (typeof unified.healA !== "number") unified.healA = 0;
+  if (typeof unified.healB !== "number") unified.healB = 0;
+
+  return unified;
+}
+
+function clampUnifiedHpState(team) {
+  const unified = getUnifiedData(team);
+  if (!team || !unified) return;
+
+  const maxHp = getUnifiedMaxHpRaw(team);
+  const current =
+    clampNumber(unified.baseHpA) +
+    clampNumber(unified.baseHpB) +
+    clampNumber(unified.healA) +
+    clampNumber(unified.healB) -
+    clampNumber(unified.totalDamage);
+
+  if (current <= maxHp) return;
+
+  let overflow = current - maxHp;
+
+  const reduceB = Math.min(clampNumber(unified.healB), overflow);
+  unified.healB = clampNumber(unified.healB) - reduceB;
+  overflow -= reduceB;
+
+  const reduceA = Math.min(clampNumber(unified.healA), overflow);
+  unified.healA = clampNumber(unified.healA) - reduceA;
 }
 
 export function create2v2Adapter(ctx) {
@@ -83,19 +119,23 @@ export function create2v2Adapter(ctx) {
     const unified = getUnifiedData(team);
     if (!team || !unified) return 0;
 
-    return Math.max(
-      0,
-      clampNumber(unified.baseHpA) +
-        clampNumber(unified.baseHpB) +
-        clampNumber(unified.healA) +
-        clampNumber(unified.healB) -
-        clampNumber(unified.totalDamage)
+    clampUnifiedHpState(team);
+
+    return Math.min(
+      getUnifiedMaxHpRaw(team),
+      Math.max(
+        0,
+        clampNumber(unified.baseHpA) +
+          clampNumber(unified.baseHpB) +
+          clampNumber(unified.healA) +
+          clampNumber(unified.healB) -
+          clampNumber(unified.totalDamage)
+      )
     );
   }
 
   function getUnifiedMaxHp(team) {
-    if (!team) return 0;
-    return clampNumber(team.unit1?.maxHp) + clampNumber(team.unit2?.maxHp);
+    return getUnifiedMaxHpRaw(team);
   }
 
   function heal(ownerPlayer, actor, amount) {
@@ -105,20 +145,29 @@ export function create2v2Adapter(ctx) {
     const team = getOwnerTeam(ownerPlayer);
 
     if (!team || team.mode !== "unified") {
-      actor.hp = Math.min(actor.maxHp, actor.hp + healAmount);
+      actor.hp = Math.min(clampNumber(actor.maxHp), clampNumber(actor.hp) + healAmount);
       return healAmount;
     }
+
+    const before = getUnifiedHp(team);
+    const maxHp = getUnifiedMaxHp(team);
+    const actualHeal = Math.min(healAmount, Math.max(0, maxHp - before));
+
+    if (actualHeal <= 0) return 0;
 
     const unified = getUnifiedData(team);
     const unitKey = getUnitKeyInTeam(team, actor);
 
     if (unitKey === "unit1") {
-      unified.healA = clampNumber(unified.healA) + healAmount;
+      unified.healA = clampNumber(unified.healA) + actualHeal;
     } else if (unitKey === "unit2") {
-      unified.healB = clampNumber(unified.healB) + healAmount;
+      unified.healB = clampNumber(unified.healB) + actualHeal;
+    } else {
+      unified.healA = clampNumber(unified.healA) + actualHeal;
     }
 
-    return healAmount;
+    clampUnifiedHpState(team);
+    return actualHeal;
   }
 
   function consumeHp(ownerPlayer, actor, amount) {
@@ -128,8 +177,8 @@ export function create2v2Adapter(ctx) {
     const team = getOwnerTeam(ownerPlayer);
 
     if (!team || team.mode !== "unified") {
-      if (actor.hp < cost) return false;
-      actor.hp -= cost;
+      if (clampNumber(actor.hp) < cost) return false;
+      actor.hp = clampNumber(actor.hp) - cost;
       return true;
     }
 
@@ -139,6 +188,7 @@ export function create2v2Adapter(ctx) {
     if (currentHp < cost) return false;
 
     unified.totalDamage = clampNumber(unified.totalDamage) + cost;
+    clampUnifiedHpState(team);
     return true;
   }
 
@@ -149,12 +199,13 @@ export function create2v2Adapter(ctx) {
     const team = getOwnerTeam(ownerPlayer);
 
     if (!team || team.mode !== "unified") {
-      actor.hp = Math.max(0, Number(actor.hp || 0) - damage);
+      actor.hp = Math.max(0, clampNumber(actor.hp) - damage);
       return damage;
     }
 
     const unified = getUnifiedData(team);
     unified.totalDamage = clampNumber(unified.totalDamage) + damage;
+    clampUnifiedHpState(team);
     return damage;
   }
 
@@ -182,8 +233,8 @@ export function create2v2Adapter(ctx) {
     const team = getOwnerTeam(ownerPlayer);
 
     if (!team || team.mode !== "unified") {
-      if (!actor || actor.evade < cost) return false;
-      actor.evade -= cost;
+      if (!actor || clampNumber(actor.evade) < cost) return false;
+      actor.evade = clampNumber(actor.evade) - cost;
       return true;
     }
 
@@ -289,9 +340,7 @@ export function create2v2Adapter(ctx) {
 
     ensureUnifiedActionState(team);
 
-    if (clampNumber(team.unifiedActionCount) < cost) {
-      return false;
-    }
+    if (clampNumber(team.unifiedActionCount) < cost) return false;
 
     lockActionMode(team, "unified");
     team.unifiedActionCount = clampNumber(team.unifiedActionCount) - cost;
@@ -302,9 +351,7 @@ export function create2v2Adapter(ctx) {
   function applyToUnifiedPartners(ownerPlayer, callback) {
     const team = getOwnerTeam(ownerPlayer);
 
-    if (!team || team.mode !== "unified") {
-      return false;
-    }
+    if (!team || team.mode !== "unified") return false;
 
     if (team.unit1) callback(team.unit1, "unit1");
     if (team.unit2) callback(team.unit2, "unit2");
