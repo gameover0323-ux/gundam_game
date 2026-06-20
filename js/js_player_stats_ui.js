@@ -592,7 +592,10 @@ export function createPlayerStatsUi(ctx) {
     const unitSections = Object.keys(unitStats)
       .map(unitId => {
         const unlockedTrophies = getUnlockedBossTrophiesForUnit(profile, unitId);
-        const equippedTrophies = profile.trophies?.byUnit?.[unitId] || [];
+       if (!profile.equippedTrophies) profile.equippedTrophies = {};
+if (!profile.equippedTrophies.byUnit) profile.equippedTrophies.byUnit = {};
+
+const equippedTrophies = profile.equippedTrophies.byUnit[unitId] || [];
 
         if (unlockedTrophies.length === 0) {
           return "";
@@ -642,17 +645,17 @@ export function createPlayerStatsUi(ctx) {
           return;
         }
 
-        if (!profile.trophies) profile.trophies = {};
-        if (!profile.trophies.byUnit) profile.trophies.byUnit = {};
-        if (!profile.trophies.byUnit[unitId]) profile.trophies.byUnit[unitId] = [];
+        if (!profile.equippedTrophies) profile.equippedTrophies = {};
+if (!profile.equippedTrophies.byUnit) profile.equippedTrophies.byUnit = {};
+if (!profile.equippedTrophies.byUnit[unitId]) profile.equippedTrophies.byUnit[unitId] = [];
 
-        const trophies = profile.trophies.byUnit[unitId];
+const trophies = profile.equippedTrophies.byUnit[unitId];
 
-        if (trophies.includes(trophyId)) {
-          profile.trophies.byUnit[unitId] = trophies.filter(id => id !== trophyId);
-        } else {
-          trophies.push(trophyId);
-        }
+if (trophies.includes(trophyId)) {
+  profile.equippedTrophies.byUnit[unitId] = trophies.filter(id => id !== trophyId);
+} else {
+  trophies.push(trophyId);
+}
 
         await savePlayerCustomizeState();
         renderTrophyCustomizePanel();
@@ -664,10 +667,10 @@ export function createPlayerStatsUi(ctx) {
         const unitId = btn.dataset.unitId;
         if (!unitId) return;
 
-        if (!profile.trophies) profile.trophies = {};
-        if (!profile.trophies.byUnit) profile.trophies.byUnit = {};
+        if (!profile.equippedTrophies) profile.equippedTrophies = {};
+if (!profile.equippedTrophies.byUnit) profile.equippedTrophies.byUnit = {};
 
-        profile.trophies.byUnit[unitId] = [];
+profile.equippedTrophies.byUnit[unitId] = [];
 
         await savePlayerCustomizeState();
         renderTrophyCustomizePanel();
