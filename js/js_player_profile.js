@@ -284,6 +284,7 @@ function addDefeated(profile, category, opponentUnitId) {
     (profile.stats.defeated[category][opponentUnitId] || 0) + 1;
 }
 
+
 export async function recordBattleResult(record) {
   const profile = playerSession.profile;
   if (!profile) return { ok: false, message: "ゲスト参戦のため保存しません" };
@@ -385,12 +386,26 @@ function ensureTwoVtwoStats(unitStats) {
   return unitStats.twoVtwo;
 }
 
-function addTwoVtwoWin(bucket, defeatedUnitIds) {
+function addTwoVtwoWin(bucket, defeatedUnitIds, playerUnitIndex = null) {
   bucket.total.win += 1;
+
+  if (!bucket.defeatedByPosition) {
+    bucket.defeatedByPosition = {};
+  }
 
   defeatedUnitIds.forEach(unitId => {
     bucket.defeated[unitId] =
       (bucket.defeated[unitId] || 0) + 1;
+
+    if (playerUnitIndex !== null) {
+      if (!bucket.defeatedByPosition[unitId]) {
+        bucket.defeatedByPosition[unitId] = {};
+      }
+
+      const positionKey = String(playerUnitIndex);
+      bucket.defeatedByPosition[unitId][positionKey] =
+        (bucket.defeatedByPosition[unitId][positionKey] || 0) + 1;
+    }
   });
 }
 
@@ -409,18 +424,18 @@ export async function record2v2BattleResult({
   if (!profile) return { ok: false, message: "ゲスト参戦のため保存しません" };
   if (profile.role === "debug") return { ok: false, message: "デバッグアカウントの戦績は通常保存しません" };
 
-  playerUnitIds.forEach(unitId => {
+  playerUnitIds.forEach((unitId, unitIndex) => {
     const unitStats = ensureUnitStats(profile, unitId);
     const twoVtwo = ensureTwoVtwoStats(unitStats);
     const bucket = twoVtwo[modeKey];
 
     if (result === "win") {
-      addTwoVtwoWin(bucket, defeatedUnitIds);
+      addTwoVtwoWin(bucket, defeatedUnitIds, unitIndex);
     } else {
       addTwoVtwoLose(bucket);
     }
   });
-
+  
   if (result === "win") {
     defeatedUnitIds.forEach(unitId => {
       if (opponentCategory === "boss") {
