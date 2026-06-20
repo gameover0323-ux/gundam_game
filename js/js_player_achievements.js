@@ -139,11 +139,18 @@ function applyBossTrophyRules(profile) {
       const trophies = profile.trophies.byUnit[playerUnitId];
 
       if (Array.isArray(rule.twoVtwoTrophies)) {
-        const twoVtwoCpu = stats?.twoVtwo?.cpu;
-        const byPosition = twoVtwoCpu?.defeatedByPosition?.[rule.bossId] || {};
+        const twoVtwoBuckets = [
+          stats?.twoVtwo?.offline,
+          stats?.twoVtwo?.cpu,
+          stats?.twoVtwo?.online
+        ];
 
         rule.twoVtwoTrophies.forEach((trophyId, index) => {
-          const win = Number(byPosition[String(index)] || 0);
+          const win = twoVtwoBuckets.reduce((sum, bucket) => {
+            const byPosition = bucket?.defeatedByPosition?.[rule.bossId] || {};
+            return sum + Number(byPosition[String(index)] || 0);
+          }, 0);
+
           if (win < rule.unlockAt) return;
 
           if (!trophies.includes(trophyId)) {
@@ -169,7 +176,6 @@ function applyBossTrophyRules(profile) {
 
   return changed;
 }
-
 export function updatePlayerAchievements(profile) {
   if (!profile) return { changed: false };
 
