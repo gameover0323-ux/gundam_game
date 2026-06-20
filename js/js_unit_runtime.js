@@ -623,6 +623,8 @@ export function createBattleState(unit) {
 
  return {
     unitId: unit.id,
+    id: unit.id,
+    originalUnitId: unit.id,
     isBoss: unit.isBoss === true,
     isTwoVsBossUnit: unit.isTwoVsBossUnit === true,
     bossGroupId: unit.bossGroupId || "",
