@@ -58,29 +58,31 @@ export function createBattleRecordController(ctx) {
   }
 
   function getDefeatedTeamRecordIds(team) {
-    if (!team) return [];
+  if (!team) return [];
 
-    const units = [team.unit1, team.unit2].filter(Boolean);
+  const units = [team.unit1, team.unit2].filter(Boolean);
+  const unitIds = units
+    .map(unit => getUnitIdFromState(unit))
+    .filter(Boolean);
 
-    const unitIds = units
-      .map(unit => getUnitIdFromState(unit))
-      .filter(Boolean);
+  const bossGroupIds = units
+    .map(unit => unit?.bossGroupId)
+    .filter(Boolean);
 
-    const bossGroupIds = units
-      .map(unit => getBossGroupIdFromState(unit))
-      .filter(Boolean);
+  const uniqueBossGroupIds = [...new Set(bossGroupIds)];
 
-    const uniqueBossGroupIds = [...new Set(bossGroupIds)];
+  if (
+    uniqueBossGroupIds.length === 1 &&
+    bossGroupIds.length === units.length &&
+    unitIds.length >= 2
+  ) {
+    return [
+      uniqueBossGroupIds[0],
+      ...unitIds
+    ];
+  }
 
-    if (
-      uniqueBossGroupIds.length === 1 &&
-      bossGroupIds.length === units.length &&
-      unitIds.length >= 2
-    ) {
-      return [uniqueBossGroupIds[0]];
-    }
-
-    return unitIds;
+  return unitIds;
   }
 
   function get1v1UnitId(playerKey) {
