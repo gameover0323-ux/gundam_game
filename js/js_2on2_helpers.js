@@ -1,6 +1,16 @@
 export function create2v2Helpers({ getBattleMode, getTeam }) {
   function isTeamBattleMode() {
-    return getBattleMode() === "2v2" || getBattleMode() === "challenge2v2";
+    const mode = getBattleMode();
+    return (
+      mode === "2v2" ||
+      mode === "challenge2v2" ||
+      mode === "vscpu2v2" ||
+      mode === "online2v2"
+    );
+  }
+
+  function floor(value) {
+    return Math.max(0, Math.floor(Number(value || 0)));
   }
 
   function isUnifiedTeam(playerKey) {
@@ -8,11 +18,13 @@ export function create2v2Helpers({ getBattleMode, getTeam }) {
     return isTeamBattleMode() && team && team.mode === "unified";
   }
 
+  function getUnifiedMaxHp(team) {
+    return floor(team?.unit1?.maxHp) + floor(team?.unit2?.maxHp);
+  }
+
   function ensureUnifiedState(team) {
     if (!team) return null;
-    if (!team.unified) {
-      team.unified = {};
-    }
+    if (!team.unified) team.unified = {};
 
     const unified = team.unified;
 
@@ -21,57 +33,82 @@ export function create2v2Helpers({ getBattleMode, getTeam }) {
     if (typeof unified.totalDamage !== "number") unified.totalDamage = 0;
     if (typeof unified.healA !== "number") unified.healA = 0;
     if (typeof unified.healB !== "number") unified.healB = 0;
-
     if (typeof unified.baseActionCount !== "number") unified.baseActionCount = 1;
     if (typeof unified.actionCount !== "number") unified.actionCount = unified.baseActionCount;
 
     return unified;
   }
 
+  function clampUnifiedHpState(team) {
+    const unified = ensureUnifiedState(team);
+    if (!team || !unified) return;
+
+    const maxHp = getUnifiedMaxHp(team);
+    const baseTotal = floor(unified.baseHpA) + floor(unified.baseHpB);
+    const healTotal = floor(unified.healA) + floor(unified.healB);
+    const totalDamage = floor(unified.totalDamage);
+
+    const currentHp = Math.max(0, baseTotal + healTotal - totalDamage);
+
+    if (currentHp <= maxHp) return;
+
+    const overflow = currentHp - maxHp;
+    let remain = overflow;
+
+    const reduceB = Math.min(floor(unified.healB), remain);
+    unified.healB = floor(unified.healB) - reduceB;
+    remain -= reduceB;
+
+    const reduceA = Math.min(floor(unified.healA), remain);
+    unified.healA = floor(unified.healA) - reduceA;
+  }
+
   function syncUnifiedHealFromCurrentHp(team) {
     if (!team || team.mode !== "unified") return;
+
     const unified = ensureUnifiedState(team);
     if (!unified) return;
 
-    const hpA = Math.max(0, Number(team.unit1?.hp || 0));
-    const hpB = Math.max(0, Number(team.unit2?.hp || 0));
+    const hpA = floor(team.unit1?.hp);
+    const hpB = floor(team.unit2?.hp);
 
-    unified.healA = Math.max(Number(unified.healA || 0), hpA - Number(unified.baseHpA || 0));
-    unified.healB = Math.max(Number(unified.healB || 0), hpB - Number(unified.baseHpB || 0));
-  }
+    unified.healA = Math.max(floor(unified.healA), hpA - floor(unified.baseHpA));
+    unified.healB = Math.max(floor(unified.healB), hpB - floor(unified.baseHpB));
 
-  function getUnifiedMaxHp(team) {
-    return Math.max(0, Number(team?.unit1?.maxHp || 0)) +
-      Math.max(0, Number(team?.unit2?.maxHp || 0));
+    clampUnifiedHpState(team);
   }
 
   function getUnifiedHp(team) {
     if (!team) return 0;
+
     syncUnifiedHealFromCurrentHp(team);
+
     const unified = ensureUnifiedState(team);
     if (!unified) return 0;
 
-    return Math.max(
-      0,
-      Math.floor(Number(unified.baseHpA || 0)) +
-      Math.floor(Number(unified.baseHpB || 0)) +
-      Math.floor(Number(unified.healA || 0)) +
-      Math.floor(Number(unified.healB || 0)) -
-      Math.floor(Number(unified.totalDamage || 0))
-    );
+    const hp =
+      floor(unified.baseHpA) +
+      floor(unified.baseHpB) +
+      floor(unified.healA) +
+      floor(unified.healB) -
+      floor(unified.totalDamage);
+
+    return Math.min(getUnifiedMaxHp(team), Math.max(0, hp));
   }
 
   function isUnitDefeated(unit) {
-    return !unit || Number(unit.hp || 0) <= 0 || unit.isDefeated === true;
+    return !unit || floor(unit.hp) <= 0 || unit.isDefeated === true;
   }
 
   function enterUnified(team) {
     if (!team || team.mode === "unified") return false;
+    if (!team.unit1 || !team.unit2) return false;
+    if (isUnitDefeated(team.unit1) || isUnitDefeated(team.unit2)) return false;
 
     const unified = ensureUnifiedState(team);
 
-    unified.baseHpA = Math.max(0, Number(team.unit1?.hp || 0));
-    unified.baseHpB = Math.max(0, Number(team.unit2?.hp || 0));
+    unified.baseHpA = floor(team.unit1.hp);
+    unified.baseHpB = floor(team.unit2.hp);
     unified.totalDamage = 0;
     unified.healA = 0;
     unified.healB = 0;
@@ -87,46 +124,42 @@ export function create2v2Helpers({ getBattleMode, getTeam }) {
     return true;
   }
 
-function exitUnified(team) {
-  if (!team || team.mode !== "unified") return false;
+  function exitUnified(team) {
+    if (!team || team.mode !== "unified") return false;
 
-  const unified = ensureUnifiedState(team);
-  const rawUnifiedHp =
-    Math.max(0, Number(unified.baseHpA || 0)) +
-    Math.max(0, Number(unified.baseHpB || 0)) +
-    Math.max(0, Number(unified.healA || 0)) +
-    Math.max(0, Number(unified.healB || 0)) -
-    Math.max(0, Number(unified.totalDamage || 0));
+    syncUnifiedHealFromCurrentHp(team);
 
-  if (rawUnifiedHp <= 0) {
-    if (team.unit1) {
-      team.unit1.hp = 0;
-      team.unit1.isDefeated = true;
+    const unified = ensureUnifiedState(team);
+    const unifiedHp = getUnifiedHp(team);
+
+    if (unifiedHp <= 0) {
+      if (team.unit1) {
+        team.unit1.hp = 0;
+        team.unit1.isDefeated = true;
+      }
+      if (team.unit2) {
+        team.unit2.hp = 0;
+        team.unit2.isDefeated = true;
+      }
+
+      unified.baseHpA = 0;
+      unified.baseHpB = 0;
+      unified.totalDamage = 0;
+      unified.healA = 0;
+      unified.healB = 0;
+      unified.baseActionCount = 1;
+      unified.actionCount = 1;
+
+      team.mode = "split";
+      team.activeUnitKey = "unit1";
+      team.focusUnitKey = "unit1";
+      return true;
     }
-    if (team.unit2) {
-      team.unit2.hp = 0;
-      team.unit2.isDefeated = true;
-    }
 
-    unified.baseHpA = 0;
-    unified.baseHpB = 0;
-    unified.totalDamage = 0;
-    unified.healA = 0;
-    unified.healB = 0;
-    unified.baseActionCount = 1;
-    unified.actionCount = 1;
-
-    team.mode = "split";
-    team.activeUnitKey = "unit1";
-    team.focusUnitKey = "unit1";
-    return true;
-  }
-
-  syncUnifiedHealFromCurrentHp(team);
-    const aPool = Math.max(0, Number(unified.baseHpA || 0)) + Math.max(0, Number(unified.healA || 0));
-    const bPool = Math.max(0, Number(unified.baseHpB || 0)) + Math.max(0, Number(unified.healB || 0));
+    const aPool = floor(unified.baseHpA) + floor(unified.healA);
+    const bPool = floor(unified.baseHpB) + floor(unified.healB);
     const totalPool = Math.max(1, aPool + bPool);
-    const totalDamage = Math.max(0, Number(unified.totalDamage || 0));
+    const totalDamage = Math.min(floor(unified.totalDamage), totalPool);
 
     let aDamage = Math.floor(totalDamage * (aPool / totalPool));
     let bDamage = totalDamage - aDamage;
@@ -145,12 +178,12 @@ function exitUnified(team) {
     }
 
     if (team.unit1) {
-      team.unit1.hp = Math.max(0, Math.min(Number(team.unit1.maxHp || 0), Math.floor(aFinal)));
+      team.unit1.hp = Math.max(0, Math.min(floor(team.unit1.maxHp), floor(aFinal)));
       team.unit1.isDefeated = team.unit1.hp <= 0;
     }
 
     if (team.unit2) {
-      team.unit2.hp = Math.max(0, Math.min(Number(team.unit2.maxHp || 0), Math.floor(bFinal)));
+      team.unit2.hp = Math.max(0, Math.min(floor(team.unit2.maxHp), floor(bFinal)));
       team.unit2.isDefeated = team.unit2.hp <= 0;
     }
 
@@ -173,22 +206,18 @@ function exitUnified(team) {
 
   function getUnifiedEvade(team) {
     if (!team) return 0;
-
-    const ev1 = Math.max(0, Number(team.unit1?.evade || 0));
-    const ev2 = Math.max(0, Number(team.unit2?.evade || 0));
-
-    return ev1 + ev2;
+    return floor(team.unit1?.evade) + floor(team.unit2?.evade);
   }
 
   function consumeUnifiedEvade(team, amount) {
     if (!team) return false;
 
-    let remain = Math.max(0, Number(amount || 0));
+    let remain = floor(amount);
     if (getUnifiedEvade(team) < remain) return false;
 
     while (remain > 0) {
-      const ev1 = Math.max(0, Number(team.unit1?.evade || 0));
-      const ev2 = Math.max(0, Number(team.unit2?.evade || 0));
+      const ev1 = floor(team.unit1?.evade);
+      const ev2 = floor(team.unit2?.evade);
 
       if (ev1 >= ev2 && ev1 > 0) {
         team.unit1.evade = ev1 - 1;
@@ -212,9 +241,9 @@ function exitUnified(team) {
     }
 
     if (!state) return false;
-    if (Number(state.evade || 0) < Number(amount || 1)) return false;
+    if (floor(state.evade) < floor(amount || 1)) return false;
 
-    state.evade -= Number(amount || 1);
+    state.evade = floor(state.evade) - floor(amount || 1);
     return true;
   }
 
@@ -226,9 +255,7 @@ function exitUnified(team) {
   }
 
   function withUnifiedEvadeForCheck(playerKey, actor, callback) {
-    if (!isUnifiedTeam(playerKey) || !actor) {
-      return callback();
-    }
+    if (!isUnifiedTeam(playerKey) || !actor) return callback();
 
     const team = getTeam(playerKey);
     const backup = actor.evade;
@@ -252,33 +279,33 @@ function exitUnified(team) {
     if (!team || team.mode !== "unified") return 0;
 
     const unified = ensureUnifiedState(team);
-    return Math.max(0, Number(unified.actionCount || 0));
+    return floor(unified.actionCount);
   }
 
-  function canConsumeAction(playerKey, _state, amount = 1) {
+  function canConsumeAction(playerKey, state, amount = 1) {
     const team = getTeam(playerKey);
 
     if (!team || team.mode !== "unified") {
-      return Number(_state?.actionCount || 0) >= Number(amount || 1);
+      return floor(state?.actionCount) >= floor(amount || 1);
     }
 
-    return getActionCount(playerKey) >= Number(amount || 1);
+    return getActionCount(playerKey) >= floor(amount || 1);
   }
 
-  function consumeAction(playerKey, _state, amount = 1) {
+  function consumeAction(playerKey, state, amount = 1) {
     const team = getTeam(playerKey);
 
     if (!team || team.mode !== "unified") {
-      if (!_state) return false;
-      if (Number(_state.actionCount || 0) < Number(amount || 1)) return false;
-      _state.actionCount = Math.max(0, Number(_state.actionCount || 0) - Number(amount || 1));
+      if (!state) return false;
+      if (floor(state.actionCount) < floor(amount || 1)) return false;
+      state.actionCount = floor(state.actionCount) - floor(amount || 1);
       return true;
     }
 
     const unified = ensureUnifiedState(team);
-    if (Number(unified.actionCount || 0) < Number(amount || 1)) return false;
+    if (floor(unified.actionCount) < floor(amount || 1)) return false;
 
-    unified.actionCount = Math.max(0, Number(unified.actionCount || 0) - Number(amount || 1));
+    unified.actionCount = floor(unified.actionCount) - floor(amount || 1);
     return true;
   }
 
@@ -287,12 +314,12 @@ function exitUnified(team) {
 
     if (team?.mode === "unified") {
       const unified = ensureUnifiedState(team);
-      unified.actionCount += Number(amount || 1);
+      unified.actionCount = floor(unified.actionCount) + floor(amount || 1);
       return true;
     }
 
     if (!state) return false;
-    state.actionCount = Number(state.actionCount || 0) + Number(amount || 1);
+    state.actionCount = floor(state.actionCount) + floor(amount || 1);
     return true;
   }
 
