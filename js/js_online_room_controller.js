@@ -1,4 +1,4 @@
-export function createOnlineRoomController(ctx) {
+export function createOnline2v2RoomController(ctx) {
   let roomIdMatchActiveRoomId = null;
   let roomIdMatchUnsubscribe = null;
   let roomIdMatchEntering = false;
@@ -7,34 +7,10 @@ export function createOnlineRoomController(ctx) {
     if (typeof roomIdMatchUnsubscribe === "function") {
       roomIdMatchUnsubscribe();
     }
+
     roomIdMatchUnsubscribe = null;
   }
 
-  function enterRoomIdMatchedRoom(roomId, playerSide) {
-    if (!roomId || (playerSide !== "A" && playerSide !== "B")) return;
-    if (roomIdMatchEntering && roomIdMatchActiveRoomId === roomId) return;
-
-    roomIdMatchEntering = true;
-    roomIdMatchActiveRoomId = roomId;
-    cleanupRoomIdMatchListener();
-
-    const onlineRoomStatus = ctx.getOnlineRoomStatus();
-    if (onlineRoomStatus) {
-      onlineRoomStatus.textContent = `オンラインマッチ成立。あなたはPLAYER ${playerSide}です。`;
-    }
-
-    enterOnlineSelect();
-
-    ctx.readRoom(roomId).then(snapshot => {
-      if (!snapshot.exists()) return;
-      applyOnlineRoomData(snapshot.val());
-    });
-
-    roomIdMatchUnsubscribe = ctx.listenRoom(roomId, roomData => {
-      if (!roomData) return;
-      applyOnlineRoomData(roomData);
-    });
-  }
   function getOnlineProfilePatch(playerKey) {
     const profile = ctx.getPlayerProfile();
 
@@ -55,7 +31,67 @@ export function createOnlineRoomController(ctx) {
     };
   }
 
-  async function createOnlineRoom() {
+  function getUnitId(unit) {
+    return unit?.id || unit?.name || "";
+  }
+
+  function isOnlineSpectator() {
+    return typeof ctx.isOnlineSpectator === "function" && ctx.isOnlineSpectator();
+  }
+
+  function getRoomUnitIds(roomData, playerKey) {
+    const playerData = roomData?.players?.[playerKey] || {};
+    return Array.isArray(playerData.unitIds)
+      ? playerData.unitIds.filter(Boolean)
+      : [];
+  }
+
+  function idsToUnits(ids) {
+    return ids.map((id) => ctx.getUnitById(id)).filter(Boolean);
+  }
+
+  function setSelectTeamUnits(playerKey, units) {
+    const safeUnits = Array.isArray(units) ? units.filter(Boolean) : [];
+
+    if (playerKey === "A") {
+      ctx.setTeamA({ units: safeUnits });
+    } else {
+      ctx.setTeamB({ units: safeUnits });
+    }
+  }
+
+  function getSelectTeamUnits(playerKey) {
+    const team = playerKey === "A" ? ctx.getTeamA() : ctx.getTeamB();
+    return Array.isArray(team?.units) ? team.units : [];
+  }
+
+  function enterRoomIdMatchedRoom(roomId, playerSide) {
+    if (!roomId || (playerSide !== "A" && playerSide !== "B")) return;
+    if (roomIdMatchEntering && roomIdMatchActiveRoomId === roomId) return;
+
+    roomIdMatchEntering = true;
+    roomIdMatchActiveRoomId = roomId;
+    cleanupRoomIdMatchListener();
+
+    const onlineRoomStatus = ctx.getOnlineRoomStatus();
+    if (onlineRoomStatus) {
+      onlineRoomStatus.textContent = `オンライン2on2マッチ成立。あなたはPLAYER ${playerSide}です。`;
+    }
+
+    enterOnline2v2Select();
+
+    ctx.readRoom(roomId).then((snapshot) => {
+      if (!snapshot.exists()) return;
+      applyOnline2v2RoomData(snapshot.val());
+    });
+
+    roomIdMatchUnsubscribe = ctx.listenRoom(roomId, (roomData) => {
+      if (!roomData) return;
+      applyOnline2v2RoomData(roomData);
+    });
+  }
+
+  async function createOnline2v2Room() {
     try {
       await ctx.cleanupOldRooms();
       cleanupRoomIdMatchListener();
@@ -68,7 +104,8 @@ export function createOnlineRoomController(ctx) {
         enabled: true,
         roomId,
         myPlayer: "A",
-        isHost: true
+        isHost: true,
+        isSpectator: false
       });
 
       ctx.setOnlineSelectEntered(false);
@@ -78,37 +115,46 @@ export function createOnlineRoomController(ctx) {
       const onlineInviteUrl = ctx.getOnlineInviteUrl();
 
       if (onlineRoomStatus) {
-        onlineRoomStatus.textContent = `部屋作成中...\n部屋ID：${roomId}`;
+        onlineRoomStatus.textContent = `オンライン2on2部屋作成中...\n部屋ID：${roomId}`;
       }
 
-      const initialRoomData = ctx.buildInitialRoomData({ mode: "online1v1" });
+      const initialRoomData = ctx.buildInitialRoomData({ mode: "online2v2" });
       const profile = ctx.getPlayerProfile();
+
+      initialRoomData.meta.firstPlayer = Math.random() < 0.5 ? "A" : "B";
 
       Object.assign(initialRoomData.players.A, {
         joined: true,
         ready: false,
+        unitIds: [],
         unitId: null,
         profileId: profile?.id || null,
         profileName: profile?.name || profile?.id || "ゲスト",
-        equippedTitles: Array.isArray(profile?.equippedTitles)
-          ? profile.equippedTitles
-          : [],
+        equippedTitles: Array.isArray(profile?.equippedTitles) ? profile.equippedTitles : [],
         lastSeen: Date.now()
+      });
+
+      Object.assign(initialRoomData.players.B, {
+        joined: false,
+        ready: false,
+        unitIds: [],
+        unitId: null,
+        lastSeen: 0
       });
 
       await ctx.writeRoom(roomId, initialRoomData);
 
-      const inviteUrl = `${location.origin}${location.pathname}?mode=online1v1&room=${roomId}`;
+      const inviteUrl = `${location.origin}${location.pathname}?mode=online2v2&room=${roomId}`;
 
       if (onlineRoomStatus) {
-        onlineRoomStatus.textContent = `部屋を作成しました。あなたはPLAYER Aです。部屋ID：${roomId}`;
+        onlineRoomStatus.textContent = `オンライン2on2部屋を作成しました。あなたはPLAYER Aです。部屋ID：${roomId}`;
       }
 
       if (onlineInviteUrl) {
         onlineInviteUrl.textContent = inviteUrl;
       }
 
-      roomIdMatchUnsubscribe = ctx.listenRoom(roomId, roomData => {
+      roomIdMatchUnsubscribe = ctx.listenRoom(roomId, (roomData) => {
         if (!roomData) return;
 
         const playerBJoined = roomData.players?.B?.joined;
@@ -116,7 +162,7 @@ export function createOnlineRoomController(ctx) {
 
         if (status) {
           status.textContent = playerBJoined
-            ? `PLAYER B が参加しました。機体選択へ移動します。部屋ID：${roomId}`
+            ? `PLAYER B が参加しました。2on2機体選択へ移動します。部屋ID：${roomId}`
             : `PLAYER B の参加待ちです。部屋ID：${roomId}`;
         }
 
@@ -126,23 +172,16 @@ export function createOnlineRoomController(ctx) {
       });
     } catch (error) {
       console.error(error);
-
-      const onlineRoomStatus = ctx.getOnlineRoomStatus();
-      if (onlineRoomStatus) {
-        onlineRoomStatus.textContent = "部屋作成に失敗しました";
-      }
-
-      ctx.showPopup(`部屋作成エラー：${error.message}`);
+      ctx.showPopup(`オンライン2on2部屋作成エラー：${error.message}`);
     }
   }
 
-  async function joinOnlineRoom() {
+  async function joinOnline2v2Room() {
     try {
       await ctx.cleanupOldRooms();
       cleanupRoomIdMatchListener();
 
       const onlineRoomIdInput = ctx.getOnlineRoomIdInput();
-      const onlineRoomStatus = ctx.getOnlineRoomStatus();
       const roomId = onlineRoomIdInput?.value.trim();
 
       if (!roomId) {
@@ -157,6 +196,13 @@ export function createOnlineRoomController(ctx) {
         return;
       }
 
+      const roomData = snapshot.val();
+
+      if (roomData?.meta?.mode !== "online2v2") {
+        ctx.showPopup("この部屋はオンライン2on2部屋ではありません");
+        return;
+      }
+
       roomIdMatchActiveRoomId = roomId;
       roomIdMatchEntering = false;
 
@@ -164,7 +210,8 @@ export function createOnlineRoomController(ctx) {
         enabled: true,
         roomId,
         myPlayer: "B",
-        isHost: false
+        isHost: false,
+        isSpectator: false
       });
 
       ctx.setOnlineSelectEntered(false);
@@ -173,6 +220,7 @@ export function createOnlineRoomController(ctx) {
       await ctx.updateRoom(roomId, {
         "players/B/joined": true,
         "players/B/ready": false,
+        "players/B/unitIds": [],
         "players/B/unitId": null,
         "players/B/left": false,
         "players/B/lastSeen": Date.now(),
@@ -181,25 +229,27 @@ export function createOnlineRoomController(ctx) {
         "meta/updatedAt": Date.now()
       });
 
+      const onlineRoomStatus = ctx.getOnlineRoomStatus();
+
       if (onlineRoomStatus) {
-        onlineRoomStatus.textContent = "部屋に参加しました。機体選択へ移動します。";
+        onlineRoomStatus.textContent = "オンライン2on2部屋に参加しました。機体選択へ移動します。";
       }
 
       enterRoomIdMatchedRoom(roomId, "B");
     } catch (error) {
       console.error(error);
-      ctx.showPopup(`部屋参加エラー：${error.message}`);
+      ctx.showPopup(`オンライン2on2部屋参加エラー：${error.message}`);
     }
   }
 
-  function bootOnlineFromUrl() {
+  function bootOnline2v2FromUrl() {
     const params = new URLSearchParams(location.search);
     const mode = params.get("mode");
     const roomId = params.get("room");
 
-    if (mode !== "online1v1" || !roomId) return;
+    if (mode !== "online2v2" || !roomId) return false;
 
-    ctx.setBattleMode("online1v1");
+    ctx.setBattleMode("online2v2");
     ctx.showScreen("onlineRoom");
 
     const onlineRoomIdInput = ctx.getOnlineRoomIdInput();
@@ -210,34 +260,44 @@ export function createOnlineRoomController(ctx) {
     }
 
     if (onlineRoomStatus) {
-      onlineRoomStatus.textContent =
-        "招待URLから部屋IDを読み込みました。「部屋に入る」を押してください。";
+      onlineRoomStatus.textContent = "オンライン2on2招待URLから部屋IDを読み込みました。「部屋に入る」を押してください。";
     }
+
+    return true;
   }
 
-  async function selectOnlineUnit(unit) {
+  async function selectOnline2v2Unit(unit) {
     if (!ctx.isOnlineEnabled || !ctx.isOnlineEnabled()) return false;
+    if (ctx.getBattleMode() !== "online2v2") return false;
     if (!unit) return true;
 
     const roomId = ctx.getOnlineRoomId();
     const myPlayer = ctx.getOnlineMyPlayer();
 
     if (!roomId || (myPlayer !== "A" && myPlayer !== "B")) {
-      ctx.showPopup("オンライン部屋情報が取得できません");
+      ctx.showPopup("オンライン2on2部屋情報が取得できません");
       return true;
     }
 
-    if (myPlayer === "A") {
-      ctx.setSelectedUnitA(unit);
-    } else {
-      ctx.setSelectedUnitB(unit);
+    const currentUnits = getSelectTeamUnits(myPlayer);
+    const currentIds = currentUnits.map(getUnitId).filter(Boolean);
+
+    if (currentIds.length >= 2) {
+      ctx.showPopup("オンライン2on2では2機まで選択済みです");
+      return true;
     }
 
+    const nextIds = [...currentIds, getUnitId(unit)].filter(Boolean).slice(0, 2);
+    const nextUnits = idsToUnits(nextIds);
+    const ready = nextIds.length >= 2;
+
+    setSelectTeamUnits(myPlayer, nextUnits);
     ctx.updateSelectUi();
 
     await ctx.updateRoom(roomId, {
-      [`players/${myPlayer}/unitId`]: unit.id || unit.name,
-      [`players/${myPlayer}/ready`]: true,
+      [`players/${myPlayer}/unitIds`]: nextIds,
+      [`players/${myPlayer}/unitId`]: nextIds[0] || null,
+      [`players/${myPlayer}/ready`]: ready,
       [`players/${myPlayer}/lastSeen`]: Date.now(),
       "meta/status": "selecting",
       "meta/updatedAt": Date.now()
@@ -246,8 +306,19 @@ export function createOnlineRoomController(ctx) {
     return true;
   }
 
-  function applyOnlineRoomData(roomData) {
+  function syncSelectedUnitsFromRoom(roomData) {
+    const idsA = getRoomUnitIds(roomData, "A");
+    const idsB = getRoomUnitIds(roomData, "B");
+
+    setSelectTeamUnits("A", idsToUnits(idsA));
+    setSelectTeamUnits("B", idsToUnits(idsB));
+
+    ctx.updateSelectUi();
+  }
+
+  function applyOnline2v2RoomData(roomData) {
     if (!ctx.isOnlineEnabled() || !roomData) return;
+    if (roomData?.meta?.mode !== "online2v2") return;
 
     ctx.renderOnlineExtraUi(roomData);
     ctx.applyOnlinePeaceRequest(roomData);
@@ -256,87 +327,89 @@ export function createOnlineRoomController(ctx) {
     const playerA = roomData.players?.A || {};
     const playerB = roomData.players?.B || {};
 
-    if (playerA.unitId) {
-      ctx.setSelectedUnitA(ctx.getUnitById(playerA.unitId));
-    }
+    const idsA = getRoomUnitIds(roomData, "A");
+    const idsB = getRoomUnitIds(roomData, "B");
+    const unitsA = idsToUnits(idsA);
+    const unitsB = idsToUnits(idsB);
 
-    if (playerB.unitId) {
-      ctx.setSelectedUnitB(ctx.getUnitById(playerB.unitId));
-    }
-
-    ctx.updateSelectUi();
-
-    if (!ctx.isOnlineSpectator()) {
-      ctx.applyOnlineAction(roomData.action, roomData.battleSnapshot || null);
+    if (!ctx.getOnlineBattleStarted()) {
+      setSelectTeamUnits("A", unitsA);
+      setSelectTeamUnits("B", unitsB);
+      ctx.updateSelectUi();
     }
 
     if (
-      !ctx.isOnlineSpectator() &&
+      !isOnlineSpectator() &&
+      typeof ctx.applyOnline2v2Action === "function"
+    ) {
+      ctx.applyOnline2v2Action(
+        roomData.action,
+        roomData.battleSnapshot || null
+      );
+    }
+
+    const aReady = playerA.ready === true || idsA.length >= 2;
+    const bReady = playerB.ready === true || idsB.length >= 2;
+
+    if (
+      !isOnlineSpectator() &&
       !ctx.getOnlineBattleStarted() &&
-      playerA.ready &&
-      playerB.ready &&
-      ctx.getSelectedUnitA() &&
-      ctx.getSelectedUnitB()
+      aReady &&
+      bReady &&
+      unitsA.length >= 2 &&
+      unitsB.length >= 2
     ) {
       ctx.saveOnlineEncounteredPlayer(roomData);
       ctx.setOnlineBattleStarted(true);
-      ctx.initOnline1v1Battle(ctx.getSelectedUnitA(), ctx.getSelectedUnitB());
+      initOnline2v2Battle(
+        unitsA,
+        unitsB,
+        roomData.meta?.firstPlayer === "B" ? "B" : "A"
+      );
     }
   }
 
-  function enterOnlineSelect() {
+  function enterOnline2v2Select() {
     if (ctx.getOnlineSelectEntered()) return;
 
-    ctx.setBattleMode("online1v1");
-    ctx.setTeamA(null);
-    ctx.setTeamB(null);
+    ctx.setBattleMode("online2v2");
     ctx.setSelectedUnitA(null);
     ctx.setSelectedUnitB(null);
+    ctx.setTeamA({ units: [] });
+    ctx.setTeamB({ units: [] });
     ctx.setSelectingPlayer(ctx.getOnlineMyPlayer() === "B" ? "B" : "A");
     ctx.setOnlineBattleStarted(false);
     ctx.setOnlineSelectEntered(true);
     ctx.showScreen("select");
     ctx.loadUnitButtons();
+    ctx.updateSelectUi();
   }
 
-  function initOnline1v1Battle(unitA, unitB) {
-    const playerAState = ctx.createBattleState(unitA);
-    const playerBState = ctx.createBattleState(unitB);
+  function initOnline2v2Battle(unitsA, unitsB, firstPlayer = "A") {
+    ctx.init2v2(unitsA, unitsB);
 
-    ctx.setPlayerAState(playerAState);
-    ctx.setPlayerBState(playerBState);
+    if (typeof ctx.setCurrentPlayer === "function") {
+      ctx.setCurrentPlayer(firstPlayer === "B" ? "B" : "A");
+    }
 
-    ctx.resetActionCount(playerAState);
-    ctx.resetActionCount(playerBState);
-
-    ctx.resetBattleRuntimeState({
-      currentTurn: 1,
-      currentPlayer: "A",
-      isTestMode: false,
-      onlineBattleFinished: false
-    });
-
-    ctx.applyBattleDisplayNames();
-    ctx.redrawBattleBoards();
     ctx.ensureOnlineBattleExtraUi();
 
     const attackLog = document.getElementById("attackLog");
     if (attackLog) {
-      attackLog.textContent = "オンラインバトル開始";
+      attackLog.textContent =
+        firstPlayer === "B"
+          ? "オンライン2on2バトル開始：PLAYER B 先攻"
+          : "オンライン2on2バトル開始：PLAYER A 先攻";
     }
-
-    ctx.updateDebugButtonVisibility();
-    ctx.showScreen("battle");
   }
 
   return {
-    getOnlineProfilePatch,
-    createOnlineRoom,
-    joinOnlineRoom,
-    bootOnlineFromUrl,
-    selectOnlineUnit,
-    applyOnlineRoomData,
-    enterOnlineSelect,
-    initOnline1v1Battle
+    createOnline2v2Room,
+    joinOnline2v2Room,
+    bootOnline2v2FromUrl,
+    selectOnline2v2Unit,
+    applyOnline2v2RoomData,
+    enterOnline2v2Select,
+    initOnline2v2Battle
   };
 }
