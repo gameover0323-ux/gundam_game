@@ -19,14 +19,10 @@ export function createOnlineBattleUi(ctx) {
       area.innerHTML = `
         <div id="onlinePeaceStatusArea" style="font-size:14px;margin-bottom:8px;"></div>
         <div id="onlineSpectatorControlArea" style="font-size:13px;margin-bottom:8px;"></div>
-     <div id="onlineChatFixedArea" style="text-align:left;margin-bottom:8px;">
-  <div id="onlineChatA">[PLAYER Aチャット]</div>
-  <div id="onlineChatB">[PLAYER Bチャット]</div>
-  <div id="onlineSpectatorChatVisible"
-       style="margin-top:6px;padding:6px;border:1px solid #888;font-weight:bold;background:rgba(255,255,255,0.08);">
-    [観戦者チャット] まだ発言はありません
-  </div>
-</div>
+        <div id="onlineChatFixedArea" style="text-align:left;margin-bottom:8px;">
+          <div id="onlineChatA">[PLAYER Aチャット]</div>
+          <div id="onlineChatB">[PLAYER Bチャット]</div>
+        </div>
       `;
 
       const attackLog = document.getElementById("attackLog");
@@ -222,25 +218,16 @@ export function createOnlineBattleUi(ctx) {
       infoB.innerHTML = `<div>${playerB.profileName || "ゲスト"}</div>`;
     }
 
-  const chatADiv = document.getElementById("onlineChatA");
-const chatBDiv = document.getElementById("onlineChatB");
-const spectatorChatDiv = document.getElementById("onlineSpectatorChatVisible");
+    const chatADiv = document.getElementById("onlineChatA");
+    const chatBDiv = document.getElementById("onlineChatB");
 
-if (chatADiv) {
-  chatADiv.textContent = `[PLAYER Aチャット] ${chatA}`;
-}
+    if (chatADiv) {
+      chatADiv.textContent = `[PLAYER Aチャット] ${chatA}`;
+    }
 
-if (chatBDiv) {
-  chatBDiv.textContent = `[PLAYER Bチャット] ${chatB}`;
-}
-
-if (spectatorChatDiv) {
-  const latest = roomData?.spectatorChat?.latest || null;
-
-  spectatorChatDiv.textContent = latest?.text
-    ? `[観戦者チャット] ${latest.name || "観戦者"}：${latest.text}`
-    : "[観戦者チャット] まだ発言はありません";
-}
+    if (chatBDiv) {
+      chatBDiv.textContent = `[PLAYER Bチャット] ${chatB}`;
+    }
 
     const peaceArea = document.getElementById("onlinePeaceStatusArea");
     if (peaceArea) {
