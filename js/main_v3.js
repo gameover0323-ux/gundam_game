@@ -1485,7 +1485,12 @@ onlineActionSync = createOnlineActionSync({
   isOnlineEnabled: () => onlineState.enabled,
   getOnlineRoomId: () => onlineState.roomId,
   getOnlineMyPlayer: () => onlineState.myPlayer,
-buildOnlineBattleSnapshot,
+  buildOnlineBattleSnapshot,
+
+  getCurrentPlayer: () => currentPlayer,
+  getCurrentAttack: () => currentAttack,
+  getCurrentAttackContext: () => currentAttackContext,
+
   isApplyingRemote: () => onlineState.isApplyingRemote,
   setApplyingRemote: (value) => {
     onlineState.isApplyingRemote = value;
