@@ -629,6 +629,10 @@ function publishOnlineBattleEnd(winnerPlayer) {
 }
 
 function applyOnlineAction(action, battleSnapshot = null) {
+  if (applyOnlineManualSnapshotAction(action)) {
+    return;
+  }
+
   if (onlineQteResultSync?.applyOnlineQteResultAction(action, battleSnapshot)) {
     return;
   }
@@ -637,6 +641,10 @@ function applyOnlineAction(action, battleSnapshot = null) {
 }
 
 function applyOnline2v2Action(action, battleSnapshot = null) {
+  if (applyOnlineManualSnapshotAction(action)) {
+    return;
+  }
+
   if (onlineQteResultSync?.applyOnlineQteResultAction(action, battleSnapshot)) {
     return;
   }
@@ -664,6 +672,16 @@ function updateDebugButtonVisibility() {
   if (specTutorialController?.updateVisibility) {
     specTutorialController.updateVisibility();
   }
+}
+
+function applyOnlineManualSnapshotAction(action) {
+  if (!action || action.type !== "manualSnapshot") return false;
+
+  const snapshot = action.payload?.snapshot || null;
+  if (!snapshot) return true;
+
+  applyOnlineBattleSnapshot(snapshot);
+  return true;
 }
 function updatePlayerCardUi() {
   return playerAccountUi.updatePlayerCardUi();
@@ -1346,8 +1364,21 @@ isOnlineSpectator,
 publishOnlineManualSnapshot: async () => {
     if (!onlineState.enabled || !onlineState.roomId) return;
 
+    const actionId = onlineActionSeq + 1;
+    onlineActionSeq = actionId;
+    onlineState.lastAppliedActionId = actionId;
+
+    const snapshot = buildOnlineBattleSnapshot();
+
     await updateRoom(onlineState.roomId, {
-      battleSnapshot: buildOnlineBattleSnapshot(),
+      action: {
+        actionId,
+        actor: onlineState.myPlayer,
+        type: "manualSnapshot",
+        payload: { snapshot },
+        createdAt: Date.now()
+      },
+      battleSnapshot: snapshot,
       "meta/updatedAt": Date.now()
     });
   },
