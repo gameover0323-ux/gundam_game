@@ -1,9 +1,58 @@
+import { getCriticalRate } from "./js_unit_runtime.js";
+
 export function createOnline2v2ActionSync(ctx) {
   function cloneValue(value) {
     return JSON.parse(JSON.stringify(value ?? null));
   }
 
+  function getOnline2v2AttackOwnerState(index) {
+    const contexts = typeof ctx.getCurrentAttackContexts === "function"
+      ? ctx.getCurrentAttackContexts()
+      : [];
+
+    const context = Array.isArray(contexts) && contexts[index]
+      ? contexts[index]
+      : typeof ctx.getCurrentAttackContext === "function"
+        ? ctx.getCurrentAttackContext()
+        : null;
+
+    const ownerPlayer = context?.ownerPlayer || ctx.getCurrentPlayer();
+
+    if (context?.ownerUnitKey && typeof ctx.getTeam === "function") {
+      const team = ctx.getTeam(ownerPlayer);
+      if (team && team[context.ownerUnitKey]) {
+        return team[context.ownerUnitKey];
+      }
+    }
+
+    if (typeof ctx.getPlayerState === "function") {
+      return ctx.getPlayerState(ownerPlayer);
+    }
+
+    return null;
+  }
+
+  function ensureOnline2v2CriticalFlags() {
+    if (ctx.getBattleMode() !== "online2v2") return;
+
+    const attacks = ctx.getCurrentAttack();
+    if (!Array.isArray(attacks) || attacks.length === 0) return;
+
+    attacks.forEach((attack, index) => {
+      if (!attack || attack.criticalFixed === true) return;
+
+      const attacker = getOnline2v2AttackOwnerState(index);
+      const rate = getCriticalRate(attacker);
+
+      attack.criticalFixed = true;
+      attack.criticalRate = rate;
+      attack.criticalHit = Math.random() * 100 < rate;
+    });
+  }
+
   function buildOnline2v2BattleSnapshot() {
+    ensureOnline2v2CriticalFlags();
+
     return {
       mode: ctx.getBattleMode(),
       currentTurn: ctx.getCurrentTurn(),
@@ -55,9 +104,11 @@ export function createOnline2v2ActionSync(ctx) {
   function publishOnline2v2SnapshotAction(type, actor, payload = {}) {
     publishAction(type, actor, payload);
   }
-if (ctx && typeof ctx === "object") {
-  ctx.publishOnline2v2SnapshotAction = publishOnline2v2SnapshotAction;
-}
+
+  if (ctx && typeof ctx === "object") {
+    ctx.publishOnline2v2SnapshotAction = publishOnline2v2SnapshotAction;
+  }
+
   function publishOnline2v2SlotAction(ownerPlayer, slotMode = "team", unitKey = null) {
     publishAction("slot2v2", ownerPlayer, { slotMode, unitKey });
   }
@@ -66,17 +117,17 @@ if (ctx && typeof ctx === "object") {
     publishAction("special2v2", ownerPlayer, { specialKey });
   }
 
-function publishOnline2v2ChoiceAction(choice, selectedValue) {
-  const actor = choice?.ownerPlayer || ctx.getOnlineMyPlayer();
+  function publishOnline2v2ChoiceAction(choice, selectedValue) {
+    const actor = choice?.ownerPlayer || ctx.getOnlineMyPlayer();
 
-  queueMicrotask(() => {
-    publishAction("choice2v2", actor, {
-      source: choice?.source || null,
-      choiceType: choice?.choiceType || null,
-      selectedValue
+    queueMicrotask(() => {
+      publishAction("choice2v2", actor, {
+        source: choice?.source || null,
+        choiceType: choice?.choiceType || null,
+        selectedValue
+      });
     });
-  });
-}
+  }
 
   function publishOnline2v2QteAction(kind, index) {
     publishAction("qte2v2", ctx.getOnlineMyPlayer(), { kind, index });
@@ -148,6 +199,7 @@ function publishOnline2v2ChoiceAction(choice, selectedValue) {
     if (action.actor === ctx.getOnlineMyPlayer()) return;
 
     ctx.setApplyingRemote(true);
+
     try {
       if (battleSnapshot) {
         applyOnline2v2BattleSnapshot(battleSnapshot);
