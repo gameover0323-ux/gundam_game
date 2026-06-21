@@ -42,34 +42,31 @@ export function createRandomMatchController(ctx) {
     return "";
   }
 
-function canReceiveRandomMatchAnnouncement(data) {
-  const profile = ctx.getPlayerProfile();
+  function canReceiveRandomMatchAnnouncement(data) {
+    const profile = ctx.getPlayerProfile();
 
-  if (!profile) return false;
-  if (!data || !data.id) return false;
+    if (!profile) return false;
+    if (!data || !data.id) return false;
 
-  // status がある場合は recruiting のみ通知対象。
-  // status 未設定の古い通知データは、下の有効期限判定で自然に落とす。
-  if (data.status && data.status !== "recruiting") return false;
+    if (data.status && data.status !== "recruiting") return false;
 
-  const updatedAt = Number(data.updatedAt || data.createdAt || 0);
-  if (!updatedAt) return false;
+    const updatedAt = Number(data.updatedAt || data.createdAt || 0);
+    if (!updatedAt) return false;
 
-  // 古い募集通知は無視。60秒で自然失効。
-  if (Date.now() - updatedAt > 60 * 1000) return false;
+    if (Date.now() - updatedAt > 60 * 1000) return false;
 
-  if (data.profileId && data.profileId === profile.id) return false;
-  if (data.id === lastSeenRandomMatchAnnouncementId) return false;
-  if (randomMatchInviteShowing) return false;
-  if (ctx.isOnlineEnabled() || randomMatchState.enabled) return false;
+    if (data.profileId && data.profileId === profile.id) return false;
+    if (data.id === lastSeenRandomMatchAnnouncementId) return false;
+    if (randomMatchInviteShowing) return false;
+    if (ctx.isOnlineEnabled() || randomMatchState.enabled) return false;
 
-  const scene = getCurrentRandomMatchNotifyScene();
-  if (!scene) return false;
+    const scene = getCurrentRandomMatchNotifyScene();
+    if (!scene) return false;
 
-  const settings = getRandomMatchNotifySettings();
-  return settings[scene] === true;
-}
-  
+    const settings = getRandomMatchNotifySettings();
+    return settings[scene] === true;
+  }
+
   function listenRandomMatchAnnouncementsOnceReady() {
     if (randomMatchAnnouncementUnsubscribe) return;
 
@@ -315,13 +312,13 @@ function canReceiveRandomMatchAnnouncement(data) {
       const now = Date.now();
 
       await ctx.writeRandomMatchAnnouncement({
-  id: myTicketId,
-  status: "recruiting",
-  profileId: profile.id,
-  profileName: profile.name || profile.id || "プレイヤー",
-  createdAt: now,
-  updatedAt: now
-});
+        id: myTicketId,
+        status: "recruiting",
+        profileId: profile.id,
+        profileName: profile.name || profile.id || "プレイヤー",
+        createdAt: now,
+        updatedAt: now
+      });
 
       randomMatchState.ticketId = myTicketId;
 
@@ -572,6 +569,7 @@ function canReceiveRandomMatchAnnouncement(data) {
     const now = Date.now();
 
     const initialRoomData = ctx.buildInitialRoomData({ mode: "online1v1" });
+    initialRoomData.meta.firstPlayer = Math.random() < 0.5 ? "A" : "B";
 
     initialRoomData.players.A = {
       ...initialRoomData.players.A,
