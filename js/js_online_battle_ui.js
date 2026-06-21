@@ -133,8 +133,12 @@ export function createOnlineBattleUi(ctx) {
         和平
       </button>
 
-      <button id="onlineSurrenderBtn" style="width:33px;height:33px;font-size:12px;padding:0;">
+   <button id="onlineSurrenderBtn" style="width:33px;height:33px;font-size:12px;padding:0;">
         降伏
+      </button>
+
+      <button id="onlineManualSyncBtn" style="width:48px;height:33px;font-size:11px;padding:0;">
+        状況送信
       </button>
     `;
 
@@ -142,6 +146,7 @@ export function createOnlineBattleUi(ctx) {
 
     document.getElementById("onlinePeaceBtn")?.addEventListener("click", requestOnlinePeace);
     document.getElementById("onlineSurrenderBtn")?.addEventListener("click", requestOnlineSurrender);
+    document.getElementById("onlineManualSyncBtn")?.addEventListener("click", requestManualSync);
   }
 
   async function sendOnlineChat(playerKey) {
@@ -246,6 +251,23 @@ export function createOnlineBattleUi(ctx) {
     }
   }
 
+async function requestManualSync() {
+    if (!ctx.isOnlineEnabled() || !ctx.getOnlineRoomId()) return;
+
+    if (isSpectator()) {
+      ctx.showPopup("観戦中は状況送信できません");
+      return;
+    }
+
+    if (typeof ctx.publishOnlineManualSnapshot !== "function") {
+      ctx.showPopup("状況送信機能が未接続です");
+      return;
+    }
+
+    await ctx.publishOnlineManualSnapshot();
+    ctx.showPopup("現在の状況を送信しました");
+  }
+  
   async function requestOnlinePeace() {
     if (!ctx.isOnlineEnabled() || !ctx.getOnlineRoomId()) return;
 
@@ -578,6 +600,7 @@ function renderSpectatorControlArea(roomData) {
     ensureOnlineTopPlayerHud,
     ensureOnlineCenterButtons,
     sendOnlineChat,
+    requestManualSync,
     renderOnlineExtraUi,
     requestOnlinePeace,
     respondOnlinePeace,
