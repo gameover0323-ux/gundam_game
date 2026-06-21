@@ -42,31 +42,27 @@ export function createRandomMatchController(ctx) {
     return "";
   }
 
-  function canReceiveRandomMatchAnnouncement(data) {
-    const profile = ctx.getPlayerProfile();
+function canReceiveRandomMatchAnnouncement(data) {
+  const profile = ctx.getPlayerProfile();
 
-    if (!profile) return false;
-    if (!data || !data.id) return false;
+  if (!profile) return false;
+  if (!data || !data.id) return false;
 
-    if (data.status && data.status !== "recruiting") return false;
+  // ←ここ追加
+  if (data.status && data.status !== "recruiting") return false;
 
-    const updatedAt = Number(data.updatedAt || data.createdAt || 0);
-    if (!updatedAt) return false;
+  if (data.profileId && data.profileId === profile.id) return false;
+  if (data.id === lastSeenRandomMatchAnnouncementId) return false;
+  if (randomMatchInviteShowing) return false;
+  if (ctx.isOnlineEnabled() || randomMatchState.enabled) return false;
 
-    if (Date.now() - updatedAt > 60 * 1000) return false;
+  const scene = getCurrentRandomMatchNotifyScene();
+  if (!scene) return false;
 
-    if (data.profileId && data.profileId === profile.id) return false;
-    if (data.id === lastSeenRandomMatchAnnouncementId) return false;
-    if (randomMatchInviteShowing) return false;
-    if (ctx.isOnlineEnabled() || randomMatchState.enabled) return false;
-
-    const scene = getCurrentRandomMatchNotifyScene();
-    if (!scene) return false;
-
-    const settings = getRandomMatchNotifySettings();
-    return settings[scene] === true;
-  }
-
+  const settings = getRandomMatchNotifySettings();
+  return settings[scene] === true;
+}
+  
   function listenRandomMatchAnnouncementsOnceReady() {
     if (randomMatchAnnouncementUnsubscribe) return;
 
@@ -313,7 +309,6 @@ export function createRandomMatchController(ctx) {
 
       await ctx.writeRandomMatchAnnouncement({
         id: myTicketId,
-        status: "recruiting",
         profileId: profile.id,
         profileName: profile.name || profile.id || "プレイヤー",
         createdAt: now,
@@ -569,7 +564,6 @@ export function createRandomMatchController(ctx) {
     const now = Date.now();
 
     const initialRoomData = ctx.buildInitialRoomData({ mode: "online1v1" });
-    initialRoomData.meta.firstPlayer = Math.random() < 0.5 ? "A" : "B";
 
     initialRoomData.players.A = {
       ...initialRoomData.players.A,
