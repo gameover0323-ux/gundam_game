@@ -171,9 +171,10 @@ export function createOnline2v2ActionSync(ctx) {
   }
 
   function publishOnline2v2QteAction(kind, index) {
-    const critical = kind === "hit"
-      ? buildOnline2v2CriticalPayload(index)
-      : null;
+    const critical =
+      kind === "hit" || kind === "supportDefense"
+        ? buildOnline2v2CriticalPayload(index)
+        : null;
 
     publishAction(
       "qte2v2",
@@ -267,6 +268,7 @@ export function createOnline2v2ActionSync(ctx) {
         } else if (kind === "evade") {
           ctx.evadeAttackRaw(index);
         } else if (kind === "supportDefense") {
+          applyOnline2v2CriticalPayload(action.payload?.critical);
           ctx.supportDefenseAttackRaw(index);
           ctx.checkBattleEnd();
         }
