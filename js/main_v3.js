@@ -1632,7 +1632,7 @@ getPendingChoice: () => pendingChoice,
     twoVtwoBreakthroughController.applyOnlineBet(player, value),
 
   renderBreakthroughResultRaw: (result) =>
-    twoVtwoBreakthroughController.renderResult(result),
+  twoVtwoBreakthroughController.applyOnlineResult(result),
 
   toggleTeamModeRaw: (playerKey) => {
     toggleTeamMode(playerKey);
