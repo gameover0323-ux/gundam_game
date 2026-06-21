@@ -337,8 +337,8 @@ export function onFreedomAfterSlotResolved(state, slotNumber, context = {}) {
   }
 
   if (result.customEffectId === "freedom_seed_extend") {
-    extendSeed(state, 3);
-    return { redraw: true, message: "S.E.E.D.覚醒 残りターン+3" };
+    extendSeed(state, 2);
+    return { redraw: true, message: "S.E.E.D.覚醒 残りターン+2" };
   }
 
   return { redraw: false, message: null };
