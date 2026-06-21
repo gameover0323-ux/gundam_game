@@ -2,6 +2,7 @@ export function createOnlineRoomController(ctx) {
   let roomIdMatchActiveRoomId = null;
   let roomIdMatchUnsubscribe = null;
   let roomIdMatchEntering = false;
+  let lastAppliedBattleSnapshotUpdatedAt = 0;
 
   function cleanupRoomIdMatchListener() {
     if (typeof roomIdMatchUnsubscribe === "function") {
@@ -16,6 +17,7 @@ export function createOnlineRoomController(ctx) {
 
     roomIdMatchEntering = true;
     roomIdMatchActiveRoomId = roomId;
+    lastAppliedBattleSnapshotUpdatedAt = 0;
     cleanupRoomIdMatchListener();
 
     const onlineRoomStatus = ctx.getOnlineRoomStatus();
@@ -35,6 +37,7 @@ export function createOnlineRoomController(ctx) {
       applyOnlineRoomData(roomData);
     });
   }
+
   function getOnlineProfilePatch(playerKey) {
     const profile = ctx.getPlayerProfile();
 
@@ -63,6 +66,7 @@ export function createOnlineRoomController(ctx) {
       const roomId = ctx.createRoomId();
       roomIdMatchActiveRoomId = roomId;
       roomIdMatchEntering = false;
+      lastAppliedBattleSnapshotUpdatedAt = 0;
 
       ctx.setOnlineState({
         enabled: true,
@@ -159,6 +163,7 @@ export function createOnlineRoomController(ctx) {
 
       roomIdMatchActiveRoomId = roomId;
       roomIdMatchEntering = false;
+      lastAppliedBattleSnapshotUpdatedAt = 0;
 
       ctx.setOnlineState({
         enabled: true,
@@ -268,6 +273,17 @@ export function createOnlineRoomController(ctx) {
 
     if (!ctx.isOnlineSpectator()) {
       ctx.applyOnlineAction(roomData.action, roomData.battleSnapshot || null);
+
+      const snapshotUpdatedAt = Number(roomData.battleSnapshot?.updatedAt || 0);
+
+      if (
+        roomData.battleSnapshot &&
+        snapshotUpdatedAt > lastAppliedBattleSnapshotUpdatedAt &&
+        typeof ctx.applyOnlineBattleSnapshot === "function"
+      ) {
+        lastAppliedBattleSnapshotUpdatedAt = snapshotUpdatedAt;
+        ctx.applyOnlineBattleSnapshot(roomData.battleSnapshot);
+      }
     }
 
     if (
