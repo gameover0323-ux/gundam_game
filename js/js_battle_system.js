@@ -29,7 +29,11 @@ export function createAttack(damage, count, options = {}) {
       specialAttribute: options.specialAttribute || null,
 
       moonlightButterfly: options.moonlightButterfly || false,
-      minEvadeRequired: options.minEvadeRequired || 0
+      minEvadeRequired: options.minEvadeRequired || 0,
+
+      criticalFixed: options.criticalFixed || false,
+      criticalHit: options.criticalHit || false,
+      criticalRate: options.criticalRate || 0
     });
   }
 
