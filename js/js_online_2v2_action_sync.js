@@ -32,27 +32,55 @@ export function createOnline2v2ActionSync(ctx) {
     return null;
   }
 
-  function ensureOnline2v2CriticalFlags() {
-    if (ctx.getBattleMode() !== "online2v2") return;
+  function buildOnline2v2CriticalPayload(index) {
+    const attacks = ctx.getCurrentAttack();
+    const attack = Array.isArray(attacks) ? attacks[index] : null;
+
+    if (!attack) return null;
+
+    if (attack.criticalFixed === true) {
+      return {
+        index,
+        criticalFixed: true,
+        criticalHit: attack.criticalHit === true,
+        criticalRate: Number(attack.criticalRate || 0)
+      };
+    }
+
+    const attacker = getOnline2v2AttackOwnerState(index);
+    const rate = getCriticalRate(attacker);
+    const hit = Math.random() * 100 < rate;
+
+    attack.criticalFixed = true;
+    attack.criticalHit = hit;
+    attack.criticalRate = rate;
+
+    return {
+      index,
+      criticalFixed: true,
+      criticalHit: hit,
+      criticalRate: rate
+    };
+  }
+
+  function applyOnline2v2CriticalPayload(payload) {
+    if (!payload || payload.criticalFixed !== true) return;
 
     const attacks = ctx.getCurrentAttack();
-    if (!Array.isArray(attacks) || attacks.length === 0) return;
+    if (!Array.isArray(attacks)) return;
 
-    attacks.forEach((attack, index) => {
-      if (!attack || attack.criticalFixed === true) return;
+    const index = Number(payload.index);
+    if (!Number.isInteger(index)) return;
 
-      const attacker = getOnline2v2AttackOwnerState(index);
-      const rate = getCriticalRate(attacker);
+    const attack = attacks[index];
+    if (!attack) return;
 
-      attack.criticalFixed = true;
-      attack.criticalRate = rate;
-      attack.criticalHit = Math.random() * 100 < rate;
-    });
+    attack.criticalFixed = true;
+    attack.criticalHit = payload.criticalHit === true;
+    attack.criticalRate = Number(payload.criticalRate || 0);
   }
 
   function buildOnline2v2BattleSnapshot() {
-    ensureOnline2v2CriticalFlags();
-
     return {
       mode: ctx.getBattleMode(),
       currentTurn: ctx.getCurrentTurn(),
@@ -78,6 +106,13 @@ export function createOnline2v2ActionSync(ctx) {
     };
   }
 
+  function buildRoomUpdateWithoutSnapshot(action) {
+    return {
+      action,
+      "meta/updatedAt": Date.now()
+    };
+  }
+
   function canPublish(actor) {
     if (!ctx.isOnlineEnabled()) return false;
     if (ctx.isApplyingRemote()) return false;
@@ -87,18 +122,24 @@ export function createOnline2v2ActionSync(ctx) {
     return true;
   }
 
-  function publishAction(type, actor, payload = {}) {
+  function publishAction(type, actor, payload = {}, options = {}) {
     if (!canPublish(actor)) return;
 
     const actionId = ctx.nextOnlineActionSeq();
 
-    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot({
+    const action = {
       actionId,
       actor,
       type,
       payload,
       createdAt: Date.now()
-    }));
+    };
+
+    const update = options.withoutSnapshot === true
+      ? buildRoomUpdateWithoutSnapshot(action)
+      : buildRoomUpdateWithSnapshot(action);
+
+    ctx.updateRoom(ctx.getOnlineRoomId(), update);
   }
 
   function publishOnline2v2SnapshotAction(type, actor, payload = {}) {
@@ -130,7 +171,16 @@ export function createOnline2v2ActionSync(ctx) {
   }
 
   function publishOnline2v2QteAction(kind, index) {
-    publishAction("qte2v2", ctx.getOnlineMyPlayer(), { kind, index });
+    const critical = kind === "hit"
+      ? buildOnline2v2CriticalPayload(index)
+      : null;
+
+    publishAction(
+      "qte2v2",
+      ctx.getOnlineMyPlayer(),
+      { kind, index, critical },
+      { withoutSnapshot: true }
+    );
   }
 
   function publishOnline2v2CriticalBoostAction(ownerPlayer) {
@@ -203,6 +253,24 @@ export function createOnline2v2ActionSync(ctx) {
     try {
       if (battleSnapshot) {
         applyOnline2v2BattleSnapshot(battleSnapshot);
+        return;
+      }
+
+      if (action.type === "qte2v2") {
+        const kind = action.payload?.kind;
+        const index = action.payload?.index;
+
+        if (kind === "hit") {
+          applyOnline2v2CriticalPayload(action.payload?.critical);
+          ctx.takeHitRaw(index);
+          ctx.checkBattleEnd();
+        } else if (kind === "evade") {
+          ctx.evadeAttackRaw(index);
+        } else if (kind === "supportDefense") {
+          ctx.supportDefenseAttackRaw(index);
+          ctx.checkBattleEnd();
+        }
+
         return;
       }
 
