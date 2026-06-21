@@ -33,6 +33,9 @@ function ensureExtremeState(state) {
 
   if (typeof state.extremeSkipActionTurns !== "number") state.extremeSkipActionTurns = 0;
   if (typeof state.extremeTachyonAllEvadedStunPending !== "boolean") state.extremeTachyonAllEvadedStunPending = false;
+
+  if (typeof state.extremeIgnisMode !== "string") state.extremeIgnisMode = "evade";
+  if (typeof state.extremeIgnisLastModeSide !== "string") state.extremeIgnisLastModeSide = "none";
 }
 
 function getExtremeEffect(state, key) {
@@ -53,6 +56,35 @@ function changeExtremeForm(state, formId) {
   ensureExtremeState(state);
   setForm(state, formId);
   syncHpBySharedDamage(state, formId);
+
+  if (formId !== "ignis") {
+    state.extremeIgnisMode = "evade";
+    state.extremeIgnisLastModeSide = "none";
+  }
+}
+
+function enterIgnisForm(state) {
+  changeExtremeForm(state, "ignis");
+  state.extremeIgnisMode = "evade";
+  state.extremeIgnisLastModeSide = "self";
+}
+
+function advanceIgnisModeForSide(state, side, messages) {
+  ensureExtremeState(state);
+
+  if (state.formId !== "ignis") return;
+  if (state.extremeIgnisLastModeSide === side) return;
+
+  state.extremeIgnisMode =
+    state.extremeIgnisMode === "evade" ? "damage" : "evade";
+
+  state.extremeIgnisLastModeSide = side;
+
+  messages.push(
+    state.extremeIgnisMode === "evade"
+      ? "イグニスフェイズ：回避モードへ移行"
+      : "イグニスフェイズ：被弾増加モードへ移行"
+  );
 }
 
 function getOverlimitLevel(state) {
@@ -299,17 +331,28 @@ function getStatusForForm(state) {
   if (state.formId === "ignis") {
     const shield = getExtremeEffect(state, "extreme_shield_bit");
     if (shield) status.push(`シールドビット:${shield.turns}ターン`);
-    status.push("偶数ターン: 回避可能攻撃を全回避");
-    status.push("奇数ターン: 被ダメージ1.5倍");
+
+    if (state.extremeIgnisMode === "damage") {
+      status.push("イグニスモード: 被弾増加モード");
+      status.push("特性: 被ダメージ1.5倍");
+    } else {
+      status.push("イグニスモード: 回避モード");
+      status.push("特性: 回避可能攻撃を全回避");
+    }
   }
 
   if (state.formId === "mystic") {
     status.push("特性: 被ダメージ常時半減");
   }
-if (Array.isArray(state.pendingReservedActions) && state.pendingReservedActions.some((action) => action.id === "extreme_high_altitude_carnage")) {
+
+  if (
+    Array.isArray(state.pendingReservedActions) &&
+    state.pendingReservedActions.some((action) => action.id === "extreme_high_altitude_carnage")
+  ) {
     status.push("高高度カルネージストライカー: 予約中");
-}
-   if (state.extremeFullEvadeActive) status.push("換装解除効果: 回避可能攻撃を全回避");
+  }
+
+  if (state.extremeFullEvadeActive) status.push("換装解除効果: 回避可能攻撃を全回避");
 
   return status;
 }
@@ -361,7 +404,7 @@ export function onExtremeGundamBeforeSlot(state) {
 
   state.extremeMeleeNullThisTurn = false;
 
-
+  advanceIgnisModeForSide(state, "self", messages);
 
   if (state.extremeFullEvadePending) {
     state.extremeFullEvadePending = false;
@@ -392,7 +435,7 @@ export function onExtremeGundamEnemyBeforeSlot(state) {
 
   const messages = [];
 
-
+  advanceIgnisModeForSide(state, "enemy", messages);
 
   if (state.extremeFullEvadePending) {
     state.extremeFullEvadePending = false;
@@ -403,8 +446,7 @@ export function onExtremeGundamEnemyBeforeSlot(state) {
   return { redraw: messages.length > 0, message: messages.join("\n") || null };
 }
 
-
-      export function onExtremeGundamAfterSlotResolved(state, slotNumber, context = {}) {
+export function onExtremeGundamAfterSlotResolved(state, slotNumber, context = {}) {
   ensureExtremeState(state);
 
   const result = context.resolveResult || {};
@@ -428,8 +470,8 @@ export function onExtremeGundamEnemyBeforeSlot(state) {
   }
 
   if (effectId === "extreme_form_ignis") {
-    changeExtremeForm(state, "ignis");
-    return { redraw: true, message: "エクストリームガンダム・イグニスフェイズへ換装" };
+    enterIgnisForm(state);
+    return { redraw: true, message: "エクストリームガンダム・イグニスフェイズへ換装。回避モード開始" };
   }
 
   if (effectId === "extreme_form_mystic") {
@@ -497,7 +539,7 @@ export function onExtremeGundamEnemyBeforeSlot(state) {
   }
 
   return { redraw: false, message: null };
-      }
+}
 
 export function onExtremeGundamActionResolved(attacker, defender, context) {
   ensureExtremeState(attacker);
@@ -512,13 +554,11 @@ export function onExtremeGundamActionResolved(attacker, defender, context) {
     redraw = true;
   }
 
- if (context.slotLabel === "ファイヤーバンカー" && context.hitCount > 0) {
-  defender.pendingActionPenalty = Number(defender.pendingActionPenalty || 0) + 1;
-  messages.push(`${defender.name} は次の行動権-1`);
-  redraw = true;
-}
-
-  
+  if (context.slotLabel === "ファイヤーバンカー" && context.hitCount > 0) {
+    defender.pendingActionPenalty = Number(defender.pendingActionPenalty || 0) + 1;
+    messages.push(`${defender.name} は次の行動権-1`);
+    redraw = true;
+  }
 
   if (context.slotLabel === "サンダースラッシュ" && context.hitCount > 0) {
     defender.evade = Math.max(0, defender.evade - 2);
@@ -537,7 +577,8 @@ export function onExtremeGundamActionResolved(attacker, defender, context) {
     messages.push("終焉摂理：相手が4回以上回避したため、行動回数+1");
     redraw = true;
   }
-if (context.slotLabel === "人馬一神・乱れ突き" && context.hitCount > 0) {
+
+  if (context.slotLabel === "人馬一神・乱れ突き" && context.hitCount > 0) {
     messages.push("人馬一神・乱れ突き：1回以上被弾したためフィニッシュ突きが発動");
     redraw = true;
 
@@ -556,36 +597,38 @@ if (context.slotLabel === "人馬一神・乱れ突き" && context.hitCount > 0)
         }
       ]
     };
-}
+  }
+
   if (attacker.formId === "tachyon" && context.totalCount > 0 && context.allEvaded) {
     attacker.extremeTachyonAllEvadedStunPending = true;
     messages.push("タキオンフェイズ特性：次のターン行動不能。行動不能中は被ダメージ半減");
     redraw = true;
   }
-if (
-  context.slotLabel === "カルネージストライカー連射" &&
-  context.hitCount > 0 &&
-  context.appendedFrom !== "カルネージストライカー連射"
-) {
-  return {
-    redraw: true,
-    message: messages.concat("カルネージストライカー連射：1回以上被弾したため本命攻撃").join("\n"),
-    appendAttackLabel: "カルネージストライカー連射 追撃",
-    appendSlotLabel: "カルネージストライカー連射 追撃",
-    appendSlotDesc: "60ダメージ。射撃。",
-    appendAttacks: [
-      {
-        damage: 60,
-        type: "shoot",
-        beam: false,
-        cannotEvade: false,
-        ignoreReduction: false,
-        ignoreDefense: false,
-        source: "カルネージストライカー連射 追撃"
-      }
-    ]
-  };
-}
+
+  if (
+    context.slotLabel === "カルネージストライカー連射" &&
+    context.hitCount > 0 &&
+    context.appendedFrom !== "カルネージストライカー連射"
+  ) {
+    return {
+      redraw: true,
+      message: messages.concat("カルネージストライカー連射：1回以上被弾したため本命攻撃").join("\n"),
+      appendAttackLabel: "カルネージストライカー連射 追撃",
+      appendSlotLabel: "カルネージストライカー連射 追撃",
+      appendSlotDesc: "60ダメージ。射撃。",
+      appendAttacks: [
+        {
+          damage: 60,
+          type: "shoot",
+          beam: false,
+          cannotEvade: false,
+          ignoreReduction: false,
+          ignoreDefense: false,
+          source: "カルネージストライカー連射 追撃"
+        }
+      ]
+    };
+  }
 
   return { redraw, message: messages.join("\n") || null };
 }
@@ -601,6 +644,7 @@ export function onExtremeGundamDamaged(state) {
 
 export function modifyExtremeGundamTakenDamage(state, attacker, attack, damage, context = {}) {
   ensureExtremeState(state);
+
   let nextDamage = damage;
   const messages = [];
 
@@ -636,9 +680,9 @@ export function modifyExtremeGundamTakenDamage(state, attacker, attack, damage, 
     messages.push("シールドビット：射撃被ダメージ半減");
   }
 
-  if (state.formId === "ignis" && Number(context?.turnNumber || 0) % 2 === 1) {
+  if (state.formId === "ignis" && state.extremeIgnisMode === "damage") {
     nextDamage = Math.floor(nextDamage * 1.5);
-    messages.push("イグニスフェイズ奇数ターン：被ダメージ1.5倍");
+    messages.push("イグニスフェイズ被弾増加モード：被ダメージ1.5倍");
   }
 
   if (state.formId === "mystic" && !attack.ignoreReduction) {
@@ -658,10 +702,10 @@ export function modifyExtremeGundamEvadeAttempt(defender, attacker, attack, cont
 
   if (
     defender.formId === "ignis" &&
-    Number(context?.turnNumber || 0) % 2 === 0 &&
+    defender.extremeIgnisMode === "evade" &&
     !attack.cannotEvade
   ) {
-    return { handled: true, ok: true, consumeEvade: 0, message: "イグニスフェイズ偶数ターン：自動回避" };
+    return { handled: true, ok: true, consumeEvade: 0, message: "イグニスフェイズ回避モード：自動回避" };
   }
 
   if (attack.minEvadeRequired && defender.evade < attack.minEvadeRequired) {
