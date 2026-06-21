@@ -23,23 +23,32 @@ export function createOnlineSpectatorController(ctx) {
     return unitId;
   }
 
-  function buildOnlineBattleSnapshot() {
+function buildOnlineBattleSnapshot() {
     return {
       mode: ctx.getBattleMode(),
       currentTurn: ctx.getCurrentTurn(),
       currentPlayer: ctx.getCurrentPlayer(),
+
       playerAState: cloneValue(ctx.getPlayerAState()),
       playerBState: cloneValue(ctx.getPlayerBState()),
+
+      teamA: cloneValue(typeof ctx.getTeamA === "function" ? ctx.getTeamA() : null),
+      teamB: cloneValue(typeof ctx.getTeamB === "function" ? ctx.getTeamB() : null),
+
+      pendingChoice: cloneValue(
+        typeof ctx.getPendingChoice === "function" ? ctx.getPendingChoice() : null
+      ),
+
       currentAttack: cloneValue(ctx.getCurrentAttack()),
       currentAttackContext: cloneValue(ctx.getCurrentAttackContext()),
       currentAttackContexts: cloneValue(ctx.getCurrentAttackContexts()),
+
       battleNotice: ctx.getBattleNotice(),
       currentActionHeader: ctx.getCurrentActionHeader(),
       currentActionLabel: ctx.getCurrentActionLabel(),
       updatedAt: Date.now()
     };
-  }
-
+}
   function applyOnlineBattleSnapshot(snapshot) {
     if (!snapshot) return;
 
@@ -60,7 +69,13 @@ export function createOnlineSpectatorController(ctx) {
     if (snapshot.playerBState) {
       ctx.setPlayerBState(cloneValue(snapshot.playerBState));
     }
+if (snapshot.teamA && typeof ctx.setTeamA === "function") {
+      ctx.setTeamA(cloneValue(snapshot.teamA));
+    }
 
+    if (snapshot.teamB && typeof ctx.setTeamB === "function") {
+      ctx.setTeamB(cloneValue(snapshot.teamB));
+    }
     ctx.setCurrentTurn(Number(snapshot.currentTurn || 1));
     ctx.setCurrentPlayer(snapshot.currentPlayer === "B" ? "B" : "A");
 
@@ -77,7 +92,10 @@ export function createOnlineSpectatorController(ctx) {
     ctx.setBattleNotice(snapshot.battleNotice || "");
     ctx.setCurrentActionHeader(snapshot.currentActionHeader || "");
     ctx.setCurrentActionLabel(snapshot.currentActionLabel || "");
-
+    
+if (typeof ctx.setPendingChoice === "function") {
+      ctx.setPendingChoice(cloneValue(snapshot.pendingChoice));
+}
     ctx.redrawBattleBoards();
     ctx.renderAttackChoices();
     ctx.ensureOnlineBattleExtraUi();
