@@ -103,7 +103,7 @@ export const v2_gundam = {
         slot2: { label: "回復 100", desc: "HP100回復", effect: { type: "heal", amount: 100 } },
         slot3: { label: "ビームサーベル", desc: "30ダメージ×所持回避数。0の時80ダメージ。格闘。ビーム", effect: { type: "custom", customType: "v2_ab_slot3" } },
         slot4: { label: "ビームライフル 80ダメージ", desc: "80ダメージ。射撃。ビーム", effect: { type: "attack", attackType: "shoot", damage: 80, count: 1, beam: true, special: "v2_slot4" } },
-        slot5: { label: "回復 80＋回避2＋上限+2", desc: "HP80回復＋回避2＋回避ストック最大値+2", effect: { type: "custom", customType: "v2_ab_slot5" } },
+        slot5: { label: "回復 30＋回避1＋上限+1", desc: "HP30回復＋回避1＋回避ストック最大値+1", effect: { type: "custom", customType: "v2_ab_slot5" } },
         slot6: { label: "光の翼", desc: "30ダメージ×所持開始数＋1ターン攻撃無効化＋回避ストック最大値+1。格闘。ビーム", effect: { type: "custom", customType: "v2_ab_slot6" } }
       },
       specials: [
