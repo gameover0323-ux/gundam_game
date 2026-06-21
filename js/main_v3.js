@@ -1805,8 +1805,9 @@ onlineQteResultSync = createOnlineQteResultSync({
   },
 
   redrawBattleBoards,
-  renderAttackChoices,
-  renderPendingChoice
+renderAttackChoices,
+renderPendingChoice,
+renderAttackLogText
 });
 uiController = createUiController({
   screens,
