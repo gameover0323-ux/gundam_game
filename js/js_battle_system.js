@@ -21,11 +21,13 @@ export function createAttack(damage, count, options = {}) {
       source: options.source || null,
       sourceLabel: options.sourceLabel || null,
       onHit: options.onHit || null,
-psychommu: options.psychommu || false,
-funnel: options.funnel || false,
-dragoon: options.dragoon || false,
-incom: options.incom || false,
-specialAttribute: options.specialAttribute || null,
+
+      psychommu: options.psychommu || false,
+      funnel: options.funnel || false,
+      dragoon: options.dragoon || false,
+      incom: options.incom || false,
+      specialAttribute: options.specialAttribute || null,
+
       moonlightButterfly: options.moonlightButterfly || false,
       minEvadeRequired: options.minEvadeRequired || 0
     });
@@ -167,23 +169,21 @@ export function takeHit({
     damageMessage = modified.message || null;
   }
 
- let criticalHit = false;
+  let criticalHit = false;
 
-if (attack.criticalResolved === true) {
-  criticalHit = attack.criticalHit === true;
-} else if (typeof rollCritical === "function") {
-  criticalHit = rollCritical(defender, attacker, attack) === true;
-  attack.criticalResolved = true;
-  attack.criticalHit = criticalHit;
-}
+  if (attack.criticalFixed === true) {
+    criticalHit = attack.criticalHit === true;
+  } else if (typeof rollCritical === "function") {
+    criticalHit = rollCritical(defender, attacker, attack) === true;
+  }
 
-if (criticalHit) {
-  finalDamage *= 2;
+  if (criticalHit) {
+    finalDamage *= 2;
 
-  damageMessage = damageMessage
-    ? `${damageMessage}\n会心！ダメージ2倍`
-    : "会心！ダメージ2倍";
-}
+    damageMessage = damageMessage
+      ? `${damageMessage}\n会心！ダメージ2倍`
+      : "会心！ダメージ2倍";
+  }
 
   defender.hp -= finalDamage;
 
