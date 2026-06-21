@@ -138,7 +138,7 @@ export function createOnlineBattleUi(ctx) {
       </button>
 
       <button id="onlineManualSyncBtn" style="width:48px;height:33px;font-size:11px;padding:0;">
-        状況送信
+        同期
       </button>
     `;
 
