@@ -38,10 +38,12 @@ export function createQteController(ctx) {
       return;
     }
 
+    if (ctx.isOnlineEnabled()) {
+      ctx.publishOnlineQteAction("hit", i);
+    }
+
     const result = ctx.attackTakeHit(i);
     ctx.checkBattleEnd();
-
-    ctx.publishOnlineQteAction("hit", i);
 
     return result;
   }
@@ -52,9 +54,11 @@ export function createQteController(ctx) {
       return;
     }
 
-    const result = ctx.attackEvadeAttack(i);
+    if (ctx.isOnlineEnabled()) {
+      ctx.publishOnlineQteAction("evade", i);
+    }
 
-    ctx.publishOnlineQteAction("evade", i);
+    const result = ctx.attackEvadeAttack(i);
 
     return result;
   }
@@ -65,10 +69,12 @@ export function createQteController(ctx) {
       return;
     }
 
+    if (ctx.isOnlineEnabled()) {
+      ctx.publishOnlineQteAction("supportDefense", i);
+    }
+
     const result = ctx.attackSupportDefenseAttack(i);
     ctx.checkBattleEnd();
-
-    ctx.publishOnlineQteAction("supportDefense", i);
 
     return result;
   }
