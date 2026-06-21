@@ -2323,7 +2323,10 @@ online2v2RoomController = createOnline2v2RoomController({
   setBattleMode: (value) => {
     battleMode = value;
   },
-
+  
+setCurrentPlayer: (value) => {
+  currentPlayer = value;
+},
   getOnlineRoomIdInput: () => onlineRoomIdInput,
   getOnlineRoomStatus: () => onlineRoomStatus,
   getOnlineInviteUrl: () => onlineInviteUrl,
