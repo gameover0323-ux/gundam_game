@@ -3,16 +3,98 @@ import { create2v2BreakthroughEngine } from "./js_2on2_breakthrough_engine.js";
 export function create2v2BreakthroughController(ctx) {
   const engine = create2v2BreakthroughEngine(ctx);
 
+  let onlineBetA = null;
+  let onlineBetB = null;
+  let onlineResultApplied = false;
+
   function getAttackLog() {
     return document.getElementById("attackLog");
   }
 
-  function renderBetChoice() {
+  function isOnline2v2() {
+    return typeof ctx.getBattleMode === "function" && ctx.getBattleMode() === "online2v2";
+  }
+
+  function getMyPlayer() {
+    return typeof ctx.getOnlineMyPlayer === "function" ? ctx.getOnlineMyPlayer() : null;
+  }
+
+  function canSelectBet(player) {
+    if (!isOnline2v2()) return true;
+    return getMyPlayer() === player;
+  }
+
+  function resetOnlineBets() {
+    onlineBetA = null;
+    onlineBetB = null;
+    onlineResultApplied = false;
+  }
+
+  function getBetValue(player) {
+    return player === "A" ? onlineBetA : onlineBetB;
+  }
+
+  function setBetValue(player, value) {
+    if (player === "A") onlineBetA = value;
+    if (player === "B") onlineBetB = value;
+  }
+
+  function bothBetsReady() {
+    return onlineBetA !== null && onlineBetB !== null;
+  }
+
+  function shouldRunOnlineBreakthrough() {
+    return isOnline2v2() && getMyPlayer() === "A";
+  }
+
+  function runOnlineBreakthroughIfReady() {
+    if (!isOnline2v2()) return false;
+    if (!bothBetsReady()) return false;
+    if (onlineResultApplied) return true;
+
+    if (!shouldRunOnlineBreakthrough()) {
+      renderWaitingForPlayerAResult();
+      return true;
+    }
+
+    const result = engine.runBreakthrough({
+      betA: onlineBetA,
+      betB: onlineBetB
+    });
+
+    onlineResultApplied = true;
+    renderResult(result, { publishOnline: true });
+    return true;
+  }
+
+  function renderWaitingForPlayerAResult() {
     const attackLog = getAttackLog();
     if (!attackLog) return;
 
-    let betA = null;
-    let betB = null;
+    attackLog.innerHTML = "";
+
+    const title = document.createElement("div");
+    title.style.fontWeight = "bold";
+    title.style.marginBottom = "6px";
+    title.textContent = "打破賭け：PLAYER A の結果待ち";
+    attackLog.appendChild(title);
+
+    const summary = document.createElement("div");
+    summary.innerHTML = `
+      PLAYER A: ${onlineBetA === null ? "未選択" : onlineBetA}<br>
+      PLAYER B: ${onlineBetB === null ? "未選択" : onlineBetB}<br>
+      PLAYER A端末でシミュレーション結果を確定します。
+    `;
+    attackLog.appendChild(summary);
+  }
+
+  function renderBetChoice() {
+    if (isOnline2v2() && onlineBetA === null && onlineBetB === null) {
+      onlineResultApplied = false;
+    }
+
+    const attackLog = getAttackLog();
+    if (!attackLog) return;
 
     function render() {
       attackLog.innerHTML = "";
@@ -24,8 +106,8 @@ export function create2v2BreakthroughController(ctx) {
       attackLog.appendChild(title);
 
       [
-        { player: "A", value: betA },
-        { player: "B", value: betB }
+        { player: "A", value: getBetValue("A") },
+        { player: "B", value: getBetValue("B") }
       ].forEach(({ player, value }) => {
         const row = document.createElement("div");
         row.style.marginBottom = "8px";
@@ -38,12 +120,34 @@ export function create2v2BreakthroughController(ctx) {
           const btn = document.createElement("button");
           btn.textContent = i === 0 ? "0 放棄" : String(i);
 
-          btn.addEventListener("click", () => {
-            if (player === "A") betA = i;
-            if (player === "B") betB = i;
+          if (!canSelectBet(player) || value !== null) {
+            btn.disabled = true;
+          }
 
-            if (betA !== null && betB !== null) {
-              const result = engine.runBreakthrough({ betA, betB });
+          btn.addEventListener("click", () => {
+            if (!canSelectBet(player)) {
+              if (ctx.showPopup) ctx.showPopup("自分側のベットのみ選択できます");
+              return;
+            }
+
+            setBetValue(player, i);
+
+            if (isOnline2v2() && typeof ctx.onOnline2v2BreakthroughBet === "function") {
+              ctx.onOnline2v2BreakthroughBet(player, i);
+            }
+
+            if (isOnline2v2()) {
+              if (!runOnlineBreakthroughIfReady()) {
+                render();
+              }
+              return;
+            }
+
+            if (bothBetsReady()) {
+              const result = engine.runBreakthrough({
+                betA: onlineBetA,
+                betB: onlineBetB
+              });
               renderResult(result);
               return;
             }
@@ -61,9 +165,11 @@ export function create2v2BreakthroughController(ctx) {
     render();
   }
 
-  function renderResult(result) {
+  function renderResult(result, options = {}) {
     const attackLog = getAttackLog();
-    if (!attackLog) return;
+    if (!attackLog || !result) return;
+
+    onlineResultApplied = true;
 
     attackLog.innerHTML = "";
 
@@ -86,33 +192,41 @@ export function create2v2BreakthroughController(ctx) {
     `;
     attackLog.appendChild(summary);
 
-    result.logs.forEach((log) => {
-      const div = document.createElement("div");
-      div.style.borderTop = "1px solid #666";
-      div.style.paddingTop = "4px";
-      div.style.marginTop = "4px";
+    if (Array.isArray(result.logs)) {
+      result.logs.forEach((log) => {
+        const div = document.createElement("div");
+        div.style.borderTop = "1px solid #666";
+        div.style.paddingTop = "4px";
+        div.style.marginTop = "4px";
 
-      div.innerHTML = `
-        ${log.turnIndex}T / PLAYER ${log.player} / ${log.unitKey === "unit2" ? "2" : "1"}機目 ${log.unitName}<br>
-        ${log.slotNumber}.${log.slotName}<br>
-        加算ダメージ:${log.damage}
-        ${log.healReduction ? ` / 回復減算:${log.healReduction}` : ""}
-        ${log.evadeGain ? ` / 回避+${log.evadeGain}` : ""}
-        ${
-          Array.isArray(log.notes) && log.notes.length > 0
-            ? `<br>${log.notes.join("<br>")}`
-            : ""
-        }
-      `;
+        div.innerHTML = `
+          ${log.turnIndex}T / PLAYER ${log.player} / ${log.unitKey === "unit2" ? "2" : "1"}機目 ${log.unitName}<br>
+          ${log.slotNumber}.${log.slotName}<br>
+          加算ダメージ:${log.damage}
+          ${log.healReduction ? ` / 回復減算:${log.healReduction}` : ""}
+          ${log.evadeGain ? ` / 回避+${log.evadeGain}` : ""}
+          ${
+            Array.isArray(log.notes) && log.notes.length > 0
+              ? `<br>${log.notes.join("<br>")}`
+              : ""
+          }
+        `;
 
-      attackLog.appendChild(div);
-    });
+        attackLog.appendChild(div);
+      });
+    }
 
     if (!result.winnerPlayer) {
       const retryBtn = document.createElement("button");
       retryBtn.textContent = "賭け直す";
       retryBtn.addEventListener("click", () => {
         engine.clampAllTeamEvade();
+        resetOnlineBets();
+
+        if (isOnline2v2() && typeof ctx.onOnline2v2BreakthroughStart === "function") {
+          ctx.onOnline2v2BreakthroughStart(getMyPlayer());
+        }
+
         renderBetChoice();
       });
       attackLog.appendChild(retryBtn);
@@ -120,25 +234,44 @@ export function create2v2BreakthroughController(ctx) {
 
     ctx.redrawBattleBoards();
 
-if (
-  typeof ctx.publishOnline2v2SnapshotAction === "function" &&
-  typeof ctx.getBattleMode === "function" &&
-  ctx.getBattleMode() === "online2v2" &&
-  result &&
-  result.winnerPlayer
-) {
-  ctx.publishOnline2v2SnapshotAction("breakthroughResult2v2", result.winnerPlayer, {
-    betA: result.betA,
-    betB: result.betB,
-    winnerPlayer: result.winnerPlayer,
-    bonusTurns: result.bonusTurns
-  });
-}
+    if (
+      isOnline2v2() &&
+      options.publishOnline === true &&
+      typeof ctx.onOnline2v2BreakthroughResult === "function"
+    ) {
+      ctx.onOnline2v2BreakthroughResult(result);
+    }
+  }
+
+  function applyOnlineBet(player, value) {
+    if (player !== "A" && player !== "B") return;
+
+    const safeValue = Number(value);
+    if (!Number.isInteger(safeValue) || safeValue < 0 || safeValue > 10) return;
+
+    setBetValue(player, safeValue);
+
+    if (!runOnlineBreakthroughIfReady()) {
+      renderBetChoice();
+    }
+  }
+
+  function applyOnlineResult(result) {
+    if (!result) return;
+
+    onlineResultApplied = true;
+
+    onlineBetA = typeof result.betA === "number" ? result.betA : onlineBetA;
+    onlineBetB = typeof result.betB === "number" ? result.betB : onlineBetB;
+
+    renderResult(result, { publishOnline: false });
   }
 
   return {
     renderBetChoice,
     renderResult,
+    applyOnlineBet,
+    applyOnlineResult,
     runBreakthrough: engine.runBreakthrough,
     simulateOneDuelSlot: engine.simulateOneDuelSlot,
     clampAllTeamEvade: engine.clampAllTeamEvade,
