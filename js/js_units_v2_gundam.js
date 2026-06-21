@@ -15,7 +15,7 @@ export const v2_gundam = {
         slot3: { label: "ビームサーベル 50ダメージ", desc: "50ダメージ。格闘。ビーム", effect: { type: "attack", attackType: "melee", damage: 50, count: 1, beam: true } },
         slot4: { label: "ビームライフル 80ダメージ", desc: "80ダメージ。射撃。ビーム", effect: { type: "attack", attackType: "shoot", damage: 80, count: 1, beam: true, special: "v2_slot4" } },
         slot5: { label: "回復 60", desc: "HP60回復", effect: { type: "heal", amount: 60 } },
-        slot6: { label: "光の翼", desc: "次のターンの攻撃を完全無効化し、無効化成功時に80ダメージ格闘ビーム軽減不可で反撃。", effect: { type: "custom", customType: "v2_wings_guard" } }
+        slot6: { label: "光の翼", desc: "次のターンの攻撃を無効化し、無効化成功時に80ダメージ格闘ビーム軽減不可で反撃。", effect: { type: "custom", customType: "v2_wings_guard" } }
       },
       specials: [
         { name: "特性", effectType: "v2_trait", timing: "auto", actionType: "auto", desc: "各形態換装クールタイムは5ターン。" },
@@ -104,7 +104,7 @@ export const v2_gundam = {
         slot3: { label: "ビームサーベル", desc: "30ダメージ×所持回避数。0の時80ダメージ。格闘。ビーム", effect: { type: "custom", customType: "v2_ab_slot3" } },
         slot4: { label: "ビームライフル 80ダメージ", desc: "80ダメージ。射撃。ビーム", effect: { type: "attack", attackType: "shoot", damage: 80, count: 1, beam: true, special: "v2_slot4" } },
         slot5: { label: "回復 80＋回避2＋上限+2", desc: "HP80回復＋回避2＋回避ストック最大値+2", effect: { type: "custom", customType: "v2_ab_slot5" } },
-        slot6: { label: "光の翼", desc: "30ダメージ×所持開始数＋1ターン攻撃完全無効化＋回避ストック最大値+1。格闘。ビーム", effect: { type: "custom", customType: "v2_ab_slot6" } }
+        slot6: { label: "光の翼", desc: "30ダメージ×所持開始数＋1ターン攻撃無効化＋回避ストック最大値+1。格闘。ビーム", effect: { type: "custom", customType: "v2_ab_slot6" } }
       },
       specials: [
         { name: "特性", effectType: "v2_ab_trait", timing: "auto", actionType: "auto", desc: "毎ターン回避+1、回避ストック最大値-1、HP-30。最大値0でV2へ戻りHP50回復。" },
