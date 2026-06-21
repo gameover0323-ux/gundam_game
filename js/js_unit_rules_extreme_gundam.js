@@ -599,33 +599,30 @@ export function onExtremeGundamDamaged(state) {
   return { redraw: true, message: null };
 }
 
-export function modifyExtremeGundamTakenDamage(state, attacker, attack, damage) {
+export function modifyExtremeGundamTakenDamage(state, attacker, attack, damage, context = {}) {
   ensureExtremeState(state);
-
   let nextDamage = damage;
   const messages = [];
 
-
   if (state.formId === "carnage") {
-  const attackContext = context?.currentAttackContext;
+    const attackContext = context?.currentAttackContext;
+    if (attackContext) {
+      if (typeof attackContext.extremeCarnageReductionRemaining !== "number") {
+        attackContext.extremeCarnageReductionRemaining = 30;
+      }
 
-  if (attackContext) {
-    if (typeof attackContext.extremeCarnageReductionRemaining !== "number") {
-      attackContext.extremeCarnageReductionRemaining = 30;
+      const reduceAmount = Math.min(
+        nextDamage,
+        Math.max(0, attackContext.extremeCarnageReductionRemaining)
+      );
+
+      nextDamage = Math.max(0, nextDamage - reduceAmount);
+      attackContext.extremeCarnageReductionRemaining -= reduceAmount;
+
+      if (reduceAmount > 0) {
+        messages.push(`カルネージフェイズ特性：総ダメージ軽減 残り${attackContext.extremeCarnageReductionRemaining}`);
+      }
     }
-
-    const reduceAmount = Math.min(
-      nextDamage,
-      Math.max(0, attackContext.extremeCarnageReductionRemaining)
-    );
-
-    nextDamage = Math.max(0, nextDamage - reduceAmount);
-    attackContext.extremeCarnageReductionRemaining -= reduceAmount;
-
-    if (reduceAmount > 0) {
-      messages.push(`カルネージフェイズ特性：総ダメージ軽減 残り${attackContext.extremeCarnageReductionRemaining}`);
-    }
-  }
   }
 
   if (state.formId === "tachyon" && state.extremeSkipActionTurns > 0 && !attack.ignoreReduction) {
@@ -639,7 +636,7 @@ export function modifyExtremeGundamTakenDamage(state, attacker, attack, damage) 
     messages.push("シールドビット：射撃被ダメージ半減");
   }
 
-  if (state.formId === "ignis" && Number(state.turnCount || 0) % 2 === 1) {
+  if (state.formId === "ignis" && Number(context?.turnNumber || 0) % 2 === 1) {
     nextDamage = Math.floor(nextDamage * 1.5);
     messages.push("イグニスフェイズ奇数ターン：被ダメージ1.5倍");
   }
@@ -652,7 +649,7 @@ export function modifyExtremeGundamTakenDamage(state, attacker, attack, damage) 
   return { damage: nextDamage, message: messages.join("\n") || null };
 }
 
-export function modifyExtremeGundamEvadeAttempt(defender, attacker, attack) {
+export function modifyExtremeGundamEvadeAttempt(defender, attacker, attack, context = {}) {
   ensureExtremeState(defender);
 
   if (defender.extremeFullEvadeActive && !attack.cannotEvade) {
@@ -661,19 +658,14 @@ export function modifyExtremeGundamEvadeAttempt(defender, attacker, attack) {
 
   if (
     defender.formId === "ignis" &&
-    Number(defender.turnCount || 0) % 2 === 0 &&
+    Number(context?.turnNumber || 0) % 2 === 0 &&
     !attack.cannotEvade
   ) {
     return { handled: true, ok: true, consumeEvade: 0, message: "イグニスフェイズ偶数ターン：自動回避" };
   }
 
   if (attack.minEvadeRequired && defender.evade < attack.minEvadeRequired) {
-    return {
-      handled: true,
-      ok: false,
-      consumeEvade: 0,
-      message: `回避には回避${attack.minEvadeRequired}以上の所持が必要`
-    };
+    return { handled: true, ok: false, consumeEvade: 0, message: `回避には回避${attack.minEvadeRequired}以上の所持が必要` };
   }
 
   return { handled: false };
