@@ -8,7 +8,7 @@ import {
 import { createAttack } from "./js_battle_system.js";
 
 const CHANGE_COOLDOWN = 5;
-const ASSAULT_HIT_BREAK_COUNT = 20;
+const ASSAULT_HIT_BREAK_COUNT = 10;
 
 function ensureV2State(state) {
   if (!state) return;
