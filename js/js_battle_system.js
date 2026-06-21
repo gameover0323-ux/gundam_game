@@ -171,20 +171,20 @@ export function takeHit({
 
 if (attack.criticalResolved === true) {
   criticalHit = attack.criticalHit === true;
+} else let criticalHit = false;
+
+if (attack.criticalFixed === true) {
+  criticalHit = attack.criticalHit === true;
 } else if (typeof rollCritical === "function") {
   criticalHit = rollCritical(defender, attacker, attack) === true;
-  attack.criticalResolved = true;
-  attack.criticalHit = criticalHit;
 }
 
 if (criticalHit) {
   finalDamage *= 2;
-
   damageMessage = damageMessage
     ? `${damageMessage}\n会心！ダメージ2倍`
     : "会心！ダメージ2倍";
 }
-
   defender.hp -= finalDamage;
 
   if (defender.hp < 0) defender.hp = 0;
