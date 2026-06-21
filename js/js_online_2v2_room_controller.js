@@ -386,13 +386,18 @@ export function createOnline2v2RoomController(ctx) {
   }
 
   function initOnline2v2Battle(unitsA, unitsB, firstPlayer = "A") {
-    ctx.init2v2(unitsA, unitsB);
+  ctx.init2v2(unitsA, unitsB);
 
-    if (typeof ctx.setCurrentPlayer === "function") {
-      ctx.setCurrentPlayer(firstPlayer === "B" ? "B" : "A");
-    }
+  const safeFirstPlayer = firstPlayer === "B" ? "B" : "A";
 
-    ctx.ensureOnlineBattleExtraUi();
+  if (typeof ctx.setCurrentPlayer === "function") {
+    ctx.setCurrentPlayer(safeFirstPlayer);
+  }
+
+  ctx.redrawBattleBoards();
+  ctx.ensureOnlineBattleExtraUi();
+
+  const attackLog = document.getElementById("attackLog");
 
     const attackLog = document.getElementById("attackLog");
     if (attackLog) {
