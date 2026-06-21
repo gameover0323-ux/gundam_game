@@ -834,14 +834,29 @@ export function onGSelfBeforeSlot(state, rolledSlotNumber, context = {}) {
     };
   }
 
-  if (state.formId === "high_torque") {
-    state.hp = Math.max(1, Number(state.hp || 0) - 10);
+if (state.formId === "high_torque") {
+  const currentHp = getRuleHp(state, context);
+
+  if (currentHp > 10) {
+    consumeRuleHp(state, 10, context);
 
     return {
       redraw: true,
       message: "高トルクパック特性：HP-10"
     };
   }
+
+  const safetyCost = Math.max(0, currentHp - 1);
+
+  if (safetyCost > 0) {
+    consumeRuleHp(state, safetyCost, context);
+  }
+
+  return {
+    redraw: true,
+    message: "高トルクパック特性：HP1で維持"
+  };
+}
 
   const perfectCostMessage =
     payGSelfPerfectTurnCost(state, context);
