@@ -63,12 +63,13 @@ function ensureGSelfState(state) {
   if (typeof state.gselfReflectorStockDamage !== "number") state.gselfReflectorStockDamage = 0;
   if (typeof state.gselfReflectorStockCount !== "number") state.gselfReflectorStockCount = 0;
 
-  if (typeof state.gselfRocketBoostCount !== "number") state.gselfRocketBoostCount = 0;
-  if (typeof state.gselfPhotonSearcherReady !== "boolean") state.gselfPhotonSearcherReady = false;
-  if (typeof state.gselfOmniLaserActive !== "boolean") state.gselfOmniLaserActive = false;
-  if (typeof state.gselfPerfectRestTurn !== "number") state.gselfPerfectRestTurn = 0;
+if (typeof state.gselfRocketBoostCount !== "number") state.gselfRocketBoostCount = 0;
+if (typeof state.gselfPhotonSearcherReady !== "boolean") state.gselfPhotonSearcherReady = false;
+if (typeof state.gselfOmniLaserActive !== "boolean") state.gselfOmniLaserActive = false;
+if (typeof state.gselfPerfectRestTurn !== "number") state.gselfPerfectRestTurn = 0;
+if (typeof state.gselfPerfectCostPaidThisTurn !== "boolean") state.gselfPerfectCostPaidThisTurn = false;
 
-  applyPackEvadeMax(state);
+applyPackEvadeMax(state);
 }
 
 function getAdapter(context = {}) {
@@ -199,6 +200,56 @@ function healRuleHp(state, amount, context = {}) {
 
   state.hp = Math.min(Number(state.maxHp || state.hp || 0), Number(state.hp || 0) + value);
   return true;
+}
+function getRuleHp(state, context = {}) {
+  const adapter = getAdapter(context);
+  const ownerPlayer = getOwnerPlayer(context);
+
+  if (
+    adapter?.isUnifiedOwner?.(ownerPlayer) &&
+    adapter?.getOwnerTeam &&
+    adapter?.getUnifiedHp
+  ) {
+    const team = adapter.getOwnerTeam(ownerPlayer);
+    return Math.max(0, Number(adapter.getUnifiedHp(team) || 0));
+  }
+
+  return Math.max(0, Number(state?.hp || 0));
+}
+
+function payGSelfPerfectTurnCost(state, context = {}) {
+  if (!state || state.formId !== "perfect") return null;
+  if (state.gselfPerfectCostPaidThisTurn) return null;
+
+  state.gselfPerfectCostPaidThisTurn = true;
+
+  const currentHp = getRuleHp(state, context);
+
+  if (currentHp > 50) {
+    consumeRuleHp(state, 50, context);
+
+    const afterHp = getRuleHp(state, context);
+
+    if (afterHp <= 50) {
+      state.gselfPerfectRestTurn = 1;
+      changePack(state, "atmospheric");
+
+      return "パーフェクトパック反動：HP-50。大気圏パックへ強制換装";
+    }
+
+    return "パーフェクトパック特性：HP-50";
+  }
+
+  const safetyCost = Math.max(0, currentHp - 1);
+
+  if (safetyCost > 0) {
+    consumeRuleHp(state, safetyCost, context);
+  }
+
+  state.gselfPerfectRestTurn = 1;
+  changePack(state, "atmospheric");
+
+ return "パーフェクトパック反動：HP1で大気圏パックへ強制換装";
 }
 
 function setEnemyEvadeZero(enemyState, context = {}) {
@@ -770,7 +821,7 @@ export function executeGSelfSpecial(state, specialKey, context = {}) {
   };
 }
 
-export function onGSelfBeforeSlot(state) {
+export function onGSelfBeforeSlot(state, rolledSlotNumber, context = {}) {
   ensureGSelfState(state);
 
   if (state.gselfPerfectRestTurn > 0) {
@@ -792,29 +843,13 @@ export function onGSelfBeforeSlot(state) {
     };
   }
 
-  if (state.formId === "perfect") {
-    state.hp = Math.max(0, Number(state.hp || 0) - 50);
+  const perfectCostMessage =
+    payGSelfPerfectTurnCost(state, context);
 
-    if (state.hp <= 0) {
-      return {
-        redraw: true,
-        message: "パーフェクトパック特性：HP-50"
-      };
-    }
-
-    if (state.hp <= 50) {
-      state.gselfPerfectRestTurn = 1;
-      changePack(state, "atmospheric");
-
-      return {
-        redraw: true,
-        message: "パーフェクトパック反動：大気圏パックへ強制換装"
-      };
-    }
-
+  if (perfectCostMessage) {
     return {
       redraw: true,
-      message: "パーフェクトパック特性：HP-50"
+      message: perfectCostMessage
     };
   }
 
@@ -959,6 +994,7 @@ export function onGSelfTurnEnd(state) {
   state.gselfPhotonArmorShieldActive = false;
   state.gselfEmergencyEscapeActive = false;
   state.gselfPhotonShieldBarrier = 0;
+  state.gselfPerfectCostPaidThisTurn = false;
 
   return {
     redraw: false,
