@@ -1,6 +1,7 @@
 import { unitRulesMap } from "./js_unit_rules_index.js";
 
 export const EVADE_OVER_CAP_LIMIT = 25;
+export const EVADE_TEMP_OVER_CAP_BONUS = 10;
 
 function sortSlotKeys(slotKeys) {
   return [...slotKeys].sort((a, b) => {
@@ -147,6 +148,10 @@ function getAbsoluteEvadeCap(state) {
     : EVADE_OVER_CAP_LIMIT;
 }
 
+function getTemporaryEvadeCap(state) {
+  return getAbsoluteEvadeCap(state) + EVADE_TEMP_OVER_CAP_BONUS;
+}
+
 function getBaseEvadeMax(state) {
   return Math.max(0, Number(state?.evadeMax || 0));
 }
@@ -195,8 +200,6 @@ export function addEvade(state, amount) {
   const add = Math.max(0, Number(amount || 0));
   state.evade = Math.max(0, Number(state.evade || 0) + add);
 
-  // 通常回避取得はターン終了まで一時超過を許す。
-  // 例: 6/6 +3 => 9/6赤、ターン終了で6/6。
   normalizeEvadeCapState(state);
 }
 
@@ -206,15 +209,16 @@ export function doubleEvadeRedCap(state) {
   normalizeEvadeCapState(state);
 
   const absoluteMax = getAbsoluteEvadeCap(state);
+  const temporaryMax = getTemporaryEvadeCap(state);
   const beforeEvade = Math.max(0, Number(state.evade || 0));
-  const nextEvade = beforeEvade * 2;
+  const nextEvade = Math.min(beforeEvade * 2, temporaryMax);
   const nextCap = Math.min(nextEvade, absoluteMax);
 
   state.evade = nextEvade;
   state.overEvadeCap = nextCap;
   state.evadeRedCap = nextCap;
   state.evadeGoldCap = absoluteMax;
-  state.overEvadeMode = true;
+  state.overEvadeMode = nextCap > getBaseEvadeMax(state);
 
   normalizeEvadeCapState(state);
 }
@@ -232,7 +236,6 @@ export function reduceEvade(state, amount = 1) {
   const persistentCap = getPersistentEvadeCap(state);
   const current = Math.max(0, Number(state.evade || 0));
 
-  // 赤上限は「消費と同時に最大値ごと下がる」。
   if (persistentCap > baseMax) {
     const nextCap = Math.min(Math.max(baseMax, current), persistentCap, absoluteMax);
     state.overEvadeCap = nextCap;
@@ -621,7 +624,7 @@ export function createBattleState(unit) {
   const initialSlots = cloneSlots(defaultForm.slots);
   const initialSpecials = cloneSpecials(defaultForm.specials, defaultForm.specialOrder);
 
- return {
+  return {
     unitId: unit.id,
     battleRecordId: unit.battleRecordId || unit.id,
     battleRecordIgnore: unit.battleRecordIgnore === true,
