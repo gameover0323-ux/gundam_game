@@ -1,5 +1,4 @@
 import { createAttack } from "./js_battle_system.js";
-
 import {
   getSlotByKey,
   getSlotNumberFromKey,
@@ -11,21 +10,23 @@ import {
   executeUnitAfterSlotResolved,
   executeUnitExtraWeaponResult
 } from "./js_unit_runtime.js";
-
 import { resolveSlotEffect } from "./js_slot_effects.js";
 import { executeCommonSpecial } from "./js_special_actions.js";
 
 export function createActionLayer(ctx) {
   function ensureReservedActions(state) {
     if (!state) return [];
+
     if (!Array.isArray(state.pendingReservedActions)) {
       state.pendingReservedActions = [];
     }
+
     return state.pendingReservedActions;
   }
 
   function reserveAction(state, action) {
     const list = ensureReservedActions(state);
+
     list.push({
       id: action.id || `reserved_${Date.now()}_${Math.random()}`,
       delay: Number(action.delay || 0),
@@ -64,7 +65,6 @@ export function createActionLayer(ctx) {
       if (index >= 0) {
         list.splice(index, 1);
       }
-
       startReservedAction(action);
     });
 
@@ -74,17 +74,20 @@ export function createActionLayer(ctx) {
   function getActorUnitKey(ownerPlayer, actor) {
     const team = ctx.getTeam?.(ownerPlayer);
     if (!team || !actor) return null;
+
     if (team.unit1 === actor) return "unit1";
     if (team.unit2 === actor) return "unit2";
+
     return null;
   }
 
   function getUnifiedSpecialAttackScope(ownerPlayer, actor) {
     const ownerUnitKey = getActorUnitKey(ownerPlayer, actor);
 
-    const contexts = typeof ctx.getCurrentAttackContexts === "function"
-      ? ctx.getCurrentAttackContexts()
-      : [];
+    const contexts =
+      typeof ctx.getCurrentAttackContexts === "function"
+        ? ctx.getCurrentAttackContexts()
+        : [];
 
     const matchedContext = Array.isArray(contexts)
       ? contexts.find(context =>
@@ -104,7 +107,6 @@ export function createActionLayer(ctx) {
       : [];
 
     const attacks = allAttacks.filter(attack => attack.groupId === matchedContext.groupId);
-
     if (attacks.length <= 0) return null;
 
     return {
@@ -128,6 +130,7 @@ export function createActionLayer(ctx) {
       );
 
       ctx.setCurrentAttack(action.attacks);
+
       ctx.setCurrentAttackContext({
         ownerPlayer,
         enemyPlayer,
@@ -170,7 +173,6 @@ export function createActionLayer(ctx) {
 
       if (context.twoVtwoAdapter) {
         const paid = context.twoVtwoAdapter.consumeHp(context.ownerPlayer, actor, hpCost);
-
         if (!paid) {
           return { handled: true, redraw: false, message: "HPが足りません" };
         }
@@ -178,7 +180,6 @@ export function createActionLayer(ctx) {
         if (hpCost >= actor.hp) {
           return { handled: true, redraw: false, message: "HPが足りません" };
         }
-
         actor.hp -= hpCost;
       }
 
@@ -224,7 +225,6 @@ export function createActionLayer(ctx) {
 
       if (context.twoVtwoAdapter) {
         const paid = context.twoVtwoAdapter.consumeHp(context.ownerPlayer, actor, hpCost);
-
         if (!paid) {
           return { handled: true, redraw: false, message: "HPが足りません" };
         }
@@ -232,7 +232,6 @@ export function createActionLayer(ctx) {
         if (hpCost >= actor.hp) {
           return { handled: true, redraw: false, message: "HPが足りません" };
         }
-
         actor.hp -= hpCost;
       }
 
@@ -287,7 +286,7 @@ export function createActionLayer(ctx) {
       enemyState,
       resolveResult,
       twoVtwoAdapter: ctx.twoVtwoAdapter || null
-    });
+    }) || {};
 
     if (afterResult.redraw) {
       ctx.redrawBattleBoards();
@@ -312,7 +311,6 @@ export function createActionLayer(ctx) {
 
   function startSlotAction(ownerPlayer, slotKey, slotOverride = null) {
     const enemyPlayer = ctx.getOpponentPlayer(ownerPlayer);
-
     const actor = ctx.getPlayerState(ownerPlayer);
     const defender = ctx.getCombatTargetState(enemyPlayer);
 
@@ -397,14 +395,10 @@ export function createActionLayer(ctx) {
     const actor = ctx.getPlayerState(ownerPlayer);
     const defender = ctx.getCombatTargetState(enemyPlayer);
 
-    if (!actor) {
-      return null;
-    }
+    if (!actor) return null;
 
     let slot = slotOverride || getSlotByKey(actor, slotKey);
-    if (!slot) {
-      return null;
-    }
+    if (!slot) return null;
 
     let slotNumber = getSlotNumberFromKey(slotKey);
     const sourceLabel = `${actionIndex}回目スロット行動：${slotNumber}.${slot.label}`;
@@ -548,6 +542,7 @@ export function createActionLayer(ctx) {
       if (adapter) {
         return adapter.getActionCount(ownerPlayer, actor);
       }
+
       return Math.max(0, Number(actor.actionCount || 0));
     };
 
@@ -555,9 +550,11 @@ export function createActionLayer(ctx) {
       if (adapter) {
         return adapter.canConsumeAction(ownerPlayer, actor, 1);
       }
+
       if (typeof ctx.canConsumeAction === "function") {
         return ctx.canConsumeAction(actor, 1);
       }
+
       return Number(actor.actionCount || 0) >= 1;
     };
 
@@ -565,10 +562,12 @@ export function createActionLayer(ctx) {
       if (adapter) {
         return adapter.consumeAction(ownerPlayer, actor, 1);
       }
+
       if (typeof ctx.consumeActionCount === "function") {
         ctx.consumeActionCount(actor, 1);
         return true;
       }
+
       actor.actionCount = Math.max(0, Number(actor.actionCount || 0) - 1);
       return true;
     };
@@ -644,6 +643,7 @@ export function createActionLayer(ctx) {
       );
 
       ctx.setCurrentAttack(allAttacks);
+
       ctx.setCurrentAttackContext({
         ownerPlayer,
         enemyPlayer,
@@ -663,7 +663,9 @@ export function createActionLayer(ctx) {
     }
 
     ctx.renderAttackLogText(
-      notices.length > 0 ? notices.join("\n") : `${actor.name} は行動を完了`
+      notices.length > 0
+        ? notices.join("\n")
+        : `${actor.name} は行動を完了`
     );
 
     return usedCount > 0;
@@ -681,7 +683,7 @@ export function createActionLayer(ctx) {
       twoVtwoAdapter: ctx.twoVtwoAdapter || null
     });
 
-    function mergeExtraResult(baseResult) {
+    function mergeExtraResult() {
       const merged = {
         attacks: [],
         messages: [],
@@ -720,18 +722,20 @@ export function createActionLayer(ctx) {
 
     function startAttackQte(attacks, extraContext = {}) {
       ctx.setCurrentAttack(attacks);
+
       ctx.setCurrentAttackContext({
         ownerPlayer: slotMeta.ownerPlayer,
         enemyPlayer: slotMeta.enemyPlayer,
         slotKey: slotMeta.slotKey,
         slotNumber: slotMeta.slotNumber,
-        slotLabel: slot.label,
-        slotDesc: slot.desc,
+        slotLabel: extraContext.slotLabel || slot.label,
+        slotDesc: extraContext.slotDesc || slot.desc,
         totalCount: attacks.length,
         hitCount: 0,
         evadeCount: 0,
         ...extraContext
       });
+
       ctx.redrawBattleBoards();
       ctx.renderAttackChoices();
     }
@@ -742,17 +746,26 @@ export function createActionLayer(ctx) {
       result.kind === "none" ||
       result.kind === "custom"
     ) {
-      const afterResult = runAfterSlotResolvedHook(actor, slotMeta.slotNumber, result, slotMeta);
+      const afterResult = runAfterSlotResolvedHook(actor, slotMeta.slotNumber, result, {
+        ...slotMeta,
+        slot
+      });
 
-      if (afterResult?.appendAttacks && afterResult.appendAttacks.length > 0) {
-        startAttackQte(afterResult.appendAttacks, {
+      const appendedAttacks = Array.isArray(afterResult?.appendAttacks)
+        ? afterResult.appendAttacks
+        : [];
+
+      if (appendedAttacks.length > 0) {
+        startAttackQte(appendedAttacks, {
           appendedOnly: true,
-          sourceLabel: afterResult.appendAttacks[0]?.source || "追加攻撃"
+          sourceLabel: appendedAttacks[0]?.source || afterResult.appendAttackLabel || "追加攻撃",
+          slotLabel: afterResult.appendSlotLabel || afterResult.appendAttackLabel || slot.label,
+          slotDesc: afterResult.appendSlotDesc || slot.desc || ""
         });
         return;
       }
 
-      const extra = mergeExtraResult(result);
+      const extra = mergeExtraResult();
 
       extra.messages.forEach((message) => {
         ctx.appendBattleNotice(message);
@@ -765,7 +778,9 @@ export function createActionLayer(ctx) {
       if (extra.attacks.length > 0) {
         startAttackQte(extra.attacks, {
           appendedOnly: true,
-          sourceLabel: extra.attacks[0]?.source || "追加攻撃"
+          sourceLabel: extra.attacks[0]?.source || "追加攻撃",
+          slotLabel: extra.attacks[0]?.source || slot.label,
+          slotDesc: slot.desc || ""
         });
         return;
       }
@@ -786,12 +801,16 @@ export function createActionLayer(ctx) {
     }
 
     if (result.kind === "attack") {
-      const afterResult = runAfterSlotResolvedHook(actor, slotMeta.slotNumber, result, slotMeta);
-      const extra = mergeExtraResult(result);
+      const afterResult = runAfterSlotResolvedHook(actor, slotMeta.slotNumber, result, {
+        ...slotMeta,
+        slot
+      });
+
+      const extra = mergeExtraResult();
 
       const attacks = [
         ...result.attacks,
-        ...(afterResult?.appendAttacks || []),
+        ...(Array.isArray(afterResult?.appendAttacks) ? afterResult.appendAttacks : []),
         ...extra.attacks
       ];
 
@@ -855,6 +874,7 @@ export function createActionLayer(ctx) {
       if (commonResult.message) {
         ctx.showPopup(commonResult.message);
       }
+
       return;
     }
 
@@ -971,6 +991,7 @@ export function createActionLayer(ctx) {
         );
 
         ctx.setCurrentAttack(unitResult.appendAttacks);
+
         ctx.setCurrentAttackContext({
           ownerPlayer,
           enemyPlayer,
@@ -996,6 +1017,7 @@ export function createActionLayer(ctx) {
 
       if (unitResult.forcedSlotDesc) {
         ctx.setCurrentAttack([]);
+
         ctx.setCurrentAction(
           `PLAYER ${ownerPlayer} の行動`,
           unitResult.forcedSlotLabel || special.name
@@ -1013,6 +1035,7 @@ export function createActionLayer(ctx) {
             slotNumber: null
           }
         );
+
         return;
       }
 
@@ -1146,6 +1169,7 @@ export function createActionLayer(ctx) {
 
   function executeNextQueuedSlot() {
     const team = ctx.getTeam(ctx.getCurrentPlayer());
+
     if (!team || !team._slotQueue || team._slotQueue.length === 0) {
       ctx.redrawBattleBoards();
       return;
@@ -1154,7 +1178,6 @@ export function createActionLayer(ctx) {
     const next = team._slotQueue.shift();
 
     ctx.setActiveUnit(ctx.getCurrentPlayer(), next.unitKey);
-
     startSlotAction(ctx.getCurrentPlayer(), next.slotKey);
   }
 
