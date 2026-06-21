@@ -10,97 +10,50 @@ export function createOnlineActionSync(ctx) {
     };
   }
 
-  function publishOnlineCriticalBoostAction(ownerPlayer) {
+  function publishAction(type, actor, payload = {}) {
     if (!ctx.isOnlineEnabled()) return;
     if (ctx.isApplyingRemote()) return;
-    if (ownerPlayer !== ctx.getOnlineMyPlayer()) return;
+    if (actor && actor !== ctx.getOnlineMyPlayer()) return;
 
     const actionId = ctx.nextOnlineActionSeq();
+
     ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdate({
       actionId,
-      actor: ownerPlayer,
-      type: "criticalBoost",
-      payload: {},
+      actor,
+      type,
+      payload,
       createdAt: Date.now()
     }));
+  }
+
+  function publishOnlineCriticalBoostAction(ownerPlayer) {
+    publishAction("criticalBoost", ownerPlayer, {});
   }
 
   function publishOnlineChoiceAction(choice, selectedValue) {
-    if (!ctx.isOnlineEnabled()) return;
-    if (ctx.isApplyingRemote()) return;
     if (!choice) return;
 
-    const actionId = ctx.nextOnlineActionSeq();
-    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdate({
-      actionId,
-      actor: choice.ownerPlayer,
-      type: "choice",
-      payload: {
-        source: choice.source || null,
-        choiceType: choice.choiceType || null,
-        selectedValue
-      },
-      createdAt: Date.now()
-    }));
+    publishAction("choice", choice.ownerPlayer, {
+      source: choice.source || null,
+      choiceType: choice.choiceType || null,
+      selectedValue
+    });
   }
 
   function publishOnlineSpecialAction(ownerPlayer, specialKey) {
-    if (!ctx.isOnlineEnabled()) return;
-    if (ctx.isApplyingRemote()) return;
-    if (ownerPlayer !== ctx.getOnlineMyPlayer()) return;
-
-    const actionId = ctx.nextOnlineActionSeq();
-    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdate({
-      actionId,
-      actor: ownerPlayer,
-      type: "special",
-      payload: { specialKey },
-      createdAt: Date.now()
-    }));
+    publishAction("special", ownerPlayer, { specialKey });
   }
 
   function publishOnlineQteAction(kind, index) {
-    if (!ctx.isOnlineEnabled()) return;
-    if (ctx.isApplyingRemote()) return;
-
-    const actionId = ctx.nextOnlineActionSeq();
-    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdate({
-      actionId,
-      actor: ctx.getOnlineMyPlayer(),
-      type: "qteResolved",
-      payload: { kind, index },
-      createdAt: Date.now()
-    }));
+    publishAction("qteResolved", ctx.getOnlineMyPlayer(), { kind, index });
   }
 
   function publishOnlineEndTurnAction(actorPlayer) {
-    if (!ctx.isOnlineEnabled()) return;
-    if (ctx.isApplyingRemote()) return;
-    if (actorPlayer !== ctx.getOnlineMyPlayer()) return;
-
-    const actionId = ctx.nextOnlineActionSeq();
-    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdate({
-      actionId,
-      actor: actorPlayer,
-      type: "endTurn",
-      payload: {},
-      createdAt: Date.now()
-    }));
+    publishAction("endTurn", actorPlayer, {});
   }
 
   function publishOnlineSlotAction(ownerPlayer, slotKey) {
-    if (!ctx.isOnlineEnabled()) return;
-    if (ctx.isApplyingRemote()) return;
-    if (ownerPlayer !== ctx.getOnlineMyPlayer()) return;
-
-    const actionId = ctx.nextOnlineActionSeq();
-    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdate({
-      actionId,
-      actor: ownerPlayer,
-      type: "slot",
-      payload: { slotKey },
-      createdAt: Date.now()
-    }));
+    publishAction("slot", ownerPlayer, { slotKey });
   }
 
   function publishOnlineBattleEnd(winnerPlayer) {
@@ -108,6 +61,7 @@ export function createOnlineActionSync(ctx) {
     if (ctx.isApplyingRemote()) return;
 
     const actionId = ctx.nextOnlineActionSeq();
+
     ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdate({
       actionId,
       actor: winnerPlayer,
@@ -137,8 +91,7 @@ export function createOnlineActionSync(ctx) {
 
       if (action.type === "battleEnd") {
         const winner = action.payload?.winner;
-        if (!winner) return;
-        ctx.finishBattle(winner);
+        if (winner) ctx.finishBattle(winner);
       }
     } finally {
       ctx.setApplyingRemote(false);
