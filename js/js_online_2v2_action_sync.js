@@ -62,8 +62,8 @@ export function createOnline2v2ActionSync(ctx) {
     ctx.publishOnline2v2SnapshotAction = publishOnline2v2SnapshotAction;
   }
 
-  function publishOnline2v2SlotAction(ownerPlayer, slotMode = "team", unitKey = null) {
-    publishAction("slot2v2", ownerPlayer, { slotMode, unitKey });
+  function publishOnline2v2SlotAction(ownerPlayer, slotMode = "team", unitKey = null, slotKeys = null) {
+    publishAction("slot2v2", ownerPlayer, { slotMode, unitKey, slotKeys });
   }
 
   function publishOnline2v2SpecialAction(ownerPlayer, specialKey) {
@@ -86,8 +86,8 @@ export function createOnline2v2ActionSync(ctx) {
     publishAction("qteResolved2v2", ctx.getOnlineMyPlayer(), { kind, index });
   }
 
-  function publishOnline2v2CriticalBoostAction(ownerPlayer) {
-    publishAction("criticalBoost2v2", ownerPlayer, {});
+  function publishOnline2v2CriticalBoostAction(ownerPlayer, unitKey = null) {
+    publishAction("criticalBoost2v2", ownerPlayer, { unitKey });
   }
 
   function publishOnline2v2EndTurnAction(actorPlayer) {
@@ -96,6 +96,38 @@ export function createOnline2v2ActionSync(ctx) {
 
   function publishOnline2v2BattleEnd(winnerPlayer) {
     publishAction("battleEnd2v2", winnerPlayer, { winner: winnerPlayer });
+  }
+
+  function publishOnline2v2TeamModeAction(ownerPlayer) {
+    publishAction("teamMode2v2", ownerPlayer, {});
+  }
+
+  function publishOnline2v2ActiveUnitAction(ownerPlayer, unitKey) {
+    publishAction("activeUnit2v2", ownerPlayer, { unitKey });
+  }
+
+  function publishOnline2v2FocusUnitAction(ownerPlayer, unitKey) {
+    publishAction("focusUnit2v2", ownerPlayer, { unitKey });
+  }
+
+  function publishOnline2v2TauntAction(ownerPlayer, targetUnitKey) {
+    publishAction("taunt2v2", ownerPlayer, { targetUnitKey });
+  }
+
+  function publishOnline2v2DuelAction(ownerPlayer, ownUnitKey) {
+    publishAction("duel2v2", ownerPlayer, { ownUnitKey });
+  }
+
+  function publishOnline2v2BreakthroughStartAction(initiatorPlayer) {
+    publishAction("breakthroughStart2v2", initiatorPlayer, { initiatorPlayer });
+  }
+
+  function publishOnline2v2BreakthroughBetAction(player, value) {
+    publishAction("breakthroughBet2v2", player, { player, value });
+  }
+
+  function publishOnline2v2BreakthroughResultAction(result) {
+    publishAction("breakthroughResult2v2", ctx.getOnlineMyPlayer(), { result });
   }
 
   function applyOnline2v2BattleSnapshot(snapshot) {
@@ -154,6 +186,33 @@ export function createOnline2v2ActionSync(ctx) {
     ctx.setApplyingRemote(true);
 
     try {
+      if (action.type === "breakthroughStart2v2") {
+        ctx.renderBreakthroughBetChoiceRaw({
+          initiatorPlayer: action.payload?.initiatorPlayer,
+          suppressOnlinePublish: true
+        });
+        return;
+      }
+
+      if (action.type === "breakthroughBet2v2") {
+        ctx.applyBreakthroughBetRaw(
+          action.payload?.player,
+          action.payload?.value
+        );
+        return;
+      }
+
+      if (action.type === "breakthroughResult2v2") {
+        if (typeof ctx.renderBreakthroughResultRaw === "function") {
+          ctx.renderBreakthroughResultRaw(action.payload?.result);
+        }
+
+        if (battleSnapshot) {
+          applyOnline2v2BattleSnapshot(battleSnapshot);
+        }
+        return;
+      }
+
       if (battleSnapshot) {
         applyOnline2v2BattleSnapshot(battleSnapshot);
         return;
@@ -179,6 +238,14 @@ export function createOnline2v2ActionSync(ctx) {
     publishOnline2v2CriticalBoostAction,
     publishOnline2v2EndTurnAction,
     publishOnline2v2BattleEnd,
+    publishOnline2v2TeamModeAction,
+    publishOnline2v2ActiveUnitAction,
+    publishOnline2v2FocusUnitAction,
+    publishOnline2v2TauntAction,
+    publishOnline2v2DuelAction,
+    publishOnline2v2BreakthroughStartAction,
+    publishOnline2v2BreakthroughBetAction,
+    publishOnline2v2BreakthroughResultAction,
     applyOnline2v2Action
   };
 }
