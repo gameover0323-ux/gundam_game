@@ -671,163 +671,144 @@ export function createActionLayer(ctx) {
     return usedCount > 0;
   }
 
-  function resolveSlot(slot, slotMeta = {}) {
-    ctx.setCurrentAttack([]);
+ function resolveSlot(slot, slotMeta = {}) {
+  ctx.setCurrentAttack([]);
 
-    const actor = ctx.getPlayerState(slotMeta.ownerPlayer || ctx.getCurrentPlayer());
+  const ownerPlayer = slotMeta.ownerPlayer || ctx.getCurrentPlayer();
+  const enemyPlayer = slotMeta.enemyPlayer || ctx.getOpponentPlayer(ownerPlayer);
+  const actor = ctx.getPlayerState(ownerPlayer);
 
-    const result = resolveSlotEffect({
+  if (!actor || !slot) {
+    ctx.renderAttackLogText("スロット処理に失敗しました");
+    return;
+  }
+
+  const result = resolveSlotEffect({
+    slot,
+    actor,
+    ownerPlayer,
+    twoVtwoAdapter: ctx.twoVtwoAdapter || null
+  }) || { kind: "none", attacks: [], message: "" };
+
+  function mergeExtraResult() {
+    const merged = {
+      attacks: [],
+      messages: [],
+      redraw: false
+    };
+
+    const extraResult = executeUnitExtraWeaponResult(actor, {
+      ownerPlayer,
+      enemyPlayer,
+      slotKey: slotMeta.slotKey,
+      slotNumber: slotMeta.slotNumber,
       slot,
-      actor,
-      ownerPlayer: slotMeta.ownerPlayer,
       twoVtwoAdapter: ctx.twoVtwoAdapter || null
     });
 
-    function mergeExtraResult() {
-      const merged = {
-        attacks: [],
-        messages: [],
-        redraw: false
-      };
+    if (!extraResult) return merged;
 
-      const extraResult = executeUnitExtraWeaponResult(actor, {
-        ownerPlayer: slotMeta.ownerPlayer,
-        enemyPlayer: slotMeta.enemyPlayer,
-        slotKey: slotMeta.slotKey,
-        slotNumber: slotMeta.slotNumber,
-        slot,
-        twoVtwoAdapter: ctx.twoVtwoAdapter || null
-      });
-
-      if (!extraResult) return merged;
-
-      if (Array.isArray(extraResult.appendAttacks)) {
-        merged.attacks.push(...extraResult.appendAttacks);
-      }
-
-      if (Array.isArray(extraResult.appendMessages)) {
-        merged.messages.push(...extraResult.appendMessages.filter(Boolean));
-      }
-
-      if (extraResult.message) {
-        merged.messages.push(extraResult.message);
-      }
-
-      if (extraResult.redraw) {
-        merged.redraw = true;
-      }
-
-      return merged;
+    if (Array.isArray(extraResult.appendAttacks)) {
+      merged.attacks.push(...extraResult.appendAttacks);
     }
 
-    function startAttackQte(attacks, extraContext = {}) {
-      ctx.setCurrentAttack(attacks);
-
-      ctx.setCurrentAttackContext({
-        ownerPlayer: slotMeta.ownerPlayer,
-        enemyPlayer: slotMeta.enemyPlayer,
-        slotKey: slotMeta.slotKey,
-        slotNumber: slotMeta.slotNumber,
-        slotLabel: extraContext.slotLabel || slot.label,
-        slotDesc: extraContext.slotDesc || slot.desc,
-        totalCount: attacks.length,
-        hitCount: 0,
-        evadeCount: 0,
-        ...extraContext
-      });
-
-      ctx.redrawBattleBoards();
-      ctx.renderAttackChoices();
+    if (Array.isArray(extraResult.appendMessages)) {
+      merged.messages.push(...extraResult.appendMessages.filter(Boolean));
     }
 
-    if (
-      result.kind === "evade" ||
-      result.kind === "heal" ||
-      result.kind === "none" ||
-      result.kind === "custom"
-    ) {
-      const afterResult = runAfterSlotResolvedHook(actor, slotMeta.slotNumber, result, {
-        ...slotMeta,
-        slot
-      });
-
-      const appendedAttacks = Array.isArray(afterResult?.appendAttacks)
-        ? afterResult.appendAttacks
-        : [];
-
-      if (appendedAttacks.length > 0) {
-        startAttackQte(appendedAttacks, {
-          appendedOnly: true,
-          sourceLabel: appendedAttacks[0]?.source || afterResult.appendAttackLabel || "追加攻撃",
-          slotLabel: afterResult.appendSlotLabel || afterResult.appendAttackLabel || slot.label,
-          slotDesc: afterResult.appendSlotDesc || slot.desc || ""
-        });
-        return;
-      }
-
-      const extra = mergeExtraResult();
-
-      extra.messages.forEach((message) => {
-        ctx.appendBattleNotice(message);
-      });
-
-      if (extra.redraw) {
-        ctx.redrawBattleBoards();
-      }
-
-      if (extra.attacks.length > 0) {
-        startAttackQte(extra.attacks, {
-          appendedOnly: true,
-          sourceLabel: extra.attacks[0]?.source || "追加攻撃",
-          slotLabel: extra.attacks[0]?.source || slot.label,
-          slotDesc: slot.desc || ""
-        });
-        return;
-      }
-
-      ctx.redrawBattleBoards();
-
-      if (result.message) {
-        ctx.renderAttackLogText(result.message);
-      } else {
-        ctx.renderAttackLogText("行動完了");
-      }
-
-      if (ctx.getBattleMode() === "2v2") {
-        executeNextQueuedSlot();
-      }
-
-      return;
+    if (extraResult.message) {
+      merged.messages.push(extraResult.message);
     }
 
-    if (result.kind === "attack") {
-      const afterResult = runAfterSlotResolvedHook(actor, slotMeta.slotNumber, result, {
-        ...slotMeta,
-        slot
-      });
-
-      const extra = mergeExtraResult();
-
-      const attacks = [
-        ...result.attacks,
-        ...(Array.isArray(afterResult?.appendAttacks) ? afterResult.appendAttacks : []),
-        ...extra.attacks
-      ];
-
-      extra.messages.forEach((message) => {
-        ctx.appendBattleNotice(message);
-      });
-
-      if (extra.redraw || afterResult?.redraw) {
-        ctx.redrawBattleBoards();
-      }
-
-      startAttackQte(attacks);
-      return;
+    if (extraResult.redraw) {
+      merged.redraw = true;
     }
 
-    ctx.renderAttackLogText("この行動はまだ未対応");
+    return merged;
   }
+
+  function startAttackQte(attacks, extraContext = {}) {
+    const safeAttacks = Array.isArray(attacks) ? attacks.filter(Boolean) : [];
+
+    if (safeAttacks.length <= 0) {
+      ctx.redrawBattleBoards();
+      ctx.renderAttackLogText(result.message || "攻撃データがありません");
+      return;
+    }
+
+    ctx.setCurrentAttack(safeAttacks);
+
+    ctx.setCurrentAttackContext({
+      ownerPlayer,
+      enemyPlayer,
+      slotKey: slotMeta.slotKey,
+      slotNumber: slotMeta.slotNumber,
+      slotLabel: extraContext.slotLabel || slot.label,
+      slotDesc: extraContext.slotDesc || slot.desc || "",
+      totalCount: safeAttacks.length,
+      hitCount: 0,
+      evadeCount: 0,
+      ...extraContext
+    });
+
+    ctx.redrawBattleBoards();
+    ctx.renderAttackChoices();
+  }
+
+  const afterResult = runAfterSlotResolvedHook(actor, slotMeta.slotNumber, result, {
+    ...slotMeta,
+    ownerPlayer,
+    enemyPlayer,
+    slot
+  }) || {};
+
+  const extra = mergeExtraResult();
+
+  extra.messages.forEach((message) => {
+    ctx.appendBattleNotice(message);
+  });
+
+  if (extra.redraw || afterResult.redraw) {
+    ctx.redrawBattleBoards();
+  }
+
+  const attacks = [
+    ...(Array.isArray(result.attacks) ? result.attacks : []),
+    ...(Array.isArray(afterResult.appendAttacks) ? afterResult.appendAttacks : []),
+    ...extra.attacks
+  ];
+
+  if (attacks.length > 0) {
+    startAttackQte(attacks, {
+      appendedOnly: result.kind !== "attack",
+      sourceLabel:
+        attacks[0]?.source ||
+        afterResult.appendAttackLabel ||
+        slot.label,
+      slotLabel:
+        afterResult.appendSlotLabel ||
+        afterResult.appendAttackLabel ||
+        slot.label,
+      slotDesc:
+        afterResult.appendSlotDesc ||
+        slot.desc ||
+        ""
+    });
+    return;
+  }
+
+  ctx.redrawBattleBoards();
+
+  if (result.message) {
+    ctx.renderAttackLogText(result.message);
+  } else {
+    ctx.renderAttackLogText("行動完了");
+  }
+
+  if (ctx.getBattleMode() === "2v2") {
+    executeNextQueuedSlot();
+  }
+}
 
   function executeSpecial(ownerPlayer, specialKey) {
     const actor = ctx.getPlayerState(ownerPlayer);
