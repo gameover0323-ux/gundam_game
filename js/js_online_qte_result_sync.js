@@ -102,16 +102,21 @@ export function createOnlineQteResultSync(ctx) {
       ctx.setPendingChoice(cloneValue(snapshot.pendingChoice));
     }
 
-    ctx.redrawBattleBoards();
+  ctx.redrawBattleBoards();
 
-    if (Array.isArray(snapshot.currentAttack) && snapshot.currentAttack.length > 0) {
-      ctx.renderAttackChoices();
-      return;
-    }
+if (Array.isArray(snapshot.currentAttack) && snapshot.currentAttack.length > 0) {
+  ctx.renderAttackChoices();
+  return;
+}
 
-    if (snapshot.pendingChoice && typeof ctx.renderPendingChoice === "function") {
-      ctx.renderPendingChoice();
-    }
+if (snapshot.pendingChoice && typeof ctx.renderPendingChoice === "function") {
+  ctx.renderPendingChoice();
+  return;
+}
+
+if (typeof ctx.renderAttackLogText === "function") {
+  ctx.renderAttackLogText(snapshot.battleNotice || "攻撃解決済み");
+}
   }
 
   function publishOnlineQteResultAction(kind, index) {
