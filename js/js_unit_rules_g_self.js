@@ -69,6 +69,10 @@ if (typeof state.gselfOmniLaserActive !== "boolean") state.gselfOmniLaserActive 
 if (typeof state.gselfPerfectRestTurn !== "number") state.gselfPerfectRestTurn = 0;
 if (typeof state.gselfPerfectCostPaidThisTurn !== "boolean") state.gselfPerfectCostPaidThisTurn = false;
 
+if (typeof state.gselfHighTorqueCostPaidThisTurn !== "boolean") {
+  state.gselfHighTorqueCostPaidThisTurn = false;
+}
+  
 applyPackEvadeMax(state);
 }
 
@@ -834,7 +838,12 @@ export function onGSelfBeforeSlot(state, rolledSlotNumber, context = {}) {
     };
   }
 
-if (state.formId === "high_torque") {
+if (
+  state.formId === "high_torque" &&
+  !state.gselfHighTorqueCostPaidThisTurn
+) {
+  state.gselfHighTorqueCostPaidThisTurn = true;
+
   const currentHp = getRuleHp(state, context);
 
   if (currentHp > 10) {
@@ -1010,6 +1019,7 @@ export function onGSelfTurnEnd(state) {
   state.gselfEmergencyEscapeActive = false;
   state.gselfPhotonShieldBarrier = 0;
   state.gselfPerfectCostPaidThisTurn = false;
+state.gselfHighTorqueCostPaidThisTurn = false;
 
   return {
     redraw: false,
