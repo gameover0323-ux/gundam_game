@@ -1343,7 +1343,14 @@ isOnlineSpectator,
   },
 
   updateRoom,
+publishOnlineManualSnapshot: async () => {
+    if (!onlineState.enabled || !onlineState.roomId) return;
 
+    await updateRoom(onlineState.roomId, {
+      battleSnapshot: buildOnlineBattleSnapshot(),
+      "meta/updatedAt": Date.now()
+    });
+  },
   showPopup,
   showScreen,
   finishBattle,
@@ -1482,7 +1489,20 @@ onlineSpectatorController = createOnlineSpectatorController({
   setOnlineBattleStarted: value => {
     onlineBattleStarted = value;
   },
+getTeamA: () => teamA,
+  setTeamA: value => {
+    teamA = value;
+  },
 
+  getTeamB: () => teamB,
+  setTeamB: value => {
+    teamB = value;
+  },
+
+  getPendingChoice: () => pendingChoice,
+  setPendingChoice: value => {
+    pendingChoice = value;
+  },
   getOnlineRoomIdInput: () => onlineRoomIdInput,
   getOnlineRoomStatus: () => onlineRoomStatus,
 
