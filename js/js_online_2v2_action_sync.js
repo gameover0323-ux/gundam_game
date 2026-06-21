@@ -1,32 +1,10 @@
 export function createOnline2v2ActionSync(ctx) {
-  function cloneValue(value) {
-    return JSON.parse(JSON.stringify(value ?? null));
-  }
+  const appliedActionKeys = new Set();
 
-  function buildOnline2v2BattleSnapshot() {
-    return {
-      mode: ctx.getBattleMode(),
-      currentTurn: ctx.getCurrentTurn(),
-      currentPlayer: ctx.getCurrentPlayer(),
-      teamA: cloneValue(ctx.getTeam("A")),
-      teamB: cloneValue(ctx.getTeam("B")),
-      currentAttack: cloneValue(ctx.getCurrentAttack()),
-      currentAttackContext: cloneValue(ctx.getCurrentAttackContext()),
-      currentAttackContexts: cloneValue(ctx.getCurrentAttackContexts()),
-      battleNotice: ctx.getBattleNotice(),
-      currentActionHeader: ctx.getCurrentActionHeader(),
-      currentActionLabel: ctx.getCurrentActionLabel(),
-      pendingChoice: typeof ctx.getPendingChoice === "function" ? cloneValue(ctx.getPendingChoice()) : null,
-      updatedAt: Date.now()
-    };
-  }
-
-  function buildRoomUpdateWithSnapshot(action) {
-    return {
-      action,
-      battleSnapshot: buildOnline2v2BattleSnapshot(),
-      "meta/updatedAt": Date.now()
-    };
+  function getActionKey(action) {
+    if (!action) return "";
+    if (action.actionKey) return String(action.actionKey);
+    return `${action.actor || "unknown"}:${action.actionId ?? "noid"}:${action.createdAt ?? 0}`;
   }
 
   function canPublish(actor) {
@@ -41,29 +19,34 @@ export function createOnline2v2ActionSync(ctx) {
   function publishAction(type, actor, payload = {}) {
     if (!canPublish(actor)) return;
 
-    const actionId = ctx.nextOnlineActionSeq();
+    const nextSeq = Number(ctx.getOnlineActionSeq?.() || 0) + 1;
+    if (typeof ctx.setOnlineActionSeq === "function") ctx.setOnlineActionSeq(nextSeq);
 
+    const now = Date.now();
     const action = {
-      actionId,
+      actionId: nextSeq,
+      actionSeq: nextSeq,
+      actionKey: `${actor}:${nextSeq}:${now}:${Math.random()}`,
       actor,
       type,
       payload,
-      createdAt: Date.now()
+      createdAt: now
     };
 
-    ctx.updateRoom(ctx.getOnlineRoomId(), buildRoomUpdateWithSnapshot(action));
+    appliedActionKeys.add(action.actionKey);
+
+    ctx.updateRoom(ctx.getOnlineRoomId(), {
+      action,
+      "meta/updatedAt": Date.now()
+    });
   }
 
   function publishOnline2v2SnapshotAction(type, actor, payload = {}) {
     publishAction(type, actor, payload);
   }
 
-  if (ctx && typeof ctx === "object") {
-    ctx.publishOnline2v2SnapshotAction = publishOnline2v2SnapshotAction;
-  }
-
   function publishOnline2v2SlotAction(ownerPlayer, slotMode = "team", unitKey = null, slotKeys = null) {
-    publishAction("slot2v2", ownerPlayer, { slotMode, unitKey, slotKeys });
+    publishAction("slot2v2", ownerPlayer, { slotMode, unitKey, slotKeys: slotKeys || null });
   }
 
   function publishOnline2v2SpecialAction(ownerPlayer, specialKey) {
@@ -72,18 +55,15 @@ export function createOnline2v2ActionSync(ctx) {
 
   function publishOnline2v2ChoiceAction(choice, selectedValue) {
     const actor = choice?.ownerPlayer || ctx.getOnlineMyPlayer();
-
-    queueMicrotask(() => {
-      publishAction("choice2v2", actor, {
-        source: choice?.source || null,
-        choiceType: choice?.choiceType || null,
-        selectedValue
-      });
+    publishAction("choice2v2", actor, {
+      source: choice?.source || null,
+      choiceType: choice?.choiceType || null,
+      selectedValue
     });
   }
 
   function publishOnline2v2QteAction(kind, index) {
-    publishAction("qteResolved2v2", ctx.getOnlineMyPlayer(), { kind, index });
+    publishAction("qte2v2", ctx.getOnlineMyPlayer(), { kind, index });
   }
 
   function publishOnline2v2CriticalBoostAction(ownerPlayer, unitKey = null) {
@@ -130,62 +110,85 @@ export function createOnline2v2ActionSync(ctx) {
     publishAction("breakthroughResult2v2", ctx.getOnlineMyPlayer(), { result });
   }
 
-  function applyOnline2v2BattleSnapshot(snapshot) {
-    if (!snapshot || snapshot.mode !== "online2v2") return;
-
-    if (snapshot.teamA) ctx.setTeamA(cloneValue(snapshot.teamA));
-    if (snapshot.teamB) ctx.setTeamB(cloneValue(snapshot.teamB));
-
-    const nextTeamA = ctx.getTeam("A");
-    const nextTeamB = ctx.getTeam("B");
-
-    if (nextTeamA) {
-      ctx.setPlayerAState(nextTeamA[nextTeamA.activeUnitKey || "unit1"] || nextTeamA.unit1 || null);
-    }
-
-    if (nextTeamB) {
-      ctx.setPlayerBState(nextTeamB[nextTeamB.activeUnitKey || "unit1"] || nextTeamB.unit1 || null);
-    }
-
-    ctx.setCurrentTurn(Number(snapshot.currentTurn || 1));
-    ctx.setCurrentPlayer(snapshot.currentPlayer === "B" ? "B" : "A");
-    ctx.setCurrentAttack(Array.isArray(snapshot.currentAttack) ? cloneValue(snapshot.currentAttack) : []);
-    ctx.setCurrentAttackContext(cloneValue(snapshot.currentAttackContext));
-    ctx.setCurrentAttackContexts(Array.isArray(snapshot.currentAttackContexts) ? cloneValue(snapshot.currentAttackContexts) : []);
-    ctx.setBattleNotice(snapshot.battleNotice || "");
-    ctx.setCurrentActionHeader(snapshot.currentActionHeader || "");
-    ctx.setCurrentActionLabel(snapshot.currentActionLabel || "");
-
-    if (typeof ctx.setPendingChoice === "function") {
-      ctx.setPendingChoice(cloneValue(snapshot.pendingChoice));
-    }
-
-    ctx.redrawBattleBoards();
-
-    if (Array.isArray(snapshot.currentAttack) && snapshot.currentAttack.length > 0) {
-      ctx.renderAttackChoices();
-      return;
-    }
-
-    if (snapshot.pendingChoice && typeof ctx.renderPendingChoice === "function") {
-      ctx.renderPendingChoice();
-    }
+  function getCriticalTarget(action) {
+    const team = ctx.getTeam(action.actor);
+    const unitKey = action.payload?.unitKey;
+    if (team && unitKey && team[unitKey]) return team[unitKey];
+    return ctx.getPlayerState(action.actor);
   }
 
-  function applyOnline2v2Action(action, battleSnapshot = null) {
+  function renderRemoteResult(result) {
+    const message = result?.message || "";
+    if (message && ctx.renderAttackLogText) ctx.renderAttackLogText(message);
+    if (message && ctx.showPopup) ctx.showPopup(message);
+    ctx.redrawBattleBoards();
+  }
+
+  function applyOnline2v2Action(action) {
     if (!ctx.isOnlineEnabled() || !action) return;
     if (ctx.getBattleMode() !== "online2v2") return;
-    if (typeof action.actionId !== "number") return;
-    if (action.actionId <= ctx.getLastAppliedActionId()) return;
 
-    ctx.setLastAppliedActionId(action.actionId);
-    ctx.setOnlineActionSeq(Math.max(ctx.getOnlineActionSeq(), action.actionId));
+    const actionKey = getActionKey(action);
+    if (!actionKey || appliedActionKeys.has(actionKey)) return;
+
+    appliedActionKeys.add(actionKey);
 
     if (action.actor === ctx.getOnlineMyPlayer()) return;
 
     ctx.setApplyingRemote(true);
 
     try {
+      if (action.type === "criticalBoost2v2") {
+        const actor = getCriticalTarget(action);
+        if (!actor) return;
+        ctx.spendEvadeForCritical(actor);
+        ctx.redrawBattleBoards();
+        return;
+      }
+
+      if (action.type === "slot2v2") {
+        const slotMode = action.payload?.slotMode || "team";
+        const unitKey = action.payload?.unitKey || null;
+        const slotKeys = action.payload?.slotKeys || {};
+
+        if (slotMode === "team") {
+          ctx.executeTeamSlotRaw(slotKeys, { suppressOnlinePublish: true });
+          return;
+        }
+
+        ctx.executeSingleTeamSlotRaw(unitKey || slotMode, slotKeys, {
+          suppressOnlinePublish: true
+        });
+        return;
+      }
+
+      if (action.type === "teamMode2v2") {
+        ctx.toggleTeamModeRaw(action.actor);
+        return;
+      }
+
+      if (action.type === "activeUnit2v2") {
+        ctx.setActiveUnitRaw(action.actor, action.payload?.unitKey);
+        return;
+      }
+
+      if (action.type === "focusUnit2v2") {
+        ctx.setFocusUnitRaw(action.actor, action.payload?.unitKey);
+        return;
+      }
+
+      if (action.type === "taunt2v2") {
+        const result = ctx.startTauntRaw(action.actor, action.payload?.targetUnitKey);
+        renderRemoteResult(result);
+        return;
+      }
+
+      if (action.type === "duel2v2") {
+        const result = ctx.startDuelRaw(action.actor, action.payload?.ownUnitKey);
+        renderRemoteResult(result);
+        return;
+      }
+
       if (action.type === "breakthroughStart2v2") {
         ctx.renderBreakthroughBetChoiceRaw({
           initiatorPlayer: action.payload?.initiatorPlayer,
@@ -203,18 +206,40 @@ export function createOnline2v2ActionSync(ctx) {
       }
 
       if (action.type === "breakthroughResult2v2") {
-        if (typeof ctx.renderBreakthroughResultRaw === "function") {
-          ctx.renderBreakthroughResultRaw(action.payload?.result);
-        }
+        ctx.renderBreakthroughResultRaw(action.payload?.result);
+        return;
+      }
 
-        if (battleSnapshot) {
-          applyOnline2v2BattleSnapshot(battleSnapshot);
+      if (action.type === "special2v2") {
+        const specialKey = action.payload?.specialKey;
+        if (!specialKey) return;
+        ctx.executeSpecialRaw(action.actor, specialKey);
+        return;
+      }
+
+      if (action.type === "choice2v2") {
+        ctx.resolvePendingChoiceRaw(action.payload?.selectedValue);
+        return;
+      }
+
+      if (action.type === "qte2v2") {
+        const kind = action.payload?.kind;
+        const index = action.payload?.index;
+
+        if (kind === "hit") {
+          ctx.takeHitRaw(index);
+          ctx.checkBattleEnd();
+        } else if (kind === "evade") {
+          ctx.evadeAttackRaw(index);
+        } else if (kind === "supportDefense") {
+          ctx.supportDefenseAttackRaw(index);
+          ctx.checkBattleEnd();
         }
         return;
       }
 
-      if (battleSnapshot) {
-        applyOnline2v2BattleSnapshot(battleSnapshot);
+      if (action.type === "endTurn2v2") {
+        ctx.endTurnRaw();
         return;
       }
 
@@ -228,8 +253,6 @@ export function createOnline2v2ActionSync(ctx) {
   }
 
   return {
-    buildOnline2v2BattleSnapshot,
-    applyOnline2v2BattleSnapshot,
     publishOnline2v2SnapshotAction,
     publishOnline2v2SlotAction,
     publishOnline2v2SpecialAction,
