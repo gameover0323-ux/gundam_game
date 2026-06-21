@@ -1,4 +1,73 @@
+import { getCriticalRate } from "./js_unit_runtime.js";
+
 export function createOnlineActionSync(ctx) {
+  function getOnlineAttackOwnerState(index) {
+    const context = typeof ctx.getCurrentAttackContext === "function"
+      ? ctx.getCurrentAttackContext()
+      : null;
+
+    const ownerPlayer = context?.ownerPlayer || ctx.getCurrentPlayer();
+
+    if (typeof ctx.getPlayerState === "function") {
+      return ctx.getPlayerState(ownerPlayer);
+    }
+
+    return null;
+  }
+
+  function buildOnlineCriticalPayload(index) {
+    const attacks = typeof ctx.getCurrentAttack === "function"
+      ? ctx.getCurrentAttack()
+      : [];
+
+    const attack = Array.isArray(attacks) ? attacks[index] : null;
+    if (!attack) return null;
+
+    if (attack.criticalFixed === true) {
+      return {
+        index,
+        criticalFixed: true,
+        criticalHit: attack.criticalHit === true,
+        criticalRate: Number(attack.criticalRate || 0)
+      };
+    }
+
+    const attacker = getOnlineAttackOwnerState(index);
+    const rate = getCriticalRate(attacker);
+    const hit = Math.random() * 100 < rate;
+
+    attack.criticalFixed = true;
+    attack.criticalHit = hit;
+    attack.criticalRate = rate;
+
+    return {
+      index,
+      criticalFixed: true,
+      criticalHit: hit,
+      criticalRate: rate
+    };
+  }
+
+  function applyOnlineCriticalPayload(payload) {
+    if (!payload || payload.criticalFixed !== true) return;
+
+    const attacks = typeof ctx.getCurrentAttack === "function"
+      ? ctx.getCurrentAttack()
+      : [];
+
+    if (!Array.isArray(attacks)) return;
+
+    const index = Number(payload.index);
+    if (!Number.isInteger(index)) return;
+
+    const attack = attacks[index];
+    if (!attack) return;
+
+    attack.criticalFixed = true;
+    attack.criticalHit = payload.criticalHit === true;
+    attack.criticalRate = Number(payload.criticalRate || 0);
+  }
+
   function publishOnlineCriticalBoostAction(ownerPlayer) {
     if (!ctx.isOnlineEnabled()) return;
     if (ctx.isApplyingRemote()) return;
@@ -61,13 +130,18 @@ export function createOnlineActionSync(ctx) {
     if (!ctx.isOnlineEnabled()) return;
     if (ctx.isApplyingRemote()) return;
 
+    const critical =
+      kind === "hit" || kind === "supportDefense"
+        ? buildOnlineCriticalPayload(index)
+        : null;
+
     const actionId = ctx.nextOnlineActionSeq();
     ctx.updateRoom(ctx.getOnlineRoomId(), {
       action: {
         actionId,
         actor: ctx.getOnlineMyPlayer(),
         type: "qte",
-        payload: { kind, index },
+        payload: { kind, index, critical },
         createdAt: Date.now()
       },
       "meta/updatedAt": Date.now()
@@ -184,11 +258,13 @@ export function createOnlineActionSync(ctx) {
         const index = action.payload?.index;
 
         if (kind === "hit") {
+          applyOnlineCriticalPayload(action.payload?.critical);
           ctx.takeHitRaw(index);
           ctx.checkBattleEnd();
         } else if (kind === "evade") {
           ctx.evadeAttackRaw(index);
         } else if (kind === "supportDefense") {
+          applyOnlineCriticalPayload(action.payload?.critical);
           ctx.supportDefenseAttackRaw(index);
           ctx.checkBattleEnd();
         }
