@@ -32,18 +32,21 @@ export function createQteController(ctx) {
     ctx.clearBattleNotice();
   }
 
+  function publishOnlineResolvedQte(kind, index) {
+    if (!ctx.isOnlineEnabled()) return;
+    ctx.publishOnlineQteAction(kind, index);
+  }
+
   function takeHit(i) {
     if (!canOperateQteDefender()) {
       ctx.showPopup("防御側プレイヤーのみ操作できます");
       return;
     }
 
-    if (ctx.isOnlineEnabled()) {
-      ctx.publishOnlineQteAction("hit", i);
-    }
-
     const result = ctx.attackTakeHit(i);
     ctx.checkBattleEnd();
+
+    publishOnlineResolvedQte("hit", i);
 
     return result;
   }
@@ -54,11 +57,9 @@ export function createQteController(ctx) {
       return;
     }
 
-    if (ctx.isOnlineEnabled()) {
-      ctx.publishOnlineQteAction("evade", i);
-    }
-
     const result = ctx.attackEvadeAttack(i);
+
+    publishOnlineResolvedQte("evade", i);
 
     return result;
   }
@@ -69,12 +70,10 @@ export function createQteController(ctx) {
       return;
     }
 
-    if (ctx.isOnlineEnabled()) {
-      ctx.publishOnlineQteAction("supportDefense", i);
-    }
-
     const result = ctx.attackSupportDefenseAttack(i);
     ctx.checkBattleEnd();
+
+    publishOnlineResolvedQte("supportDefense", i);
 
     return result;
   }
