@@ -702,10 +702,10 @@ export function onV2AfterSlotResolved(state, slotNumber, payload = {}) {
   }
 
   if (customEffectId === "v2_ab_slot5") {
-    heal(state, 80, context);
-    addRuleEvade(state, 2, context);
-    addCap(state, 2);
-    messages.push("HP80回復、回避+2、回避ストック最大値+2");
+    heal(state, 30, context);
+    addRuleEvade(state, 1, context);
+    addCap(state, 1);
+    messages.push("HP30回復、回避+1、回避ストック最大値+1");
   }
 
   if (customEffectId === "v2_ab_slot6") {
