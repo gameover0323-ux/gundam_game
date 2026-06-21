@@ -35,10 +35,10 @@ export function createOnline2v2RoomController(ctx) {
     return unit?.id || unit?.name || "";
   }
 
-function isOnlineSpectator() {
+  function isOnlineSpectator() {
     return typeof ctx.isOnlineSpectator === "function" && ctx.isOnlineSpectator();
-}
-  
+  }
+
   function getRoomUnitIds(roomData, playerKey) {
     const playerData = roomData?.players?.[playerKey] || {};
     return Array.isArray(playerData.unitIds)
@@ -120,6 +120,8 @@ function isOnlineSpectator() {
 
       const initialRoomData = ctx.buildInitialRoomData({ mode: "online2v2" });
       const profile = ctx.getPlayerProfile();
+
+      initialRoomData.meta.firstPlayer = Math.random() < 0.5 ? "A" : "B";
 
       Object.assign(initialRoomData.players.A, {
         joined: true,
@@ -314,7 +316,7 @@ function isOnlineSpectator() {
     ctx.updateSelectUi();
   }
 
-function applyOnline2v2RoomData(roomData) {
+  function applyOnline2v2RoomData(roomData) {
     if (!ctx.isOnlineEnabled() || !roomData) return;
     if (roomData?.meta?.mode !== "online2v2") return;
 
@@ -359,7 +361,11 @@ function applyOnline2v2RoomData(roomData) {
     ) {
       ctx.saveOnlineEncounteredPlayer(roomData);
       ctx.setOnlineBattleStarted(true);
-      initOnline2v2Battle(unitsA, unitsB);
+      initOnline2v2Battle(
+        unitsA,
+        unitsB,
+        roomData.meta?.firstPlayer === "B" ? "B" : "A"
+      );
     }
   }
 
@@ -379,13 +385,21 @@ function applyOnline2v2RoomData(roomData) {
     ctx.updateSelectUi();
   }
 
-  function initOnline2v2Battle(unitsA, unitsB) {
+  function initOnline2v2Battle(unitsA, unitsB, firstPlayer = "A") {
     ctx.init2v2(unitsA, unitsB);
+
+    if (typeof ctx.setCurrentPlayer === "function") {
+      ctx.setCurrentPlayer(firstPlayer === "B" ? "B" : "A");
+    }
+
     ctx.ensureOnlineBattleExtraUi();
 
     const attackLog = document.getElementById("attackLog");
     if (attackLog) {
-      attackLog.textContent = "オンライン2on2バトル開始";
+      attackLog.textContent =
+        firstPlayer === "B"
+          ? "オンライン2on2バトル開始：PLAYER B 先攻"
+          : "オンライン2on2バトル開始：PLAYER A 先攻";
     }
   }
 
