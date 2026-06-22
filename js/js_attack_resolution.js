@@ -235,27 +235,11 @@ export function createAttackResolution(ctx) {
       ctxAtk.enemyEvadeBefore = Number(defender?.evade || 0);
     }
 
-  const currentAttack = ctx.getCurrentAttack();
-const attack = currentAttack[index];
+    const currentAttack = ctx.getCurrentAttack();
+    const attack = currentAttack[index];
+    const damagePreview = attack ? attack.damage : 0;
 
-if (
-  attack &&
-  !attack._criticalChecked &&
-  typeof ctx.rollCritical === "function"
-) {
-  attack._criticalChecked = true;
-
-  if (ctx.rollCritical(attacker)) {
-    attack.damage = Math.floor(Number(attack.damage || 0) * 2);
-    attack.isCritical = true;
-
-    ctx.appendBattleNotice("会心！");
-  }
-}
-
-const damagePreview = attack ? attack.damage : 0;
-
-recordResolvedAttack(ctxAtk, attack);
+    recordResolvedAttack(ctxAtk, attack);
 
     const currentTotalDamage = currentAttack.reduce((sum, atk) => {
       return sum + Math.max(0, Number(atk?.damage || 0));
