@@ -1,4 +1,6 @@
 export function createOnlineManualSnapshotSync(ctx) {
+  const appliedActionKeys = new Set();
+
   function isTargetAction(action) {
     return action?.type === "manualSnapshot" || action?.type === "manualSnapshot2v2";
   }
@@ -7,6 +9,19 @@ export function createOnlineManualSnapshotSync(ctx) {
     return ctx.getBattleMode() === "online2v2"
       ? "manualSnapshot2v2"
       : "manualSnapshot";
+  }
+
+  function getActionKey(action) {
+    if (!action) return "";
+    return `${action.type || "unknown"}:${action.actor || "unknown"}:${action.actionId ?? "noid"}:${action.createdAt ?? 0}`;
+  }
+
+  function rememberApplied(action) {
+    const key = getActionKey(action);
+    if (!key) return false;
+    if (appliedActionKeys.has(key)) return false;
+    appliedActionKeys.add(key);
+    return true;
   }
 
   async function publishOnlineManualSnapshot() {
@@ -18,6 +33,7 @@ export function createOnlineManualSnapshotSync(ctx) {
     if (!snapshot) return false;
 
     const actionId = ctx.nextOnlineActionSeq();
+    const createdAt = Date.now();
 
     await ctx.updateRoom(ctx.getOnlineRoomId(), {
       action: {
@@ -25,7 +41,7 @@ export function createOnlineManualSnapshotSync(ctx) {
         actor: ctx.getOnlineMyPlayer(),
         type: getActionType(),
         payload: {},
-        createdAt: Date.now()
+        createdAt
       },
       battleSnapshot: {
         ...snapshot,
@@ -41,7 +57,16 @@ export function createOnlineManualSnapshotSync(ctx) {
   function applyOnlineManualSnapshotAction(action, battleSnapshot = null) {
     if (!ctx.isOnlineEnabled() || !action) return false;
     if (!isTargetAction(action)) return false;
+
+    if (!rememberApplied(action)) {
+      return true;
+    }
+
     if (!battleSnapshot) return true;
+
+    if (typeof action.actionId === "number" && typeof ctx.setOnlineActionSeq === "function") {
+      ctx.setOnlineActionSeq(Math.max(ctx.getOnlineActionSeq(), action.actionId));
+    }
 
     if (action.actor === ctx.getOnlineMyPlayer()) {
       return true;
