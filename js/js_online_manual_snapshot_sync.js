@@ -72,3 +72,11 @@ export function createOnlineManualSnapshotSync(ctx) {
     applyOnlineManualSnapshotAction
   };
 }
+function applyOnlineManualSnapshotAction(action, battleSnapshot = null) {
+  if (!ctx.isOnlineEnabled() || !action) return false;
+  if (!isTargetAction(action)) return false;
+  if (!battleSnapshot) return true;
+
+  if (action.actor === ctx.getOnlineMyPlayer()) {
+    return true;
+  }
