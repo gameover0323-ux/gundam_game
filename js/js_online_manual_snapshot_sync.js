@@ -39,12 +39,14 @@ export function createOnlineManualSnapshotSync(ctx) {
   }
 
   function applyOnlineManualSnapshotAction(action, battleSnapshot = null) {
-    if (!ctx.isOnlineEnabled() || !action) return false;
-    if (!isTargetAction(action)) return false;
+  if (!ctx.isOnlineEnabled() || !action) return false;
+  if (!isTargetAction(action)) return false;
+  if (!battleSnapshot) return true;
 
-    if (action.actor === ctx.getOnlineMyPlayer()) {
-      return true;
-    }
+  if (action.actor === ctx.getOnlineMyPlayer()) {
+    return true;
+  }
+
 
     ctx.setApplyingRemote(true);
 
@@ -72,11 +74,3 @@ export function createOnlineManualSnapshotSync(ctx) {
     applyOnlineManualSnapshotAction
   };
 }
-function applyOnlineManualSnapshotAction(action, battleSnapshot = null) {
-  if (!ctx.isOnlineEnabled() || !action) return false;
-  if (!isTargetAction(action)) return false;
-  if (!battleSnapshot) return true;
-
-  if (action.actor === ctx.getOnlineMyPlayer()) {
-    return true;
-  }
