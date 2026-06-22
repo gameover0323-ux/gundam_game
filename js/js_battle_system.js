@@ -173,13 +173,7 @@ export function takeHit({
     damageMessage = modified.message || null;
   }
 
-  let criticalHit = false;
-
-  if (attack.criticalFixed === true) {
-    criticalHit = attack.criticalHit === true;
-  } else if (typeof rollCritical === "function") {
-    criticalHit = rollCritical(defender, attacker, attack) === true;
-  }
+const criticalHit = attack.criticalHit === true;
 
   if (criticalHit) {
     finalDamage *= 2;
