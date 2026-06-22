@@ -115,6 +115,28 @@ export function createActionLayer(ctx) {
     };
   }
 
+function applyCriticalToAttacks(actor, attacks) {
+    if (!Array.isArray(attacks)) return [];
+
+    return attacks.map((attack) => {
+      if (!attack) return attack;
+
+      if (attack.criticalFixed === true) {
+        return { ...attack };
+      }
+
+      const criticalHit =
+        typeof ctx.rollCritical === "function"
+          ? ctx.rollCritical(actor)
+          : false;
+
+      return {
+        ...attack,
+        criticalHit
+      };
+    });
+  }
+  
   function startReservedAction(action) {
     if (!action) return false;
 
@@ -718,8 +740,8 @@ export function createActionLayer(ctx) {
       return merged;
     }
 
-    function startAttackQte(attacks, extraContext = {}) {
-      ctx.setCurrentAttack(attacks);
+  function startAttackQte(attacks, extraContext = {}) {
+      ctx.setCurrentAttack(applyCriticalToAttacks(actor, attacks));
       ctx.setCurrentAttackContext({
         ownerPlayer: slotMeta.ownerPlayer,
         enemyPlayer: slotMeta.enemyPlayer,
