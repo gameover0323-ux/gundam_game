@@ -93,10 +93,19 @@ export function createOnlineActionSync(ctx) {
     });
   }
 
-  function publishOnlineSlotAction(ownerPlayer, slotKey) {
+ function publishOnlineSlotAction(ownerPlayer, slotKey) {
     if (!ctx.isOnlineEnabled()) return;
     if (ctx.isApplyingRemote()) return;
     if (ownerPlayer !== ctx.getOnlineMyPlayer()) return;
+
+    const currentAttack =
+      typeof ctx.getCurrentAttack === "function"
+        ? ctx.getCurrentAttack()
+        : [];
+
+    const syncedAttacks = Array.isArray(currentAttack)
+      ? currentAttack.map((attack) => ({ ...attack }))
+      : [];
 
     const actionId = ctx.nextOnlineActionSeq();
     ctx.updateRoom(ctx.getOnlineRoomId(), {
@@ -104,12 +113,15 @@ export function createOnlineActionSync(ctx) {
         actionId,
         actor: ownerPlayer,
         type: "slot",
-        payload: { slotKey },
+        payload: {
+          slotKey,
+          attacks: syncedAttacks
+        },
         createdAt: Date.now()
       },
       "meta/updatedAt": Date.now()
     });
-  }
+ }
 
   function publishOnlineBattleEnd(winnerPlayer) {
     if (!ctx.isOnlineEnabled()) return;
@@ -158,9 +170,26 @@ export function createOnlineActionSync(ctx) {
         if (!actor) return;
 
         ctx.ensureActionState(actor);
-        const started = ctx.startSlotAction(action.actor, slotKey);
+     const started = ctx.startSlotAction(action.actor, slotKey);
 
         if (started) {
+          const syncedAttacks = action.payload?.attacks;
+
+          if (
+            Array.isArray(syncedAttacks) &&
+            typeof ctx.getCurrentAttack === "function"
+          ) {
+            const currentAttack = ctx.getCurrentAttack();
+
+            if (Array.isArray(currentAttack)) {
+              currentAttack.splice(
+                0,
+                currentAttack.length,
+                ...syncedAttacks.map((attack) => ({ ...attack }))
+              );
+            }
+          }
+
           ctx.consumeActionCount(actor, 1);
           ctx.redrawBattleBoards();
         }
