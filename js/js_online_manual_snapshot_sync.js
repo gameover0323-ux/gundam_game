@@ -39,26 +39,25 @@ export function createOnlineManualSnapshotSync(ctx) {
   }
 
   function applyOnlineManualSnapshotAction(action, battleSnapshot = null) {
-  if (!ctx.isOnlineEnabled() || !action) return false;
-  if (!isTargetAction(action)) return false;
-  if (!battleSnapshot) return true;
+    if (!ctx.isOnlineEnabled() || !action) return false;
+    if (!isTargetAction(action)) return false;
+    if (!battleSnapshot) return true;
 
-  if (action.actor === ctx.getOnlineMyPlayer()) {
-    return true;
-  }
-
+    if (action.actor === ctx.getOnlineMyPlayer()) {
+      return true;
+    }
 
     ctx.setApplyingRemote(true);
 
     try {
       ctx.applyOnlineBattleSnapshot(battleSnapshot);
 
-      if (Array.isArray(battleSnapshot?.currentAttack) && battleSnapshot.currentAttack.length > 0) {
+      if (Array.isArray(battleSnapshot.currentAttack) && battleSnapshot.currentAttack.length > 0) {
         ctx.renderAttackChoices();
-      } else if (battleSnapshot?.pendingChoice && typeof ctx.renderPendingChoice === "function") {
+      } else if (battleSnapshot.pendingChoice && typeof ctx.renderPendingChoice === "function") {
         ctx.renderPendingChoice();
       } else if (typeof ctx.renderAttackLogText === "function") {
-        ctx.renderAttackLogText(battleSnapshot?.battleNotice || "同期しました");
+        ctx.renderAttackLogText(battleSnapshot.battleNotice || "同期しました");
       }
 
       ctx.redrawBattleBoards();
