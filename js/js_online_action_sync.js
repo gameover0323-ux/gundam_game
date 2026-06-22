@@ -1,36 +1,11 @@
+import { getCriticalRate } from "./js_unit_runtime.js";
 export function createOnlineActionSync(ctx) {
-  function stampCurrentAttackCritical(ownerPlayer) {
-    const currentAttack = ctx.getCurrentAttack?.();
-    if (!Array.isArray(currentAttack) || currentAttack.length === 0) return;
-
-    const attacker = ctx.getPlayerState?.(ownerPlayer);
-    if (!attacker) return;
-
-    currentAttack.forEach(attack => {
-      if (!attack || attack.criticalFixed === true) return;
-
-      attack.criticalFixed = true;
-      attack.criticalHit =
-        typeof ctx.rollCritical === "function"
-          ? ctx.rollCritical(attacker) === true
-          : false;
-    });
-  }
-
-  function buildStampedSnapshot(ownerPlayer) {
-    stampCurrentAttackCritical(ownerPlayer);
-    return typeof ctx.buildOnlineBattleSnapshot === "function"
-      ? ctx.buildOnlineBattleSnapshot()
-      : null;
-  }
-
   function publishOnlineCriticalBoostAction(ownerPlayer) {
     if (!ctx.isOnlineEnabled()) return;
     if (ctx.isApplyingRemote()) return;
     if (ownerPlayer !== ctx.getOnlineMyPlayer()) return;
 
     const actionId = ctx.nextOnlineActionSeq();
-
     ctx.updateRoom(ctx.getOnlineRoomId(), {
       action: {
         actionId,
@@ -49,8 +24,6 @@ export function createOnlineActionSync(ctx) {
     if (!choice) return;
 
     const actionId = ctx.nextOnlineActionSeq();
-    const snapshot = buildStampedSnapshot(choice.ownerPlayer);
-
     ctx.updateRoom(ctx.getOnlineRoomId(), {
       action: {
         actionId,
@@ -63,7 +36,6 @@ export function createOnlineActionSync(ctx) {
         },
         createdAt: Date.now()
       },
-      battleSnapshot: snapshot,
       "meta/updatedAt": Date.now()
     });
   }
@@ -74,8 +46,6 @@ export function createOnlineActionSync(ctx) {
     if (ownerPlayer !== ctx.getOnlineMyPlayer()) return;
 
     const actionId = ctx.nextOnlineActionSeq();
-    const snapshot = buildStampedSnapshot(ownerPlayer);
-
     ctx.updateRoom(ctx.getOnlineRoomId(), {
       action: {
         actionId,
@@ -84,7 +54,6 @@ export function createOnlineActionSync(ctx) {
         payload: { specialKey },
         createdAt: Date.now()
       },
-      battleSnapshot: snapshot,
       "meta/updatedAt": Date.now()
     });
   }
@@ -94,7 +63,6 @@ export function createOnlineActionSync(ctx) {
     if (ctx.isApplyingRemote()) return;
 
     const actionId = ctx.nextOnlineActionSeq();
-
     ctx.updateRoom(ctx.getOnlineRoomId(), {
       action: {
         actionId,
@@ -113,7 +81,6 @@ export function createOnlineActionSync(ctx) {
     if (actorPlayer !== ctx.getOnlineMyPlayer()) return;
 
     const actionId = ctx.nextOnlineActionSeq();
-
     ctx.updateRoom(ctx.getOnlineRoomId(), {
       action: {
         actionId,
@@ -132,8 +99,6 @@ export function createOnlineActionSync(ctx) {
     if (ownerPlayer !== ctx.getOnlineMyPlayer()) return;
 
     const actionId = ctx.nextOnlineActionSeq();
-    const snapshot = buildStampedSnapshot(ownerPlayer);
-
     ctx.updateRoom(ctx.getOnlineRoomId(), {
       action: {
         actionId,
@@ -142,7 +107,6 @@ export function createOnlineActionSync(ctx) {
         payload: { slotKey },
         createdAt: Date.now()
       },
-      battleSnapshot: snapshot,
       "meta/updatedAt": Date.now()
     });
   }
@@ -152,7 +116,6 @@ export function createOnlineActionSync(ctx) {
     if (ctx.isApplyingRemote()) return;
 
     const actionId = ctx.nextOnlineActionSeq();
-
     ctx.updateRoom(ctx.getOnlineRoomId(), {
       action: {
         actionId,
@@ -165,15 +128,7 @@ export function createOnlineActionSync(ctx) {
     });
   }
 
-  function applySnapshotIfAvailable(battleSnapshot) {
-    if (!battleSnapshot) return false;
-    if (typeof ctx.applyOnlineBattleSnapshot !== "function") return false;
-
-    ctx.applyOnlineBattleSnapshot(battleSnapshot);
-    return true;
-  }
-
-  function applyOnlineAction(action, battleSnapshot = null) {
+  function applyOnlineAction(action) {
     if (!ctx.isOnlineEnabled() || !action) return;
     if (typeof action.actionId !== "number") return;
     if (action.actionId <= ctx.getLastAppliedActionId()) return;
@@ -193,14 +148,6 @@ export function createOnlineActionSync(ctx) {
         ctx.spendEvadeForCritical(actor);
         ctx.redrawBattleBoards();
         return;
-      }
-
-      if (
-        action.type === "slot" ||
-        action.type === "special" ||
-        action.type === "choice"
-      ) {
-        if (applySnapshotIfAvailable(battleSnapshot)) return;
       }
 
       if (action.type === "slot") {
@@ -224,7 +171,6 @@ export function createOnlineActionSync(ctx) {
       if (action.type === "special") {
         const specialKey = action.payload?.specialKey;
         if (!specialKey) return;
-
         ctx.executeSpecialRaw(action.actor, specialKey);
         return;
       }
@@ -254,7 +200,6 @@ export function createOnlineActionSync(ctx) {
       if (action.type === "battleEnd") {
         const winner = action.payload?.winner;
         if (!winner) return;
-
         ctx.finishBattle(winner);
         return;
       }
