@@ -1,4 +1,4 @@
-import { getCriticalRate } from "./js_unit_runtime.js";
+
 export function createOnlineActionSync(ctx) {
   function publishOnlineCriticalBoostAction(ownerPlayer) {
     if (!ctx.isOnlineEnabled()) return;
