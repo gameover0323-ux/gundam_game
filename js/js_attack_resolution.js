@@ -281,9 +281,6 @@ export function createAttackResolution(ctx) {
           twoVtwoAdapter: ctx.twoVtwoAdapter || null
         });
       },
-      rollCritical: () => {
-        return typeof ctx.rollCritical === "function" ? ctx.rollCritical(attacker) : false;
-      }
     });
 
     if (hitResult && hitResult.cancelled) {
