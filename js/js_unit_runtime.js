@@ -647,6 +647,7 @@ export function createBattleState(unit) {
     evadeRedCap: defaultForm.evadeMax,
 
     criticalBoosts: [],
+    criticalRollSeq: 0,
 
     actionCount: 1,
     baseActionCount: 1,
