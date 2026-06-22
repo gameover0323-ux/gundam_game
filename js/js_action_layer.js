@@ -8,58 +8,14 @@ import {
   executeUnitResolveChoice,
   executeUnitBeforeSlot,
   executeUnitEnemyBeforeSlot,
- executeUnitAfterSlotResolved,
-  executeUnitExtraWeaponResult,
-  getCriticalRate
+  executeUnitAfterSlotResolved,
+  executeUnitExtraWeaponResult
 } from "./js_unit_runtime.js";
 
 import { resolveSlotEffect } from "./js_slot_effects.js";
 import { executeCommonSpecial } from "./js_special_actions.js";
 
 export function createActionLayer(ctx) {
- function deterministicPercent(seedText) {
-    const text = String(seedText || "");
-    let hash = 2166136261;
-
-    for (let i = 0; i < text.length; i += 1) {
-      hash ^= text.charCodeAt(i);
-      hash = Math.imul(hash, 16777619);
-    }
-
-    return (hash >>> 0) % 10000 / 100;
-  }
-
-  function prepareCriticalAttacks(attacker, attacks) {
-    if (!attacker || !Array.isArray(attacks)) return attacks || [];
-
-    if (typeof attacker.criticalRollSeq !== "number") {
-      attacker.criticalRollSeq = 0;
-    }
-
-    const rate = Math.max(0, Number(getCriticalRate(attacker) || 0));
-
-    return attacks.map((attack) => {
-      if (!attack || attack.criticalFixed === true) return attack;
-
-      attacker.criticalRollSeq += 1;
-
-      const seed = [
-        attacker.unitId,
-        attacker.criticalRollSeq,
-        attack.damage,
-        attack.type || attack.attackType || "",
-        attack.source || "",
-        attack.sourceLabel || ""
-      ].join("|");
-
-      return {
-        ...attack,
-        criticalFixed: true,
-        criticalRate: rate,
-        criticalHit: deterministicPercent(seed) < rate
-      };
-    });
-  }
   function ensureReservedActions(state) {
     if (!state) return [];
     if (!Array.isArray(state.pendingReservedActions)) {
@@ -171,7 +127,7 @@ export function createActionLayer(ctx) {
         action.label
       );
 
-      ctx.setCurrentAttack(prepareCriticalAttacks(ctx.getPlayerState(ownerPlayer), action.attacks));
+      ctx.setCurrentAttack(action.attacks);
       ctx.setCurrentAttackContext({
         ownerPlayer,
         enemyPlayer,
@@ -554,14 +510,14 @@ export function createActionLayer(ctx) {
       ctx.redrawBattleBoards();
     }
 
-  const attacks = prepareCriticalAttacks(actor, [
+    const attacks = [
       ...(Array.isArray(result.attacks) ? result.attacks : []),
       ...(Array.isArray(afterResult?.appendAttacks) ? afterResult.appendAttacks : []),
       ...(Array.isArray(extraResult?.appendAttacks) ? extraResult.appendAttacks : [])
     ].map((attack) => ({
       ...attack,
       sourceLabel
-    })));
+    }));
 
     if (result.message && attacks.length === 0) {
       notices.push(`${sourceLabel}：${result.message}`);
@@ -762,9 +718,8 @@ export function createActionLayer(ctx) {
       return merged;
     }
 
- function startAttackQte(attacks, extraContext = {}) {
-      const preparedAttacks = prepareCriticalAttacks(actor, attacks);
-      ctx.setCurrentAttack(preparedAttacks);
+    function startAttackQte(attacks, extraContext = {}) {
+      ctx.setCurrentAttack(attacks);
       ctx.setCurrentAttackContext({
         ownerPlayer: slotMeta.ownerPlayer,
         enemyPlayer: slotMeta.enemyPlayer,
@@ -772,7 +727,7 @@ export function createActionLayer(ctx) {
         slotNumber: slotMeta.slotNumber,
         slotLabel: slot.label,
         slotDesc: slot.desc,
-        totalCount: preparedAttacks.length,
+        totalCount: attacks.length,
         hitCount: 0,
         evadeCount: 0,
         ...extraContext
@@ -986,8 +941,7 @@ export function createActionLayer(ctx) {
             sourceLabel: targetContext?.actionLabel || attack.sourceLabel
           }));
 
-          const preparedAppendAttacks = prepareCriticalAttacks(actor, appendAttacks);
-          allCurrentAttack.push(...preparedAppendAttacks);
+          allCurrentAttack.push(...appendAttacks);
 
           if (ctx.getCurrentAttackContext()) {
             ctx.getCurrentAttackContext().totalCount += appendAttacks.length;
@@ -1016,8 +970,7 @@ export function createActionLayer(ctx) {
           unitResult.appendAttackLabel || unitResult.message || special.name
         );
 
-        const preparedAppendAttacks = prepareCriticalAttacks(actor, unitResult.appendAttacks);
-        ctx.setCurrentAttack(preparedAppendAttacks);
+        ctx.setCurrentAttack(unitResult.appendAttacks);
         ctx.setCurrentAttackContext({
           ownerPlayer,
           enemyPlayer,
@@ -1025,7 +978,7 @@ export function createActionLayer(ctx) {
           slotNumber: null,
           slotLabel: unitResult.appendAttackLabel || special.name,
           slotDesc: unitResult.appendSlotDesc || special.desc || "",
-          totalCount: preparedAppendAttacks.length,
+          totalCount: unitResult.appendAttacks.length,
           hitCount: 0,
           evadeCount: 0,
           appendedFromSpecial: special.name
@@ -1163,8 +1116,7 @@ export function createActionLayer(ctx) {
         sourceLabel: targetContext?.actionLabel || attack.sourceLabel
       }));
 
-      const preparedAppendAttacks = prepareCriticalAttacks(actor, appendAttacks);
-      currentAttack.push(...preparedAppendAttacks);
+      currentAttack.push(...appendAttacks);
 
       if (currentAttackContext) {
         currentAttackContext.totalCount += appendAttacks.length;
