@@ -135,6 +135,8 @@ import { createOnline2v2RoomController } from "./js_online_2v2_room_controller.j
 import { createOnline2v2ActionSync } from "./js_online_2v2_action_sync.js";
 import { createOnlineQteResultSync } from "./js_online_qte_result_sync.js";
 
+import { createOnlineManualSnapshotSync } from "./js_online_manual_snapshot_sync.js";
+
 import { createBattleFlow } from "./js_battle_flow.js";
 
 import { createAttackResolution } from "./js_attack_resolution.js";
@@ -251,7 +253,7 @@ let uiController = null;
 let online2v2RoomController = null;
 let online2v2ActionSync = null;
 let onlineQteResultSync = null;
-
+let onlineManualSnapshotSync = null;
 let gameSetup = null;
 
 let actionLayer = null;
@@ -629,7 +631,7 @@ function publishOnlineBattleEnd(winnerPlayer) {
 }
 
 function applyOnlineAction(action, battleSnapshot = null) {
-  if (applyOnlineManualSnapshotAction(action)) {
+  if (onlineManualSnapshotSync?.applyOnlineManualSnapshotAction(action, battleSnapshot)) {
     return;
   }
 
@@ -641,7 +643,7 @@ function applyOnlineAction(action, battleSnapshot = null) {
 }
 
 function applyOnline2v2Action(action, battleSnapshot = null) {
-  if (applyOnlineManualSnapshotAction(action)) {
+  if (onlineManualSnapshotSync?.applyOnlineManualSnapshotAction(action, battleSnapshot)) {
     return;
   }
 
@@ -674,15 +676,7 @@ function updateDebugButtonVisibility() {
   }
 }
 
-function applyOnlineManualSnapshotAction(action) {
-  if (!action || action.type !== "manualSnapshot") return false;
 
-  const snapshot = action.payload?.snapshot || null;
-  if (!snapshot) return true;
-
-  applyOnlineBattleSnapshot(snapshot);
-  return true;
-}
 function updatePlayerCardUi() {
   return playerAccountUi.updatePlayerCardUi();
 }
@@ -1361,27 +1355,8 @@ isOnlineSpectator,
   },
 
   updateRoom,
-publishOnlineManualSnapshot: async () => {
-    if (!onlineState.enabled || !onlineState.roomId) return;
-
-    const actionId = onlineActionSeq + 1;
-    onlineActionSeq = actionId;
-    onlineState.lastAppliedActionId = actionId;
-
-    const snapshot = buildOnlineBattleSnapshot();
-
-    await updateRoom(onlineState.roomId, {
-      action: {
-        actionId,
-        actor: onlineState.myPlayer,
-        type: "manualSnapshot",
-        payload: { snapshot },
-        createdAt: Date.now()
-      },
-      battleSnapshot: snapshot,
-      "meta/updatedAt": Date.now()
-    });
-  },
+publishOnlineManualSnapshot: () =>
+    onlineManualSnapshotSync.publishOnlineManualSnapshot(),
   showPopup,
   showScreen,
   finishBattle,
@@ -1550,6 +1525,33 @@ getTeamA: () => teamA,
   ensureOnlineBattleExtraUi,
   showScreen,
   showPopup
+});
+
+onlineManualSnapshotSync = createOnlineManualSnapshotSync({
+  isOnlineEnabled: () => onlineState.enabled,
+  isApplyingRemote: () => onlineState.isApplyingRemote,
+  setApplyingRemote: (value) => {
+    onlineState.isApplyingRemote = value;
+  },
+
+  getBattleMode: () => battleMode,
+  getOnlineRoomId: () => onlineState.roomId,
+  getOnlineMyPlayer: () => onlineState.myPlayer,
+
+  nextOnlineActionSeq: () => {
+    onlineActionSeq += 1;
+    onlineState.lastAppliedActionId = onlineActionSeq;
+    return onlineActionSeq;
+  },
+
+  updateRoom,
+  buildOnlineBattleSnapshot,
+  applyOnlineBattleSnapshot,
+
+  redrawBattleBoards,
+  renderAttackChoices,
+  renderPendingChoice,
+  renderAttackLogText
 });
 onlineActionSync = createOnlineActionSync({
   isOnlineEnabled: () => onlineState.enabled,
