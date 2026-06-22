@@ -133,7 +133,6 @@ import { create2v2TauntController } from "./js_2on2_taunt_controller.js";
 import { create2v2BreakthroughController } from "./js_2on2_breakthrough_controller.js";
 import { createOnline2v2RoomController } from "./js_online_2v2_room_controller.js";
 import { createOnline2v2ActionSync } from "./js_online_2v2_action_sync.js";
-import { createOnlineQteResultSync } from "./js_online_qte_result_sync.js";
 
 import { createOnlineManualSnapshotSync } from "./js_online_manual_snapshot_sync.js";
 
@@ -252,7 +251,7 @@ let uiController = null;
 
 let online2v2RoomController = null;
 let online2v2ActionSync = null;
-let onlineQteResultSync = null;
+
 let onlineManualSnapshotSync = null;
 let gameSetup = null;
 
@@ -598,10 +597,6 @@ function publishOnlineSpecialAction(ownerPlayer, specialKey) {
 }
 
 function publishOnlineQteAction(kind, index) {
-  if (onlineQteResultSync?.publishOnlineQteResultAction(kind, index)) {
-    return;
-  }
-
   if (battleMode === "online2v2") {
     return online2v2ActionSync.publishOnline2v2QteAction(kind, index);
   }
@@ -631,28 +626,13 @@ function publishOnlineBattleEnd(winnerPlayer) {
 }
 
 function applyOnlineAction(action, battleSnapshot = null) {
-  if (onlineManualSnapshotSync?.applyOnlineManualSnapshotAction(action, battleSnapshot)) {
-    return;
-  }
-
-  if (onlineQteResultSync?.applyOnlineQteResultAction(action, battleSnapshot)) {
-    return;
-  }
-
   return onlineActionSync.applyOnlineAction(action, battleSnapshot);
 }
 
 function applyOnline2v2Action(action, battleSnapshot = null) {
-  if (onlineManualSnapshotSync?.applyOnlineManualSnapshotAction(action, battleSnapshot)) {
-    return;
-  }
-
-  if (onlineQteResultSync?.applyOnlineQteResultAction(action, battleSnapshot)) {
-    return;
-  }
-
   return online2v2ActionSync.applyOnline2v2Action(action, battleSnapshot);
 }
+
 function toggleTestMode() {
   if (!canUseTestMode()) {
     showPopup("テストモードはデバッグアカウント専用です");
@@ -1764,104 +1744,7 @@ executeTeamSlotRaw: (slotKeys = null, options = {}) =>
   renderAttackChoices
 });
 
-onlineQteResultSync = createOnlineQteResultSync({
-  isOnlineEnabled: () => onlineState.enabled,
-  isApplyingRemote: () => onlineState.isApplyingRemote,
-  setApplyingRemote: (value) => {
-    onlineState.isApplyingRemote = value;
-  },
 
-  getBattleMode: () => battleMode,
-
-  getOnlineRoomId: () => onlineState.roomId,
-  getOnlineMyPlayer: () => onlineState.myPlayer,
-
-  getLastAppliedActionId: () => onlineState.lastAppliedActionId,
-  setLastAppliedActionId: (value) => {
-    onlineState.lastAppliedActionId = value;
-  },
-
-  getOnlineActionSeq: () => onlineActionSeq,
-  setOnlineActionSeq: (value) => {
-    onlineActionSeq = value;
-  },
-
-  nextOnlineActionSeq: () => {
-    onlineActionSeq += 1;
-    onlineState.lastAppliedActionId = onlineActionSeq;
-    return onlineActionSeq;
-  },
-
-  updateRoom,
-
-  getCurrentTurn: () => currentTurn,
-  setCurrentTurn: (value) => {
-    currentTurn = value;
-  },
-
-  getCurrentPlayer: () => currentPlayer,
-  setCurrentPlayer: (value) => {
-    currentPlayer = value;
-  },
-
-  getPlayerAState: () => playerAState,
-  setPlayerAState: (value) => {
-    playerAState = value;
-  },
-
-  getPlayerBState: () => playerBState,
-  setPlayerBState: (value) => {
-    playerBState = value;
-  },
-
-  getTeam,
-  setTeamA: (value) => {
-    teamA = value;
-  },
-  setTeamB: (value) => {
-    teamB = value;
-  },
-
-  getCurrentAttack: () => currentAttack,
-  setCurrentAttack: (value) => {
-    currentAttack = value;
-  },
-
-  getCurrentAttackContext: () => currentAttackContext,
-  setCurrentAttackContext: (value) => {
-    currentAttackContext = value;
-  },
-
-  getCurrentAttackContexts: () => currentAttackContexts,
-  setCurrentAttackContexts: (value) => {
-    currentAttackContexts = value;
-  },
-
-  getBattleNotice: () => battleNotice,
-  setBattleNotice: (value) => {
-    battleNotice = value;
-  },
-
-  getCurrentActionHeader: () => currentActionHeader,
-  setCurrentActionHeader: (value) => {
-    currentActionHeader = value;
-  },
-
-  getCurrentActionLabel: () => currentActionLabel,
-  setCurrentActionLabel: (value) => {
-    currentActionLabel = value;
-  },
-
-  getPendingChoice: () => pendingChoice,
-  setPendingChoice: (value) => {
-    pendingChoice = value;
-  },
-
-  redrawBattleBoards,
-renderAttackChoices,
-renderPendingChoice,
-renderAttackLogText
-});
 uiController = createUiController({
   screens,
 
