@@ -73,7 +73,7 @@ export function createAttackResolution(ctx) {
             context.totalCount > 0 &&
             context.hitCount === 0 &&
             context.evadeCount === context.totalCount
-        });
+        }) || {};
 
         if (actionResult.message) {
           ctx.appendBattleNotice(actionResult.message);
@@ -129,7 +129,7 @@ export function createAttackResolution(ctx) {
         context.totalCount > 0 &&
         context.hitCount === 0 &&
         context.evadeCount === context.totalCount
-    });
+    }) || {};
 
     ctx.redrawBattleBoards();
 
@@ -303,7 +303,7 @@ export function createAttackResolution(ctx) {
       return;
     }
 
-  if (wasUnifiedBeforeHit && defenderTeamBeforeHit && hitResult && !hitResult.cancelled) {
+    if (wasUnifiedBeforeHit && defenderTeamBeforeHit && hitResult && !hitResult.cancelled) {
       const actualDamage = typeof hitResult.finalDamage === "number"
         ? hitResult.finalDamage
         : damagePreview;
@@ -333,7 +333,7 @@ export function createAttackResolution(ctx) {
       }
     } else {
       markDefeatedIfNeeded(defender);
-  }
+    }
 
     defender.lastDamageTaken = typeof hitResult?.finalDamage === "number"
       ? hitResult.finalDamage
@@ -374,7 +374,7 @@ export function createAttackResolution(ctx) {
       currentAttack,
       attackIndex: index,
       twoVtwoAdapter: ctx.twoVtwoAdapter || null
-    });
+    }) || {};
 
     if (currentAttack.length === 0) {
       if (damagedResult.message) {
@@ -621,7 +621,7 @@ export function createAttackResolution(ctx) {
       attackIndex: index,
       supportDefense: true,
       twoVtwoAdapter: ctx.twoVtwoAdapter || null
-    });
+    }) || {};
 
     if (damagedResult.message) {
       ctx.appendBattleNotice(damagedResult.message);
