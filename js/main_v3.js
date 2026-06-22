@@ -1567,6 +1567,7 @@ onlineActionSync = createOnlineActionSync({
 
 getPlayerState,
   spendEvadeForCritical,
+  rollCritical,
   ensureActionState,
   consumeActionCount,
   startSlotAction,
