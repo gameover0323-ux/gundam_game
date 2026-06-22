@@ -1945,6 +1945,7 @@ specialActionController = createSpecialActionController({
 actionLayer = createActionLayer({
   getBattleMode: () => battleMode,
   getCurrentPlayer: () => currentPlayer,
+  rollCritical,
 getRollableSlotKeys,
   ensureActionState,
   canConsumeAction,
