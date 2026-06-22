@@ -1,4 +1,6 @@
 export function createOnlineQteResultSync(ctx) {
+  const appliedActionKeys = new Set();
+
   function cloneValue(value) {
     return JSON.parse(JSON.stringify(value ?? null));
   }
@@ -16,6 +18,19 @@ export function createOnlineQteResultSync(ctx) {
 
   function isQteResultAction(action) {
     return action?.type === "qteResult" || action?.type === "qteResult2v2";
+  }
+
+  function getActionKey(action) {
+    if (!action) return "";
+    return `${action.type || "unknown"}:${action.actor || "unknown"}:${action.actionId ?? "noid"}:${action.createdAt ?? 0}`;
+  }
+
+  function rememberApplied(action) {
+    const key = getActionKey(action);
+    if (!key) return false;
+    if (appliedActionKeys.has(key)) return false;
+    appliedActionKeys.add(key);
+    return true;
   }
 
   function buildSnapshot() {
@@ -102,21 +117,21 @@ export function createOnlineQteResultSync(ctx) {
       ctx.setPendingChoice(cloneValue(snapshot.pendingChoice));
     }
 
-  ctx.redrawBattleBoards();
+    ctx.redrawBattleBoards();
 
-if (Array.isArray(snapshot.currentAttack) && snapshot.currentAttack.length > 0) {
-  ctx.renderAttackChoices();
-  return;
-}
+    if (Array.isArray(snapshot.currentAttack) && snapshot.currentAttack.length > 0) {
+      ctx.renderAttackChoices();
+      return;
+    }
 
-if (snapshot.pendingChoice && typeof ctx.renderPendingChoice === "function") {
-  ctx.renderPendingChoice();
-  return;
-}
+    if (snapshot.pendingChoice && typeof ctx.renderPendingChoice === "function") {
+      ctx.renderPendingChoice();
+      return;
+    }
 
-if (typeof ctx.renderAttackLogText === "function") {
-  ctx.renderAttackLogText(snapshot.battleNotice || "攻撃解決済み");
-}
+    if (typeof ctx.renderAttackLogText === "function") {
+      ctx.renderAttackLogText(snapshot.battleNotice || "攻撃解決済み");
+    }
   }
 
   function publishOnlineQteResultAction(kind, index) {
@@ -126,6 +141,7 @@ if (typeof ctx.renderAttackLogText === "function") {
     if (!ctx.getOnlineRoomId()) return false;
 
     const actionId = ctx.nextOnlineActionSeq();
+    const createdAt = Date.now();
 
     ctx.updateRoom(ctx.getOnlineRoomId(), {
       action: {
@@ -133,7 +149,7 @@ if (typeof ctx.renderAttackLogText === "function") {
         actor: ctx.getOnlineMyPlayer(),
         type: getActionType(),
         payload: { kind, index },
-        createdAt: Date.now()
+        createdAt
       },
       battleSnapshot: buildSnapshot(),
       "meta/updatedAt": Date.now()
@@ -145,14 +161,14 @@ if (typeof ctx.renderAttackLogText === "function") {
   function applyOnlineQteResultAction(action, battleSnapshot = null) {
     if (!ctx.isOnlineEnabled() || !action) return false;
     if (!isQteResultAction(action)) return false;
-    if (typeof action.actionId !== "number") return true;
 
-    if (action.actionId <= ctx.getLastAppliedActionId()) {
+    if (!rememberApplied(action)) {
       return true;
     }
 
-    ctx.setLastAppliedActionId(action.actionId);
-    ctx.setOnlineActionSeq(Math.max(ctx.getOnlineActionSeq(), action.actionId));
+    if (typeof action.actionId === "number" && typeof ctx.setOnlineActionSeq === "function") {
+      ctx.setOnlineActionSeq(Math.max(ctx.getOnlineActionSeq(), action.actionId));
+    }
 
     if (action.actor === ctx.getOnlineMyPlayer()) {
       return true;
