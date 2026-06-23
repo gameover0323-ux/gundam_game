@@ -274,8 +274,11 @@ function getV2FormParts(nextForm) {
 }
 
 function getV2FormConsumption(nextForm) {
-  if (nextForm === "assault_buster" || nextForm === "assault_buster_cannon") return 2;
-  if (nextForm === "assault" || nextForm === "buster" || nextForm === "cannon") return 1;
+  if (nextForm === "assault") return 1;
+  if (nextForm === "buster") return 1;
+  if (nextForm === "cannon") return 1;
+  if (nextForm === "assault_buster") return 1;
+  if (nextForm === "assault_buster_cannon") return 1;
   return 0;
 }
 
@@ -378,10 +381,10 @@ function tickV2EquipmentStock(state, context = {}) {
 
   if (activeParts.length === 0) return null;
 
-  const cannotContinue = activeParts.some(part => getV2Stock(state, part) < consumption);
+  const shouldCancel = activeParts.some(part => getV2Stock(state, part) <= 0);
 
-  if (cannotContinue) {
-    return changeToV2(state, "装備蓄積不足：V2ガンダムへ強制換装解除", context);
+  if (shouldCancel) {
+    return changeToV2(state, "装備蓄積0：V2ガンダムへ強制換装解除", context);
   }
 
   return null;
@@ -759,9 +762,15 @@ export function onV2AfterSlotResolved(state, slotNumber, payload = {}) {
     messages.push("HP50回復、回避+2");
   }
 
-  if (customEffectId === "v2_cannon_charge") {
+  if (customEffectId === "v2_cannon_charge30") {
+    state.v2CannonCharge += 30;
+    messages.push(`チャージ：V2キャノン加算値+30（現在+${state.v2CannonCharge}）`);
+  }
+
+  if (customEffectId === "v2_cannon_evade1_charge5") {
+    addRuleEvade(state, 1, context);
     state.v2CannonCharge += 5;
-    messages.push(`チャージ：V2キャノン加算値+5（現在+${state.v2CannonCharge}）`);
+    messages.push(`回避+1、V2キャノン加算値+5（現在+${state.v2CannonCharge}）`);
   }
 
   if (customEffectId === "v2_cannon_saber") {
