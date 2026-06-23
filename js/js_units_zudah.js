@@ -6,7 +6,7 @@ export const zudah = {
     base: {
       name: "ヅダ",
       hp: 350,
-      evadeMax: 6,
+      evadeMax: 5,
       rollableSlotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"],
       ownedSlotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"],
       slots: {
@@ -16,19 +16,19 @@ export const zudah = {
           effect: { type: "attack", attackType: "shoot", damage: 10, count: 4 }
         },
         slot2: {
-          label: "ヒートホーク 50ダメージ",
-          desc: "50ダメージ。格闘",
-          effect: { type: "attack", attackType: "melee", damage: 50, count: 1 }
+          label: "ヒートホーク 30ダメージ",
+          desc: "30ダメージ。格闘",
+          effect: { type: "attack", attackType: "melee", damage: 30, count: 1 }
         },
         slot3: {
-          label: "回避 +2",
-          desc: "回避ストック+2",
-          effect: { type: "evade", amount: 2 }
+          label: "回避 +1",
+          desc: "回避ストック+1",
+          effect: { type: "evade", amount: 1 }
         },
         slot4: {
-          label: "対艦砲 90ダメージ",
-          desc: "90ダメージ。射撃",
-          effect: { type: "attack", attackType: "shoot", damage: 90, count: 1 }
+          label: "対艦砲 60ダメージ",
+          desc: "60ダメージ。射撃",
+          effect: { type: "attack", attackType: "shoot", damage: 60, count: 1 }
         },
         slot5: {
           label: "加速",
