@@ -7,12 +7,39 @@ import {
 
 import { createAttack } from "./js_battle_system.js";
 
-const CHANGE_COOLDOWN = 5;
-const ASSAULT_HIT_BREAK_COUNT = 10;
+const V2_EQUIPMENT_INITIAL_STOCK = 3;
+const V2_EQUIPMENT_MIN_STOCK = 3;
+const V2_EQUIPMENT_MAX_STOCK = 10;
+const ASSAULT_HIT_BREAK_COUNT = 20;
+
+const V2_PART_LABEL = {
+  assault: "A",
+  buster: "B",
+  cannon: "C"
+};
 
 function ensureV2State(state) {
   if (!state) return;
-  if (!state.v2Cooldowns) state.v2Cooldowns = {};
+
+  if (!state.v2EquipmentStock || typeof state.v2EquipmentStock !== "object") {
+    state.v2EquipmentStock = {
+      assault: V2_EQUIPMENT_INITIAL_STOCK,
+      buster: V2_EQUIPMENT_INITIAL_STOCK,
+      cannon: V2_EQUIPMENT_INITIAL_STOCK
+    };
+  }
+
+  ["assault", "buster", "cannon"].forEach(part => {
+    const value = Number(state.v2EquipmentStock[part]);
+    state.v2EquipmentStock[part] = Math.max(
+      0,
+      Math.min(
+        V2_EQUIPMENT_MAX_STOCK,
+        Number.isFinite(value) ? value : V2_EQUIPMENT_INITIAL_STOCK
+      )
+    );
+  });
+
   if (typeof state.v2CannonCharge !== "number") state.v2CannonCharge = 0;
   if (typeof state.v2WingGuardActive !== "boolean") state.v2WingGuardActive = false;
   if (typeof state.v2WingGuardCountered !== "boolean") state.v2WingGuardCountered = false;
@@ -38,7 +65,7 @@ function formId(state) {
 
 function isAssaultBreakForm(state) {
   const f = formId(state);
-  return f === "assault" || f === "assault_buster";
+  return f === "assault" || f === "assault_buster" || f === "assault_buster_cannon";
 }
 
 function getAdapter(context) {
@@ -237,35 +264,48 @@ function isIgnoreReduction(attack) {
   return attack?.ignoreReduction === true || attack?.ignoreDefense === true;
 }
 
-function setUsedFormCooldown(state, usedForm) {
-  ensureV2State(state);
-
-  const f = usedForm || formId(state);
-
-  if (f === "assault") state.v2Cooldowns.assault = CHANGE_COOLDOWN;
-  if (f === "buster") state.v2Cooldowns.buster = CHANGE_COOLDOWN;
-  if (f === "cannon") state.v2Cooldowns.cannon = CHANGE_COOLDOWN;
-
-  if (f === "assault_buster") {
-    state.v2Cooldowns.assault = CHANGE_COOLDOWN;
-    state.v2Cooldowns.buster = CHANGE_COOLDOWN;
-  }
-
-  if (f === "assault_buster_cannon") {
-    state.v2Cooldowns.assault = CHANGE_COOLDOWN;
-    state.v2Cooldowns.buster = CHANGE_COOLDOWN;
-    state.v2Cooldowns.cannon = CHANGE_COOLDOWN;
-  }
+function getV2FormParts(nextForm) {
+  if (nextForm === "assault") return ["assault"];
+  if (nextForm === "buster") return ["buster"];
+  if (nextForm === "cannon") return ["cannon"];
+  if (nextForm === "assault_buster") return ["assault", "buster"];
+  if (nextForm === "assault_buster_cannon") return ["assault", "buster", "cannon"];
+  return [];
 }
 
-function canUsePart(state, part) {
+function getV2FormConsumption(nextForm) {
+  if (nextForm === "assault_buster" || nextForm === "assault_buster_cannon") return 2;
+  if (nextForm === "assault" || nextForm === "buster" || nextForm === "cannon") return 1;
+  return 0;
+}
+
+function getV2Stock(state, part) {
   ensureV2State(state);
-  return Number(state.v2Cooldowns?.[part] || 0) <= 0;
+  return Math.max(0, Number(state.v2EquipmentStock?.[part] || 0));
+}
+
+function setV2Stock(state, part, value) {
+  ensureV2State(state);
+  state.v2EquipmentStock[part] = Math.max(0, Math.min(V2_EQUIPMENT_MAX_STOCK, Number(value || 0)));
+}
+
+function canUseV2Form(state, nextForm) {
+  const parts = getV2FormParts(nextForm);
+  if (parts.length === 0) return true;
+
+  return parts.every(part => getV2Stock(state, part) >= V2_EQUIPMENT_MIN_STOCK);
+}
+
+function getV2FormStockLabel(state, nextForm) {
+  const parts = getV2FormParts(nextForm);
+  if (parts.length === 0) return "通常";
+
+  return parts
+    .map(part => `${V2_PART_LABEL[part]}:${getV2Stock(state, part)}`)
+    .join(" / ");
 }
 
 function changeToV2(state, message = "V2ガンダムへ換装解除", context = {}) {
-  setUsedFormCooldown(state, formId(state));
-
   setForm(state, "v2", { preserveHp: true, preserveEvade: true });
 
   state.v2DynamicEvadeMax = -1;
@@ -286,17 +326,18 @@ function changeToV2(state, message = "V2ガンダムへ換装解除", context = 
 function changeForm(state, nextForm, context = {}) {
   const current = formId(state);
 
+  if (nextForm === "v2") {
+    if (current === "v2") return "すでにV2ガンダムです";
+    return changeToV2(state, "V2ガンダムへ換装解除", context);
+  }
+
   if (nextForm === current) {
     return changeToV2(state, "V2ガンダムへ換装解除", context);
   }
 
-  if (nextForm === "assault" && !canUsePart(state, "assault")) return "V2アサルトはクールタイム中";
-  if (nextForm === "buster" && !canUsePart(state, "buster")) return "V2バスターはクールタイム中";
-  if (nextForm === "cannon" && !canUsePart(state, "cannon")) return "V2キャノンはクールタイム中";
-  if (nextForm === "assault_buster" && (!canUsePart(state, "assault") || !canUsePart(state, "buster"))) return "V2アサルトバスターはクールタイム中";
-  if (nextForm === "assault_buster_cannon" && (!canUsePart(state, "assault") || !canUsePart(state, "buster") || !canUsePart(state, "cannon"))) return "V2アサルトバスターキャノンはクールタイム中";
-
-  setUsedFormCooldown(state, current);
+  if (!canUseV2Form(state, nextForm)) {
+    return `${getV2FormStockLabel(state, nextForm)}：蓄積3未満の装備があるため換装不可`;
+  }
 
   setForm(state, nextForm, { preserveHp: true, preserveEvade: true });
 
@@ -319,12 +360,31 @@ function changeForm(state, nextForm, context = {}) {
   return `${state.name} に換装`;
 }
 
-function decrementCooldowns(state) {
+function tickV2EquipmentStock(state, context = {}) {
   ensureV2State(state);
 
-  Object.keys(state.v2Cooldowns).forEach(key => {
-    state.v2Cooldowns[key] = Math.max(0, Number(state.v2Cooldowns[key] || 0) - 1);
+  const current = formId(state);
+  const activeParts = getV2FormParts(current);
+  const activeSet = new Set(activeParts);
+  const consumption = getV2FormConsumption(current);
+
+  ["assault", "buster", "cannon"].forEach(part => {
+    if (activeSet.has(part)) {
+      setV2Stock(state, part, getV2Stock(state, part) - consumption);
+    } else {
+      setV2Stock(state, part, getV2Stock(state, part) + 1);
+    }
   });
+
+  if (activeParts.length === 0) return null;
+
+  const cannotContinue = activeParts.some(part => getV2Stock(state, part) < consumption);
+
+  if (cannotContinue) {
+    return changeToV2(state, "装備蓄積不足：V2ガンダムへ強制換装解除", context);
+  }
+
+  return null;
 }
 
 function buildChangeChoices(state) {
@@ -335,12 +395,29 @@ function buildChangeChoices(state) {
     choices.push({ label, value });
   }
 
-  if (current !== "v2") push("V2ガンダムへ換装解除", current);
-  if (current !== "assault" && canUsePart(state, "assault")) push("V2アサルトガンダム", "assault");
-  if (current !== "buster" && canUsePart(state, "buster")) push("V2バスターガンダム", "buster");
-  if (current !== "cannon" && canUsePart(state, "cannon")) push("V2ガンダム(キャノン装備)", "cannon");
-  if (current !== "assault_buster" && canUsePart(state, "assault") && canUsePart(state, "buster")) push("V2アサルトバスターガンダム", "assault_buster");
-  if (current !== "assault_buster_cannon" && canUsePart(state, "assault") && canUsePart(state, "buster") && canUsePart(state, "cannon")) push("V2アサルトバスターガンダム(キャノン装備)", "assault_buster_cannon");
+  if (current !== "v2") {
+    push("V2ガンダム（通常）", "v2");
+  }
+
+  if (current !== "assault" && canUseV2Form(state, "assault")) {
+    push(`V2アサルトガンダム（${getV2FormStockLabel(state, "assault")}）`, "assault");
+  }
+
+  if (current !== "buster" && canUseV2Form(state, "buster")) {
+    push(`V2バスターガンダム（${getV2FormStockLabel(state, "buster")}）`, "buster");
+  }
+
+  if (current !== "cannon" && canUseV2Form(state, "cannon")) {
+    push(`V2ガンダム(キャノン装備)（${getV2FormStockLabel(state, "cannon")}）`, "cannon");
+  }
+
+  if (current !== "assault_buster" && canUseV2Form(state, "assault_buster")) {
+    push(`V2アサルトバスターガンダム（${getV2FormStockLabel(state, "assault_buster")}）`, "assault_buster");
+  }
+
+  if (current !== "assault_buster_cannon" && canUseV2Form(state, "assault_buster_cannon")) {
+    push(`V2アサルトバスターガンダム(キャノン装備)（${getV2FormStockLabel(state, "assault_buster_cannon")}）`, "assault_buster_cannon");
+  }
 
   return choices;
 }
@@ -393,8 +470,10 @@ export function getV2DerivedState(state) {
     derived.evadeMax = state.v2DynamicEvadeMax;
   }
 
-  const cds = state.v2Cooldowns || {};
-  status.push(`換装CT A:${Number(cds.assault || 0)} B:${Number(cds.buster || 0)} C:${Number(cds.cannon || 0)}`);
+  const stock = state.v2EquipmentStock || {};
+  status.push(
+    `装備蓄積 A:${Number(stock.assault || 0)}/${V2_EQUIPMENT_MAX_STOCK} B:${Number(stock.buster || 0)}/${V2_EQUIPMENT_MAX_STOCK} C:${Number(stock.cannon || 0)}/${V2_EQUIPMENT_MAX_STOCK}`
+  );
 
   if (usesV2DynamicEvadeCap(state)) {
     status.push(`回避ストック最大値現在 ${getV2CurrentEvadeMax(state)}`);
@@ -597,16 +676,18 @@ export function onV2BeforeSlot(state, rolledSlotNumber, context = {}) {
 
   if (formId(state) === "assault_buster") {
     ensureV2DynamicEvadeCap(state);
+    addRuleEvade(state, 1, context);
     reduceCap(state, 1);
     damageSelf(state, 30, context);
-    messages.push("V2AB特性：回避ストック最大値-1、HP-30");
+    messages.push("V2AB特性：回避+1、回避ストック最大値-1、HP-30");
   }
 
   if (formId(state) === "assault_buster_cannon") {
     ensureV2DynamicEvadeCap(state);
+    addRuleEvade(state, 1, context);
     reduceCap(state, 1);
     damageSelf(state, 50, context);
-    messages.push("V2ABC特性：回避ストック最大値-1、HP-50");
+    messages.push("V2ABC特性：回避+1、回避ストック最大値-1、HP-50");
   }
 
   if (usesV2DynamicEvadeCap(state) && getV2CurrentEvadeMax(state) <= 0) {
@@ -864,9 +945,10 @@ export function modifyV2EvadeAttempt(defender, attacker, attack, context = {}) {
   return { handled: false };
 }
 
-export function onV2TurnEnd(state) {
+export function onV2TurnEnd(state, context = {}) {
   ensureV2State(state);
-  decrementCooldowns(state);
+
+  const stockMessage = tickV2EquipmentStock(state, context);
 
   state.v2MegaBeamShieldActive = false;
 
@@ -888,7 +970,7 @@ export function onV2TurnEnd(state) {
 
   if (state.shieldActive) state.shieldActive = false;
 
-  return { redraw: true, message: null };
+  return { redraw: true, message: stockMessage };
 }
 
 export function onV2ResolveChoice(state, pendingChoice, selectedValue, context = {}) {
