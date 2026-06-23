@@ -16,6 +16,48 @@ export function createOnline2v2ActionSync(ctx) {
     return true;
   }
 
+  function collectCriticalResults() {
+    const attacks = typeof ctx.getCurrentAttack === "function"
+      ? ctx.getCurrentAttack()
+      : [];
+
+    if (!Array.isArray(attacks)) return [];
+
+    return attacks.map((attack) => ({
+      criticalHit: attack?.criticalHit === true,
+      criticalFixed: attack?.criticalFixed === true,
+      criticalRate: Number(attack?.criticalRate || 0)
+    }));
+  }
+
+  function applyCriticalResults(criticalResults) {
+    if (!Array.isArray(criticalResults) || criticalResults.length === 0) return;
+
+    const attacks = typeof ctx.getCurrentAttack === "function"
+      ? ctx.getCurrentAttack()
+      : [];
+
+    if (!Array.isArray(attacks) || attacks.length === 0) return;
+
+    attacks.forEach((attack, index) => {
+      const result = criticalResults[index];
+      if (!attack || !result) return;
+
+      attack.criticalHit = result.criticalHit === true;
+      attack.criticalFixed = result.criticalFixed === true;
+      attack.criticalRate = Number(result.criticalRate || 0);
+    });
+
+    if (typeof ctx.setCurrentAttack === "function") {
+      ctx.setCurrentAttack(attacks);
+    }
+
+    ctx.redrawBattleBoards();
+    if (typeof ctx.renderAttackChoices === "function") {
+      ctx.renderAttackChoices();
+    }
+  }
+
   function publishAction(type, actor, payload = {}) {
     if (!canPublish(actor)) return;
 
@@ -46,7 +88,12 @@ export function createOnline2v2ActionSync(ctx) {
   }
 
   function publishOnline2v2SlotAction(ownerPlayer, slotMode = "team", unitKey = null, slotKeys = null) {
-    publishAction("slot2v2", ownerPlayer, { slotMode, unitKey, slotKeys: slotKeys || null });
+    publishAction("slot2v2", ownerPlayer, {
+      slotMode,
+      unitKey,
+      slotKeys: slotKeys || null,
+      criticalResults: collectCriticalResults()
+    });
   }
 
   function publishOnline2v2SpecialAction(ownerPlayer, specialKey) {
@@ -150,15 +197,18 @@ export function createOnline2v2ActionSync(ctx) {
         const slotMode = action.payload?.slotMode || "team";
         const unitKey = action.payload?.unitKey || null;
         const slotKeys = action.payload?.slotKeys || {};
+        const criticalResults = action.payload?.criticalResults || [];
 
         if (slotMode === "team") {
           ctx.executeTeamSlotRaw(slotKeys, { suppressOnlinePublish: true });
+          applyCriticalResults(criticalResults);
           return;
         }
 
         ctx.executeSingleTeamSlotRaw(unitKey || slotMode, slotKeys, {
           suppressOnlinePublish: true
         });
+        applyCriticalResults(criticalResults);
         return;
       }
 
@@ -198,10 +248,7 @@ export function createOnline2v2ActionSync(ctx) {
       }
 
       if (action.type === "breakthroughBet2v2") {
-        ctx.applyBreakthroughBetRaw(
-          action.payload?.player,
-          action.payload?.value
-        );
+        ctx.applyBreakthroughBetRaw(action.payload?.player, action.payload?.value);
         return;
       }
 
