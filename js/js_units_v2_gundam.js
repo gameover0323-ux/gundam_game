@@ -18,9 +18,9 @@ export const v2_gundam = {
         slot6: { label: "光の翼", desc: "次のターンの攻撃を無効化し、無効化成功時に80ダメージ格闘ビーム軽減不可で反撃。", effect: { type: "custom", customType: "v2_wings_guard" } }
       },
       specials: [
-        { name: "特性", effectType: "v2_trait", timing: "auto", actionType: "auto", desc: "各形態換装クールタイムは5ターン。" },
+        { name: "特性", effectType: "v2_trait", timing: "auto", actionType: "auto", desc: "A/B/C装備は初期3、最大10まで蓄積。未装備ならターン終了時+1、装備中は単体-1、AB系は該当装備-2。蓄積不足で通常V2へ戻る。" },
         { name: "シールド", effectType: "shield", timing: "reaction", actionType: "instant", desc: "3回まで、1ターン間の相手の攻撃ダメージを半減する。" },
-        { name: "換装", effectType: "v2_change_form", timing: "self", actionType: "choice", desc: "各形態へ換装。通常換装はHP50回復、アサルトバスター系はHP100回復。" },
+        { name: "換装", effectType: "v2_change_form", timing: "self", actionType: "choice", desc: "通常/A/B/C/AB/ABCへ換装。対象装備の蓄積がすべて3以上必要。換装時、通常換装はHP50回復、アサルトバスター系はHP100回復。" },
         { name: "マルチプルアサルト追撃", effectType: "v2_multiple_assault", timing: "self", actionType: "instant", desc: "4の行動選択時、回避2消費で4EXを続けて発動。" }
       ]
     },
@@ -40,9 +40,9 @@ export const v2_gundam = {
         slot6: { label: "ヴェスバー", desc: "所持回避数×20ダメージ。射撃。ビーム。0の時不発", effect: { type: "custom", customType: "v2_assault_slot6" } }
       },
       specials: [
-        { name: "特性", effectType: "v2_assault_trait", timing: "auto", actionType: "auto", desc: "毎ターンHP-10、回避ストック最大値-1。最大値0でV2へ戻りHP50回復。" },
+        { name: "特性", effectType: "v2_assault_trait", timing: "auto", actionType: "auto", desc: "毎ターンHP-10、回避ストック最大値-1。最大値0でV2へ戻りHP50回復。A蓄積をターン終了時に消費し、0で通常V2へ戻る。" },
         { name: "シールド", effectType: "shield", timing: "reaction", actionType: "instant", desc: "3回まで、1ターン間の相手の攻撃ダメージを半減する。" },
-        { name: "換装", effectType: "v2_change_form", timing: "self", actionType: "choice", desc: "同形態欄は換装解除。" },
+        { name: "換装", effectType: "v2_change_form", timing: "self", actionType: "choice", desc: "通常/A/B/C/AB/ABCへ換装。対象装備の蓄積がすべて3以上必要。" },
         { name: "メガビームシールド", effectType: "v2_mega_beam_shield", timing: "reaction", actionType: "instant", desc: "3回のみ、相手の攻撃ダメージを1ターン間無効化する。アサルトと回数共有。" }
       ]
     },
@@ -62,9 +62,9 @@ export const v2_gundam = {
         slot6: { label: "光の翼 50ダメージ", desc: "50ダメージ。格闘。ビーム。軽減不可。命中時50回復", effect: { type: "attack", attackType: "melee", damage: 50, count: 1, beam: true, ignoreReduction: true, special: "v2_buster_wings_hit_heal" } }
       },
       specials: [
-        { name: "特性", effectType: "v2_buster_trait", timing: "auto", actionType: "auto", desc: "毎ターンHP-20。4EX追撃消費回避1。スロット3が50%で3EX。2ターン目以降20%で2EX、3回使用でV2へ戻る。" },
+        { name: "特性", effectType: "v2_buster_trait", timing: "auto", actionType: "auto", desc: "毎ターンHP-20。4EX追撃消費回避1。スロット3が50%で3EX。2ターン目以降20%で2EX、3回使用でV2へ戻る。B蓄積をターン終了時に消費し、0で通常V2へ戻る。" },
         { name: "シールド", effectType: "shield", timing: "reaction", actionType: "instant", desc: "3回まで、1ターン間の相手の攻撃ダメージを半減する。" },
-        { name: "換装", effectType: "v2_change_form", timing: "self", actionType: "choice", desc: "同形態欄は換装解除。" },
+        { name: "換装", effectType: "v2_change_form", timing: "self", actionType: "choice", desc: "通常/A/B/C/AB/ABCへ換装。対象装備の蓄積がすべて3以上必要。" },
         { name: "マルチプルアサルト追撃", effectType: "v2_multiple_assault", timing: "self", actionType: "instant", desc: "4の行動選択時、回避2消費で4EXを続けて発動。バスター特性で消費1。" }
       ]
     },
@@ -84,9 +84,9 @@ export const v2_gundam = {
         slot6: { label: "大口径ビームキャノン 150ダメージ", desc: "150ダメージ＋チャージ加算。射撃。ビーム", effect: { type: "custom", customType: "v2_cannon_beam_cannon" } }
       },
       specials: [
-        { name: "特性", effectType: "v2_cannon_trait", timing: "auto", actionType: "auto", desc: "毎ターンHP-10。3回攻撃行動命中でV2へ戻りHP50回復。" },
+        { name: "特性", effectType: "v2_cannon_trait", timing: "auto", actionType: "auto", desc: "毎ターンHP-10。3回攻撃行動命中でV2へ戻りHP50回復。C蓄積をターン終了時に消費し、0で通常V2へ戻る。" },
         { name: "シールド", effectType: "shield", timing: "reaction", actionType: "instant", desc: "3回まで、1ターン間の相手の攻撃ダメージを半減する。" },
-        { name: "換装", effectType: "v2_change_form", timing: "self", actionType: "choice", desc: "同形態欄は換装解除。" },
+        { name: "換装", effectType: "v2_change_form", timing: "self", actionType: "choice", desc: "通常/A/B/C/AB/ABCへ換装。対象装備の蓄積がすべて3以上必要。" },
         { name: "出力安定化", effectType: "v2_cannon_ignore_reduction", timing: "self", actionType: "instant", desc: "攻撃行動時に回避1消費で軽減不可付与。" },
         { name: "命中補正最大", effectType: "v2_cannon_cannot_evade", timing: "self", actionType: "instant", desc: "攻撃行動時に回避5消費で必中付与。" }
       ]
@@ -107,9 +107,9 @@ export const v2_gundam = {
         slot6: { label: "光の翼", desc: "30ダメージ×所持開始数＋1ターン攻撃無効化＋回避ストック最大値+1。格闘。ビーム", effect: { type: "custom", customType: "v2_ab_slot6" } }
       },
       specials: [
-        { name: "特性", effectType: "v2_ab_trait", timing: "auto", actionType: "auto", desc: "毎ターン回避+1、回避ストック最大値-1、HP-30。最大値0でV2へ戻りHP50回復。" },
+        { name: "特性", effectType: "v2_ab_trait", timing: "auto", actionType: "auto", desc: "毎ターン回避+1、回避ストック最大値-1、HP-30。最大値0でV2へ戻りHP50回復。A/B蓄積をターン終了時に各-2し、継続不能で通常V2へ戻る。" },
         { name: "シールド", effectType: "shield", timing: "reaction", actionType: "instant", desc: "3回まで、1ターン間の相手の攻撃ダメージを半減する。" },
-        { name: "換装", effectType: "v2_change_form", timing: "self", actionType: "choice", desc: "同形態欄は換装解除。" },
+        { name: "換装", effectType: "v2_change_form", timing: "self", actionType: "choice", desc: "通常/A/B/C/AB/ABCへ換装。対象装備の蓄積がすべて3以上必要。" },
         { name: "マルチプルアサルト追撃", effectType: "v2_multiple_assault", timing: "self", actionType: "instant", desc: "4の行動選択時、回避1消費で4EXを続けて発動。" },
         { name: "メガビームシールド", effectType: "v2_mega_beam_shield", timing: "reaction", actionType: "instant", desc: "3回のみ、相手の攻撃ダメージを1ターン間無効化する。アサルトと回数共有。" }
       ]
@@ -130,9 +130,9 @@ export const v2_gundam = {
         slot6: { label: "光の翼", desc: "10ダメージ×所持回避数の単発。ヒット時相手回避-3、回避ストック+3", effect: { type: "custom", customType: "v2_abc_slot6" } }
       },
       specials: [
-        { name: "特性", effectType: "v2_abc_trait", timing: "auto", actionType: "auto", desc: "毎ターン回避+1、回避ストック最大値-1、HP-50。最大値0でV2へ戻りHP50回復。" },
+        { name: "特性", effectType: "v2_abc_trait", timing: "auto", actionType: "auto", desc: "毎ターン回避+1、回避ストック最大値-1、HP-50。最大値0でV2へ戻りHP50回復。A/B/C蓄積をターン終了時に各-2し、継続不能で通常V2へ戻る。" },
         { name: "シールド", effectType: "shield", timing: "reaction", actionType: "instant", desc: "3回まで、1ターン間の相手の攻撃ダメージを半減する。" },
-        { name: "換装", effectType: "v2_change_form", timing: "self", actionType: "choice", desc: "同形態欄は換装解除。" },
+        { name: "換装", effectType: "v2_change_form", timing: "self", actionType: "choice", desc: "通常/A/B/C/AB/ABCへ換装。対象装備の蓄積がすべて3以上必要。" },
         { name: "マルチプルアサルト追撃", effectType: "v2_multiple_assault", timing: "self", actionType: "instant", desc: "4の行動選択時、回避1消費で4EXを続けて発動。" },
         { name: "メガビームシールド", effectType: "v2_mega_beam_shield", timing: "reaction", actionType: "instant", desc: "3回のみ、相手の攻撃ダメージを1ターン間無効化する。アサルトと回数共有。" }
       ]
