@@ -77,9 +77,10 @@ export const v2_gundam = {
       ownedSlotOrder: ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"],
       slots: {
         slot1: { label: "回復 80", desc: "HP80回復", effect: { type: "heal", amount: 80 } },
-        slot2: { label: "ビームサーベル 80ダメージ＋回避1＋チャージ", desc: "80ダメージ。格闘。ビーム。軽減不可。回避1回＋キャノン系攻撃数値+5", effect: { type: "custom", customType: "v2_cannon_saber80_evade1_charge5" } },
+        slot2: { label: "回避 +1＋チャージ", desc: "回避1回＋キャノン系攻撃数値+5", effect: { type: "custom", customType: "v2_cannon_evade1_charge5" } },
 slot3: { label: "チャージ", desc: "キャノン系攻撃数値+20", effect: { type: "custom", customType: "v2_cannon_charge20" } },
-slot4: { label: "回避 +1＋チャージ", desc: "回避1回＋キャノン系攻撃数値+5", effect: { type: "custom", customType: "v2_cannon_evade1_charge5" } },  slot5: { label: "大口径ビームサーベル 150ダメージ", desc: "150ダメージ＋チャージ加算。格闘。ビーム", effect: { type: "custom", customType: "v2_cannon_saber" } },
+slot4: { label: "回避 +1＋チャージ", desc: "回避1回＋キャノン系攻撃数値+5", effect: { type: "custom", customType: "v2_cannon_evade1_charge5" } }, 
+        slot5: { label: "大口径ビームサーベル 150ダメージ", desc: "150ダメージ＋チャージ加算。格闘。ビーム", effect: { type: "custom", customType: "v2_cannon_saber" } },
         slot6: { label: "大口径ビームキャノン 150ダメージ", desc: "150ダメージ＋チャージ加算。射撃。ビーム", effect: { type: "custom", customType: "v2_cannon_beam_cannon" } }
       },
       specials: [
