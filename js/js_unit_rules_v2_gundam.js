@@ -766,14 +766,6 @@ if (customEffectId === "v2_cannon_charge20") {
   state.v2CannonCharge += 20;
   messages.push(`チャージ：V2キャノン加算値+20（現在+${state.v2CannonCharge}）`);
 }
-
-if (customEffectId === "v2_cannon_saber80_evade1_charge5") {
-  addRuleEvade(state, 1, context);
-  state.v2CannonCharge += 5;
-  appendAttacks.push(...createAttack(80, 1, { type: "melee", beam: true, ignoreReduction: true, ignoreDefense: true, source: "ビームサーベル" }));
-  messages.push(`ビームサーベル：回避+1、V2キャノン加算値+5（現在+${state.v2CannonCharge}）`);
-}
-
   if (customEffectId === "v2_cannon_evade1_charge5") {
     addRuleEvade(state, 1, context);
     state.v2CannonCharge += 5;
