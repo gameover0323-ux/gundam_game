@@ -5,19 +5,34 @@ export function createStoryModeController(ctx) {
   let lineIndex = 0;
   let locked = false;
 
-  function getCurrentRole() {
-    const profileRole = ctx.getPlayerProfile?.()?.role;
-    if (profileRole) return profileRole;
+  const customizeState = {
+    hp: 200,
+    hpCost: 0,
+    evade: 1,
+    evadeCost: 0,
+    energy: 100,
+    energyCost: 0,
+    fixedSlotCost: 60,
+    maxCost: 100
+  };
 
-    const summaryText = document.getElementById("playerCardSummary")?.textContent || "";
-    if (summaryText.includes("権限：debug")) return "debug";
-    if (summaryText.includes("権限：Ciel_debugger")) return "Ciel_debugger";
+  function getUsedCost() {
+    return customizeState.fixedSlotCost
+      + customizeState.hpCost
+      + customizeState.evadeCost
+      + customizeState.energyCost;
+  }
 
-    return "";
+  function getRemainCost() {
+    return customizeState.maxCost - getUsedCost();
   }
 
   function canUseStoryMode() {
-    return DEBUG_ROLES.has(getCurrentRole());
+    const role = ctx.getPlayerProfile?.()?.role;
+    if (DEBUG_ROLES.has(role)) return true;
+
+    const summaryText = document.getElementById("playerCardSummary")?.textContent || "";
+    return summaryText.includes("権限：debug") || summaryText.includes("権限：Ciel_debugger");
   }
 
   function updateStartButtonVisibility() {
@@ -77,8 +92,7 @@ export function createStoryModeController(ctx) {
       </div>
     `;
 
-    const nextBtn = document.getElementById("storyDialogueNextBtn");
-    nextBtn.addEventListener("click", nextDialogue);
+    document.getElementById("storyDialogueNextBtn").addEventListener("click", nextDialogue);
     showCurrentLine();
   }
 
@@ -171,8 +185,8 @@ export function createStoryModeController(ctx) {
       <div id="storyLabTalk" style="margin-top:20px; max-width:720px; line-height:1.8;"></div>
     `;
 
-    const talk = document.getElementById("storyLabTalk");
-    talk.textContent = "AI「クリエイトガンダムラボへ来ました！この画面でプロトクリエイトガンダムをカスタムすることができますよ！まずはカスタマイズを押してみましょう！」";
+    document.getElementById("storyLabTalk").textContent =
+      "AI「クリエイトガンダムラボへ来ました！この画面でプロトクリエイトガンダムをカスタムすることができますよ！まずはカスタマイズを押してみましょう！」";
 
     setTimeout(() => {
       document.getElementById("storyCustomizeBtn").disabled = false;
@@ -189,6 +203,76 @@ export function createStoryModeController(ctx) {
     });
   }
 
+  function adjustHp(delta) {
+    if (delta > 0 && getRemainCost() < 10) return;
+    if (delta < 0 && customizeState.hpCost <= 0) return;
+
+    customizeState.hp += delta > 0 ? 50 : -50;
+    customizeState.hpCost += delta > 0 ? 10 : -10;
+    renderCustomizeValues();
+  }
+
+  function adjustEvade(delta) {
+    if (delta > 0 && getRemainCost() < 10) return;
+    if (delta < 0 && customizeState.evadeCost <= 0) return;
+
+    customizeState.evade += delta > 0 ? 1 : -1;
+    customizeState.evadeCost += delta > 0 ? 10 : -10;
+    renderCustomizeValues();
+  }
+
+  function adjustEnergy(delta) {
+    if (delta > 0 && getRemainCost() < 1) return;
+    if (delta < 0 && customizeState.energyCost <= 0) return;
+
+    customizeState.energy += delta > 0 ? 1 : -1;
+    customizeState.energyCost += delta > 0 ? 1 : -1;
+    renderCustomizeValues();
+  }
+
+  function bindHoldButton(btn, action) {
+    let holdTimer = null;
+    let repeatTimer = null;
+
+    function clearHold() {
+      if (holdTimer) clearTimeout(holdTimer);
+      if (repeatTimer) clearInterval(repeatTimer);
+      holdTimer = null;
+      repeatTimer = null;
+    }
+
+    btn.addEventListener("click", () => {
+      action();
+    });
+
+    btn.addEventListener("pointerdown", event => {
+      event.preventDefault();
+      clearHold();
+
+      holdTimer = setTimeout(() => {
+        repeatTimer = setInterval(action, 60);
+      }, 1000);
+    });
+
+    btn.addEventListener("pointerup", clearHold);
+    btn.addEventListener("pointerleave", clearHold);
+    btn.addEventListener("pointercancel", clearHold);
+  }
+
+  function renderCustomizeValues() {
+    document.getElementById("storyCostText").textContent =
+      `コスト 100[残${getRemainCost()}]`;
+
+    document.getElementById("storyHpText").textContent = `HP ${customizeState.hp}`;
+    document.getElementById("storyHpCost").textContent = `[コスト${customizeState.hpCost}]`;
+
+    document.getElementById("storyEvadeText").textContent = `回避ストック ${customizeState.evade}`;
+    document.getElementById("storyEvadeCost").textContent = `[コスト${customizeState.evadeCost}]`;
+
+    document.getElementById("storyEnergyText").textContent = `エネルギー ${customizeState.energy}`;
+    document.getElementById("storyEnergyCost").textContent = `[コスト${customizeState.energyCost}]`;
+  }
+
   function renderCustomizeTutorial() {
     const root = document.getElementById("storyModeRoot");
     root.style.justifyContent = "flex-start";
@@ -197,89 +281,35 @@ export function createStoryModeController(ctx) {
     root.innerHTML = `
       <h2 style="text-align:center;">プロトクリエイトガンダム</h2>
 
-      <div id="storyCustomizePanel" style="
-        width:min(720px,96vw);
-        line-height:1.6;
-        margin:0 auto;
-      ">
-        <div class="story-level" style="text-align:center;">レベル0</div>
-        <div class="story-cost" style="text-align:center;margin-bottom:12px;">コスト 100 [残40]</div>
+      <div id="storyCustomizePanel">
+        <div class="story-level">レベル0</div>
+        <div id="storyCostText" class="story-cost">コスト 100[残40]</div>
 
         <div class="story-row">
-          <span class="story-label">HP 200</span>
-          <span class="story-cost-text">[コスト0]</span>
-          <span class="story-buttons"><button class="story-inject">注入</button><button class="story-release">解除</button></span>
+          <span id="storyHpText" class="story-label">HP 200</span>
+          <span id="storyHpCost" class="story-cost-text">[コスト0]</span>
+          <span class="story-buttons"><button id="storyHpInject" class="story-inject">注入</button><button id="storyHpRelease" class="story-release">解除</button></span>
         </div>
 
         <div class="story-row">
-          <span class="story-label">回避ストック 1</span>
-          <span class="story-cost-text">[コスト0]</span>
-          <span class="story-buttons"><button class="story-inject">注入</button><button class="story-release">解除</button></span>
+          <span id="storyEvadeText" class="story-label">回避ストック 1</span>
+          <span id="storyEvadeCost" class="story-cost-text">[コスト0]</span>
+          <span class="story-buttons"><button id="storyEvadeInject" class="story-inject">注入</button><button id="storyEvadeRelease" class="story-release">解除</button></span>
         </div>
 
         <div class="story-row">
-          <span class="story-label">エネルギー 100</span>
-          <span class="story-cost-text">[コスト0]</span>
-          <span class="story-buttons"><button class="story-inject">注入</button><button class="story-release">解除</button></span>
+          <span id="storyEnergyText" class="story-label">エネルギー 100</span>
+          <span id="storyEnergyCost" class="story-cost-text">[コスト0]</span>
+          <span class="story-buttons"><button id="storyEnergyInject" class="story-inject">注入</button><button id="storyEnergyRelease" class="story-release">解除</button></span>
         </div>
 
         <hr>
 
-        <div class="story-row story-slot">
-          <span class="story-label">1.汎用マシンガン</span>
-          <span class="story-cost-text">[コスト5]</span>
-          <span class="story-buttons"><button>詳細</button><button class="story-swap">入替</button></span>
-        </div>
-
-        <div class="story-row story-slot">
-          <span class="story-label">2.回復 30</span>
-          <span class="story-cost-text">[コスト5]</span>
-          <span class="story-buttons"><button>詳細</button><button class="story-swap">入替</button></span>
-        </div>
-
-        <div class="story-row story-slot">
-          <span class="story-label">3.回避 1</span>
-          <span class="story-cost-text">[コスト5]</span>
-          <span class="story-buttons"><button>詳細</button><button class="story-swap">入替</button></span>
-        </div>
-
-        <div class="story-row story-slot">
-          <span class="story-label">4.ビームガン</span>
-          <span class="story-cost-text">[コスト5]</span>
-          <span class="story-buttons"><button>詳細</button><button class="story-swap">入替</button></span>
-        </div>
-
-        <div class="story-row story-slot">
-          <span class="story-label">5.バズーカ</span>
-          <span class="story-cost-text">[コスト20]</span>
-          <span class="story-buttons"><button>詳細</button><button class="story-swap">入替</button></span>
-        </div>
-
-        <div class="story-row story-slot">
-          <span class="story-label">6.心中蹴り</span>
-          <span class="story-cost-text">[コスト20]</span>
-          <span class="story-buttons"><button>詳細</button><button class="story-swap">入替</button></span>
-        </div>
+        ${renderSlotRows()}
 
         <hr>
 
-        <div class="story-row story-equipment">
-          <span class="story-label">装備品1 なし</span>
-          <span class="story-cost-text"></span>
-          <span class="story-buttons"><button class="story-swap">入替</button></span>
-        </div>
-
-        <div class="story-row story-equipment">
-          <span class="story-label">装備品2 なし</span>
-          <span class="story-cost-text"></span>
-          <span class="story-buttons"><button class="story-swap">入替</button></span>
-        </div>
-
-        <div class="story-row story-skill">
-          <span class="story-label">スキル なし</span>
-          <span class="story-cost-text"></span>
-          <span class="story-buttons"><button class="story-swap">入替</button></span>
-        </div>
+        ${renderOptionalRows()}
 
         <div style="text-align:center;margin-top:16px;">
           <button id="storyReadyBtn" disabled>準備完了</button>
@@ -287,6 +317,19 @@ export function createStoryModeController(ctx) {
       </div>
 
       <style>
+        #storyCustomizePanel {
+          width: min(720px, 96vw);
+          margin: 0 auto;
+          line-height: 1.6;
+          font-size: 17px;
+        }
+
+        #storyCustomizePanel .story-level,
+        #storyCustomizePanel .story-cost {
+          text-align: center;
+          margin-bottom: 8px;
+        }
+
         #storyCustomizePanel .story-row {
           display: grid;
           grid-template-columns: 1fr auto auto;
@@ -309,7 +352,7 @@ export function createStoryModeController(ctx) {
         #storyCustomizePanel .story-buttons {
           display: flex;
           justify-content: flex-end;
-          gap: 6px;
+          gap: 4px;
           white-space: nowrap;
         }
 
@@ -318,17 +361,19 @@ export function createStoryModeController(ctx) {
         }
 
         @media (max-width: 520px) {
+          #storyCustomizePanel {
+            font-size: 16px;
+          }
+
           #storyCustomizePanel .story-row {
-            grid-template-columns: 1fr auto;
+            grid-template-columns: 1fr auto auto;
+            gap: 4px;
           }
 
-          #storyCustomizePanel .story-cost-text {
-            grid-column: 1;
-          }
-
-          #storyCustomizePanel .story-buttons {
-            grid-column: 2;
-            grid-row: 1 / span 2;
+          #storyCustomizePanel button {
+            min-width: 44px;
+            padding-left: 6px;
+            padding-right: 6px;
           }
         }
       </style>
@@ -343,13 +388,58 @@ export function createStoryModeController(ctx) {
       <button id="storyTutorialNextBtn">次へ</button>
     `;
 
+    document.getElementById("storyHpInject").addEventListener("click", () => adjustHp(1));
+    document.getElementById("storyHpRelease").addEventListener("click", () => adjustHp(-1));
+
+    document.getElementById("storyEvadeInject").addEventListener("click", () => adjustEvade(1));
+    document.getElementById("storyEvadeRelease").addEventListener("click", () => adjustEvade(-1));
+
+    bindHoldButton(document.getElementById("storyEnergyInject"), () => adjustEnergy(1));
+    bindHoldButton(document.getElementById("storyEnergyRelease"), () => adjustEnergy(-1));
+
+    startCustomizeGuide();
+    renderCustomizeValues();
+  }
+
+  function renderSlotRows() {
+    const slots = [
+      ["1.汎用マシンガン", "[コスト5]"],
+      ["2.回復 30", "[コスト5]"],
+      ["3.回避 1", "[コスト5]"],
+      ["4.ビームガン", "[コスト5]"],
+      ["5.バズーカ", "[コスト20]"],
+      ["6.心中蹴り", "[コスト20]"]
+    ];
+
+    return slots.map(([label, cost]) => `
+      <div class="story-row story-slot">
+        <span class="story-label">${label}</span>
+        <span class="story-cost-text">${cost}</span>
+        <span class="story-buttons"><button>詳細</button><button class="story-swap">入替</button></span>
+      </div>
+    `).join("");
+  }
+
+  function renderOptionalRows() {
+    const rows = [
+      { cls: "story-equipment", label: "装備品1 なし", hasDetail: false },
+      { cls: "story-equipment", label: "装備品2 なし", hasDetail: false },
+      { cls: "story-skill", label: "スキル なし", hasDetail: false }
+    ];
+
+    return rows.map(row => `
+      <div class="story-row ${row.cls}">
+        <span class="story-label">${row.label}</span>
+        <span class="story-cost-text"></span>
+        <span class="story-buttons">${row.hasDetail ? "<button>詳細</button>" : ""}<button class="story-swap">入替</button></span>
+      </div>
+    `).join("");
+  }
+
+  function startCustomizeGuide() {
     const steps = [
-      {
-        text: "AI「カスタマイズ画面です！すいませんこんな弱くて…！」"
-      },
-      {
-        text: "AI「でも大丈夫です！そのためのカスタマイズですから！説明していきますね。」"
-      },
+      { text: "AI「カスタマイズ画面です！すいませんこんな弱くて…！」" },
+      { text: "AI「でも大丈夫です！そのためのカスタマイズですから！説明していきますね。」" },
       {
         selector: ".story-level",
         text: "AI「ここがレベルです！今は0ですが、経験を積むとレベルが上がります！レベルが上がると、コストや様々な能力が上がります！プレイあるのみです！」"
