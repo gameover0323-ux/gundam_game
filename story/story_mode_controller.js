@@ -5,19 +5,25 @@ export function createStoryModeController(ctx) {
   let lineIndex = 0;
   let locked = false;
 
-  function canUseStoryMode() {
-    const role = ctx.getPlayerProfile?.()?.role;
-    return DEBUG_ROLES.has(role);
-  }
+  function getCurrentRole() {
+  const profileRole = ctx.getPlayerProfile?.()?.role;
+  if (profileRole) return profileRole;
 
-  function updateStartButtonVisibility() {
+  const summaryText = document.getElementById("playerCardSummary")?.textContent || "";
+
+  if (summaryText.includes("権限：debug")) return "debug";
+  if (summaryText.includes("権限：Ciel_debugger")) return "Ciel_debugger";
+
+  return "";
+}
+
+function canUseStoryMode() {
+  return DEBUG_ROLES.has(getCurrentRole());
+}
+
+function updateStartButtonVisibility() {
   const btn = document.getElementById("startStoryModeBtn");
   if (!btn) return;
-
-  const profile = ctx.getPlayerProfile?.();
-  console.log("[StoryMode] profile =", profile);
-  console.log("[StoryMode] role =", profile?.role);
-  console.log("[StoryMode] allowed =", canUseStoryMode());
 
   btn.style.display = canUseStoryMode() ? "" : "none";
 }
