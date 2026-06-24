@@ -60,6 +60,40 @@ export function createPlayerAccountUi(ctx) {
     window.gbsRefreshStoryModeButton?.();
   }
 
+  function isStoryRole(role) {
+    return role === "debug" || role === "Ciel_debugger";
+  }
+
+  function ensureStoryModeButton() {
+    const profile = ctx.getPlayerProfile();
+    const role = profile?.role;
+
+    let btn = document.getElementById("playerStoryModeBtn");
+
+    if (!profile || !isStoryRole(role)) {
+      if (btn) btn.remove();
+      return null;
+    }
+
+    const summary = document.getElementById("playerCardSummary");
+    if (!summary) return null;
+
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.id = "playerStoryModeBtn";
+      btn.type = "button";
+      btn.textContent = "ストーリーモード";
+      btn.addEventListener("click", () => {
+        window.gbsStartStoryMode?.();
+      });
+
+      summary.insertAdjacentElement("afterend", btn);
+    }
+
+    btn.style.display = "";
+    return btn;
+  }
+
   function updatePlayerCardUi() {
     const summary = document.getElementById("playerCardSummary");
     const loginBtn = document.getElementById("playerLoginBtn");
@@ -83,6 +117,9 @@ export function createPlayerAccountUi(ctx) {
 
       const accountListBtn = document.getElementById("accountListBtn");
       if (accountListBtn) accountListBtn.style.display = "none";
+
+      const storyBtn = document.getElementById("playerStoryModeBtn");
+      if (storyBtn) storyBtn.remove();
 
       refreshStoryModeButton();
       return;
@@ -116,9 +153,9 @@ ID：${profile.id}<br>
     statsBtn.style.display = "";
 
     ensureSettingsButton();
-ensureAccountListButton();
-ensureStoryModeButton();
-refreshStoryModeButton();
+    ensureAccountListButton();
+    ensureStoryModeButton();
+    refreshStoryModeButton();
   }
 
   function ensureSettingsButton() {
@@ -162,38 +199,7 @@ refreshStoryModeButton();
 
     return btn;
   }
-function ensureStoryModeButton() {
-  const profile = ctx.getPlayerProfile();
-  const role = profile?.role;
 
-  let btn = document.getElementById("playerStoryModeBtn");
-
-  if (!profile || (role !== "debug" && role !== "Ciel_debugger")) {
-    if (btn) btn.remove();
-    return null;
-
-    const storyBtn = document.getElementById("playerStoryModeBtn");
-if (storyBtn) storyBtn.remove();
-  }
-
-  const summary = document.getElementById("playerCardSummary");
-  if (!summary) return null;
-
-  if (!btn) {
-    btn = document.createElement("button");
-    btn.id = "playerStoryModeBtn";
-    btn.type = "button";
-    btn.textContent = "ストーリーモード";
-    btn.addEventListener("click", () => {
-      window.gbsStartStoryMode?.();
-    });
-
-    summary.insertAdjacentElement("afterend", btn);
-  }
-
-  btn.style.display = "";
-  return btn;
-}
   function closeSettingsPanel() {
     const panel = document.getElementById("playerSettingsPanel");
     if (panel) panel.remove();
