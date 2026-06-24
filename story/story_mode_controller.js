@@ -1,30 +1,29 @@
+import {
+  PROTO_CREATE_BASE,
+  STORY_SLOT_OPTIONS,
+  STORY_EQUIPMENT_OPTIONS,
+  STORY_SKILL_OPTIONS,
+  createInitialProtoCreateLabState,
+  findStorySlotOption,
+  findStoryEquipmentOption,
+  findStorySkillOption,
+  calculateProtoCreateLabCost
+} from "./story_create_lab_data.js";
+
 export function createStoryModeController(ctx) {
   const DEBUG_ROLES = new Set(["debug", "Ciel_debugger"]);
 
   let activeScene = null;
   let lineIndex = 0;
   let locked = false;
-
-  const customizeState = {
-    hp: 200,
-    hpCost: 0,
-    evade: 1,
-    evadeCost: 0,
-    energy: 100,
-    energyCost: 0,
-    fixedSlotCost: 60,
-    maxCost: 100
-  };
+  let customizeState = createInitialProtoCreateLabState();
 
   function getUsedCost() {
-    return customizeState.fixedSlotCost
-      + customizeState.hpCost
-      + customizeState.evadeCost
-      + customizeState.energyCost;
+    return calculateProtoCreateLabCost(customizeState);
   }
 
   function getRemainCost() {
-    return customizeState.maxCost - getUsedCost();
+    return PROTO_CREATE_BASE.maxCost - getUsedCost();
   }
 
   function canUseStoryMode() {
@@ -204,29 +203,29 @@ export function createStoryModeController(ctx) {
   }
 
   function adjustHp(delta) {
-    if (delta > 0 && getRemainCost() < 10) return;
+    if (delta > 0 && getRemainCost() < PROTO_CREATE_BASE.hpCostStep) return;
     if (delta < 0 && customizeState.hpCost <= 0) return;
 
-    customizeState.hp += delta > 0 ? 50 : -50;
-    customizeState.hpCost += delta > 0 ? 10 : -10;
+    customizeState.hp += delta > 0 ? PROTO_CREATE_BASE.hpStep : -PROTO_CREATE_BASE.hpStep;
+    customizeState.hpCost += delta > 0 ? PROTO_CREATE_BASE.hpCostStep : -PROTO_CREATE_BASE.hpCostStep;
     renderCustomizeValues();
   }
 
   function adjustEvade(delta) {
-    if (delta > 0 && getRemainCost() < 10) return;
+    if (delta > 0 && getRemainCost() < PROTO_CREATE_BASE.evadeCostStep) return;
     if (delta < 0 && customizeState.evadeCost <= 0) return;
 
-    customizeState.evade += delta > 0 ? 1 : -1;
-    customizeState.evadeCost += delta > 0 ? 10 : -10;
+    customizeState.evade += delta > 0 ? PROTO_CREATE_BASE.evadeStep : -PROTO_CREATE_BASE.evadeStep;
+    customizeState.evadeCost += delta > 0 ? PROTO_CREATE_BASE.evadeCostStep : -PROTO_CREATE_BASE.evadeCostStep;
     renderCustomizeValues();
   }
 
   function adjustEnergy(delta) {
-    if (delta > 0 && getRemainCost() < 1) return;
+    if (delta > 0 && getRemainCost() < PROTO_CREATE_BASE.energyCostStep) return;
     if (delta < 0 && customizeState.energyCost <= 0) return;
 
-    customizeState.energy += delta > 0 ? 1 : -1;
-    customizeState.energyCost += delta > 0 ? 1 : -1;
+    customizeState.energy += delta > 0 ? PROTO_CREATE_BASE.energyStep : -PROTO_CREATE_BASE.energyStep;
+    customizeState.energyCost += delta > 0 ? PROTO_CREATE_BASE.energyCostStep : -PROTO_CREATE_BASE.energyCostStep;
     renderCustomizeValues();
   }
 
@@ -260,17 +259,25 @@ export function createStoryModeController(ctx) {
   }
 
   function renderCustomizeValues() {
-    document.getElementById("storyCostText").textContent =
-      `コスト 100[残${getRemainCost()}]`;
+    const costText = document.getElementById("storyCostText");
+    if (costText) {
+      costText.textContent = `コスト ${PROTO_CREATE_BASE.maxCost}[残${getRemainCost()}]`;
+    }
 
-    document.getElementById("storyHpText").textContent = `HP ${customizeState.hp}`;
-    document.getElementById("storyHpCost").textContent = `[コスト${customizeState.hpCost}]`;
+    const hpText = document.getElementById("storyHpText");
+    const hpCost = document.getElementById("storyHpCost");
+    if (hpText) hpText.textContent = `HP ${customizeState.hp}`;
+    if (hpCost) hpCost.textContent = `[コスト${customizeState.hpCost}]`;
 
-    document.getElementById("storyEvadeText").textContent = `回避ストック ${customizeState.evade}`;
-    document.getElementById("storyEvadeCost").textContent = `[コスト${customizeState.evadeCost}]`;
+    const evadeText = document.getElementById("storyEvadeText");
+    const evadeCost = document.getElementById("storyEvadeCost");
+    if (evadeText) evadeText.textContent = `回避ストック ${customizeState.evade}`;
+    if (evadeCost) evadeCost.textContent = `[コスト${customizeState.evadeCost}]`;
 
-    document.getElementById("storyEnergyText").textContent = `エネルギー ${customizeState.energy}`;
-    document.getElementById("storyEnergyCost").textContent = `[コスト${customizeState.energyCost}]`;
+    const energyText = document.getElementById("storyEnergyText");
+    const energyCost = document.getElementById("storyEnergyCost");
+    if (energyText) energyText.textContent = `エネルギー ${customizeState.energy}`;
+    if (energyCost) energyCost.textContent = `[コスト${customizeState.energyCost}]`;
   }
 
   function renderCustomizeTutorial() {
@@ -279,37 +286,37 @@ export function createStoryModeController(ctx) {
     root.style.overflowY = "auto";
 
     root.innerHTML = `
-      <h2 style="text-align:center;">プロトクリエイトガンダム</h2>
+      <h2 style="text-align:center;">${PROTO_CREATE_BASE.unitName}</h2>
 
       <div id="storyCustomizePanel">
-        <div class="story-level">レベル0</div>
-        <div id="storyCostText" class="story-cost">コスト 100[残40]</div>
+        <div class="story-level">レベル${PROTO_CREATE_BASE.level}</div>
+        <div id="storyCostText" class="story-cost">コスト ${PROTO_CREATE_BASE.maxCost}[残${getRemainCost()}]</div>
 
         <div class="story-row">
-          <span id="storyHpText" class="story-label">HP 200</span>
-          <span id="storyHpCost" class="story-cost-text">[コスト0]</span>
+          <span id="storyHpText" class="story-label">HP ${customizeState.hp}</span>
+          <span id="storyHpCost" class="story-cost-text">[コスト${customizeState.hpCost}]</span>
           <span class="story-buttons"><button id="storyHpInject" class="story-inject">注入</button><button id="storyHpRelease" class="story-release">解除</button></span>
         </div>
 
         <div class="story-row">
-          <span id="storyEvadeText" class="story-label">回避ストック 1</span>
-          <span id="storyEvadeCost" class="story-cost-text">[コスト0]</span>
+          <span id="storyEvadeText" class="story-label">回避ストック ${customizeState.evade}</span>
+          <span id="storyEvadeCost" class="story-cost-text">[コスト${customizeState.evadeCost}]</span>
           <span class="story-buttons"><button id="storyEvadeInject" class="story-inject">注入</button><button id="storyEvadeRelease" class="story-release">解除</button></span>
         </div>
 
         <div class="story-row">
-          <span id="storyEnergyText" class="story-label">エネルギー 100</span>
-          <span id="storyEnergyCost" class="story-cost-text">[コスト0]</span>
+          <span id="storyEnergyText" class="story-label">エネルギー ${customizeState.energy}</span>
+          <span id="storyEnergyCost" class="story-cost-text">[コスト${customizeState.energyCost}]</span>
           <span class="story-buttons"><button id="storyEnergyInject" class="story-inject">注入</button><button id="storyEnergyRelease" class="story-release">解除</button></span>
         </div>
 
         <hr>
 
-        ${renderSlotRows()}
+        <div id="storySlotRows"></div>
 
         <hr>
 
-        ${renderOptionalRows()}
+        <div id="storyOptionalRows"></div>
 
         <div style="text-align:center;margin-top:16px;">
           <button id="storyReadyBtn" disabled>準備完了</button>
@@ -360,6 +367,42 @@ export function createStoryModeController(ctx) {
           min-width: 54px;
         }
 
+        .story-modal {
+          position: fixed;
+          inset: 0;
+          z-index: 21000;
+          background: rgba(0,0,0,0.88);
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 14px;
+          box-sizing: border-box;
+        }
+
+        .story-modal-inner {
+          width: min(720px, 96vw);
+          max-height: 86vh;
+          overflow-y: auto;
+          border: 1px solid white;
+          border-radius: 10px;
+          background: #050505;
+          padding: 14px;
+          box-sizing: border-box;
+        }
+
+        .story-option-row {
+          border: 1px solid #777;
+          border-radius: 8px;
+          padding: 10px;
+          margin: 8px 0;
+          text-align: left;
+        }
+
+        .story-option-row button {
+          margin-top: 8px;
+        }
+
         @media (max-width: 520px) {
           #storyCustomizePanel {
             font-size: 16px;
@@ -388,6 +431,13 @@ export function createStoryModeController(ctx) {
       <button id="storyTutorialNextBtn">次へ</button>
     `;
 
+    bindCustomizeButtons();
+    renderLabRows();
+    startCustomizeGuide();
+    renderCustomizeValues();
+  }
+
+  function bindCustomizeButtons() {
     document.getElementById("storyHpInject").addEventListener("click", () => adjustHp(1));
     document.getElementById("storyHpRelease").addEventListener("click", () => adjustHp(-1));
 
@@ -396,44 +446,172 @@ export function createStoryModeController(ctx) {
 
     bindHoldButton(document.getElementById("storyEnergyInject"), () => adjustEnergy(1));
     bindHoldButton(document.getElementById("storyEnergyRelease"), () => adjustEnergy(-1));
+  }
 
-    startCustomizeGuide();
+  function renderLabRows() {
+    const slotRoot = document.getElementById("storySlotRows");
+    const optionalRoot = document.getElementById("storyOptionalRows");
+
+    if (slotRoot) slotRoot.innerHTML = renderSlotRows();
+    if (optionalRoot) optionalRoot.innerHTML = renderOptionalRows();
+
+    bindSwapButtons();
+    bindDetailButtons();
     renderCustomizeValues();
   }
 
   function renderSlotRows() {
-    const slots = [
-      ["1.汎用マシンガン", "[コスト5]"],
-      ["2.回復 30", "[コスト5]"],
-      ["3.回避 1", "[コスト5]"],
-      ["4.ビームガン", "[コスト5]"],
-      ["5.バズーカ", "[コスト20]"],
-      ["6.心中蹴り", "[コスト20]"]
-    ];
+    return ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"].map(slotKey => {
+      const option = findStorySlotOption(slotKey, customizeState.selectedSlots[slotKey]);
 
-    return slots.map(([label, cost]) => `
-      <div class="story-row story-slot">
-        <span class="story-label">${label}</span>
-        <span class="story-cost-text">${cost}</span>
-        <span class="story-buttons"><button>詳細</button><button class="story-swap">入替</button></span>
-      </div>
-    `).join("");
+      return `
+        <div class="story-row story-slot">
+          <span class="story-label">${option?.shortLabel || "未設定"}</span>
+          <span class="story-cost-text">[コスト${option?.cost || 0}]</span>
+          <span class="story-buttons">
+            <button class="story-detail-btn" data-kind="slot" data-key="${slotKey}">詳細</button>
+            <button class="story-swap story-swap-btn" data-kind="slot" data-key="${slotKey}">入替</button>
+          </span>
+        </div>
+      `;
+    }).join("");
   }
 
   function renderOptionalRows() {
-    const rows = [
-      { cls: "story-equipment", label: "装備品1 なし", hasDetail: false },
-      { cls: "story-equipment", label: "装備品2 なし", hasDetail: false },
-      { cls: "story-skill", label: "スキル なし", hasDetail: false }
-    ];
+    const equipment1 = findStoryEquipmentOption(customizeState.equipment.equipment1);
+    const equipment2 = findStoryEquipmentOption(customizeState.equipment.equipment2);
+    const skill = findStorySkillOption(customizeState.skill);
 
-    return rows.map(row => `
-      <div class="story-row ${row.cls}">
-        <span class="story-label">${row.label}</span>
-        <span class="story-cost-text"></span>
-        <span class="story-buttons">${row.hasDetail ? "<button>詳細</button>" : ""}<button class="story-swap">入替</button></span>
+    return `
+      ${renderOptionalRow("equipment", "equipment1", "装備品1", equipment1, "story-equipment")}
+      ${renderOptionalRow("equipment", "equipment2", "装備品2", equipment2, "story-equipment")}
+      ${renderOptionalRow("skill", "skill", "スキル", skill, "story-skill")}
+    `;
+  }
+
+  function renderOptionalRow(kind, key, prefix, option, cls) {
+    const hasDetail = option && option.id !== "none";
+    const costText = option?.cost ? `[コスト${option.cost}]` : "";
+
+    return `
+      <div class="story-row ${cls}">
+        <span class="story-label">${prefix} ${option?.label || "なし"}</span>
+        <span class="story-cost-text">${costText}</span>
+        <span class="story-buttons">
+          ${hasDetail ? `<button class="story-detail-btn" data-kind="${kind}" data-key="${key}">詳細</button>` : ""}
+          <button class="story-swap story-swap-btn" data-kind="${kind}" data-key="${key}">入替</button>
+        </span>
       </div>
-    `).join("");
+    `;
+  }
+
+  function bindSwapButtons() {
+    document.querySelectorAll(".story-swap-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        openSwapModal(btn.dataset.kind, btn.dataset.key);
+      });
+    });
+  }
+
+  function bindDetailButtons() {
+    document.querySelectorAll(".story-detail-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        openDetailModal(btn.dataset.kind, btn.dataset.key);
+      });
+    });
+  }
+
+  function getCurrentOption(kind, key) {
+    if (kind === "slot") return findStorySlotOption(key, customizeState.selectedSlots[key]);
+    if (kind === "equipment") return findStoryEquipmentOption(customizeState.equipment[key]);
+    if (kind === "skill") return findStorySkillOption(customizeState.skill);
+    return null;
+  }
+
+  function getOptionsFor(kind, key) {
+    if (kind === "slot") return STORY_SLOT_OPTIONS[key] || [];
+    if (kind === "equipment") return STORY_EQUIPMENT_OPTIONS;
+    if (kind === "skill") return STORY_SKILL_OPTIONS;
+    return [];
+  }
+
+  function setOption(kind, key, optionId) {
+    if (kind === "slot") {
+      customizeState.selectedSlots[key] = optionId;
+    }
+
+    if (kind === "equipment") {
+      customizeState.equipment[key] = optionId;
+    }
+
+    if (kind === "skill") {
+      customizeState.skill = optionId;
+    }
+
+    renderLabRows();
+  }
+
+  function openSwapModal(kind, key) {
+    const options = getOptionsFor(kind, key);
+    const current = getCurrentOption(kind, key);
+
+    const modal = document.createElement("div");
+    modal.className = "story-modal";
+
+    modal.innerHTML = `
+      <div class="story-modal-inner">
+        <h3>入替</h3>
+        ${options.map(option => `
+          <div class="story-option-row">
+            <div><b>${option.label}</b> [コスト${option.cost || 0}]</div>
+            ${option.detail ? `<div style="font-size:14px;margin-top:4px;">${option.detail}</div>` : ""}
+            <button class="story-select-option-btn" data-option-id="${option.id}" ${current?.id === option.id ? "disabled" : ""}>
+              ${current?.id === option.id ? "装備中" : "これにする"}
+            </button>
+          </div>
+        `).join("")}
+        <div style="text-align:center;margin-top:12px;">
+          <button id="storySwapCloseBtn">閉じる</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelectorAll(".story-select-option-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        setOption(kind, key, btn.dataset.optionId);
+        modal.remove();
+      });
+    });
+
+    modal.querySelector("#storySwapCloseBtn").addEventListener("click", () => {
+      modal.remove();
+    });
+  }
+
+  function openDetailModal(kind, key) {
+    const option = getCurrentOption(kind, key);
+    if (!option) return;
+
+    const modal = document.createElement("div");
+    modal.className = "story-modal";
+
+    modal.innerHTML = `
+      <div class="story-modal-inner">
+        <h3>${option.label}</h3>
+        <p>${option.detail || "詳細なし"}</p>
+        <div>コスト：${option.cost || 0}</div>
+        <div style="text-align:center;margin-top:12px;">
+          <button id="storyDetailCloseBtn">閉じる</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    modal.querySelector("#storyDetailCloseBtn").addEventListener("click", () => {
+      modal.remove();
+    });
   }
 
   function startCustomizeGuide() {
@@ -458,7 +636,7 @@ export function createStoryModeController(ctx) {
       },
       {
         selector: ".story-swap",
-        text: "AI「このボタンでその項目の装備を入れ替えられます！対応した入れ替え先のものを所持していれば入れ替えられます！無くすことはできません！」"
+        text: "AI「このボタンでその項目の装備を入れ替えられます！対応した入れ替え先のものを所持していれば入れ替えられます！」"
       },
       {
         selector: ".story-slot",
