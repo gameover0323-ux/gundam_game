@@ -1,3 +1,5 @@
+import { createStoryModeController } from "../story/story_mode_controller.js";
+
 export function bindMainEvents(ctx) {
   const {
     startOnline1v1Btn,
@@ -18,6 +20,22 @@ export function bindMainEvents(ctx) {
     renderPlayerStatsPanel
   } = ctx;
 
+  const storyModeController = createStoryModeController({
+    getPlayerProfile: ctx.getPlayerProfile,
+    playerAccountUi,
+    showPopup
+  });
+
+  window.gbsRefreshStoryModeButton = () => {
+    storyModeController.updateStartButtonVisibility();
+  };
+
+  document.getElementById("startStoryModeBtn")?.addEventListener("click", () => {
+    storyModeController.start();
+  });
+
+  storyModeController.updateStartButtonVisibility();
+
   startOnline1v1Btn?.addEventListener("click", () => {
     ctx.setBattleMode("online1v1");
     showScreen("onlineRoom");
@@ -33,7 +51,6 @@ export function bindMainEvents(ctx) {
       online2v2RoomController.createOnline2v2Room();
       return;
     }
-
     onlineRoomController.createOnlineRoom();
   });
 
@@ -42,7 +59,6 @@ export function bindMainEvents(ctx) {
       online2v2RoomController.joinOnline2v2Room();
       return;
     }
-
     onlineRoomController.joinOnlineRoom();
   });
 
