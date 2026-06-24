@@ -116,8 +116,9 @@ ID：${profile.id}<br>
     statsBtn.style.display = "";
 
     ensureSettingsButton();
-    ensureAccountListButton();
-    refreshStoryModeButton();
+ensureAccountListButton();
+ensureStoryModeButton();
+refreshStoryModeButton();
   }
 
   function ensureSettingsButton() {
@@ -161,7 +162,38 @@ ID：${profile.id}<br>
 
     return btn;
   }
+function ensureStoryModeButton() {
+  const profile = ctx.getPlayerProfile();
+  const role = profile?.role;
 
+  let btn = document.getElementById("playerStoryModeBtn");
+
+  if (!profile || (role !== "debug" && role !== "Ciel_debugger")) {
+    if (btn) btn.remove();
+    return null;
+
+    const storyBtn = document.getElementById("playerStoryModeBtn");
+if (storyBtn) storyBtn.remove();
+  }
+
+  const summary = document.getElementById("playerCardSummary");
+  if (!summary) return null;
+
+  if (!btn) {
+    btn = document.createElement("button");
+    btn.id = "playerStoryModeBtn";
+    btn.type = "button";
+    btn.textContent = "ストーリーモード";
+    btn.addEventListener("click", () => {
+      window.gbsStartStoryMode?.();
+    });
+
+    summary.insertAdjacentElement("afterend", btn);
+  }
+
+  btn.style.display = "";
+  return btn;
+}
   function closeSettingsPanel() {
     const panel = document.getElementById("playerSettingsPanel");
     if (panel) panel.remove();
