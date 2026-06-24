@@ -13,7 +13,6 @@ export function bindMainEvents(ctx) {
     playerAccountUi,
     showScreen,
     showTitle,
-    showPopup,
     simulateSlot,
     endTurn,
     toggleTestMode,
@@ -23,11 +22,15 @@ export function bindMainEvents(ctx) {
   const storyModeController = createStoryModeController({
     getPlayerProfile: ctx.getPlayerProfile,
     playerAccountUi,
-    showPopup
+    showPopup: ctx.showPopup
   });
 
   window.gbsRefreshStoryModeButton = () => {
     storyModeController.updateStartButtonVisibility();
+  };
+
+  window.gbsStartStoryMode = () => {
+    storyModeController.start();
   };
 
   document.getElementById("startStoryModeBtn")?.addEventListener("click", () => {
