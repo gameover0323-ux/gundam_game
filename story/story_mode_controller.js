@@ -11,11 +11,16 @@ export function createStoryModeController(ctx) {
   }
 
   function updateStartButtonVisibility() {
-    const btn = document.getElementById("startStoryModeBtn");
-    if (!btn) return;
-    btn.style.display = canUseStoryMode() ? "" : "none";
-  }
+  const btn = document.getElementById("startStoryModeBtn");
+  if (!btn) return;
 
+  const profile = ctx.getPlayerProfile?.();
+  console.log("[StoryMode] profile =", profile);
+  console.log("[StoryMode] role =", profile?.role);
+  console.log("[StoryMode] allowed =", canUseStoryMode());
+
+  btn.style.display = canUseStoryMode() ? "" : "none";
+}
   function clearStoryScreen() {
     const old = document.getElementById("storyModeRoot");
     if (old) old.remove();
