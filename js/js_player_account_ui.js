@@ -38,11 +38,11 @@ export function createPlayerAccountUi(ctx) {
     return lines.join("<br>");
   }
 
-function getUnitTrophyText(profile, unitId) {
-  const trophies = profile?.equippedTrophies?.byUnit?.[unitId] || [];
-  if (!trophies.length) return "";
-  return trophies.join("");
-}
+  function getUnitTrophyText(profile, unitId) {
+    const trophies = profile?.equippedTrophies?.byUnit?.[unitId] || [];
+    if (!trophies.length) return "";
+    return trophies.join("");
+  }
 
   function getFavoriteUnitIds(profile) {
     if (Array.isArray(profile?.favoriteUnitIds)) {
@@ -54,6 +54,10 @@ function getUnitTrophyText(profile, unitId) {
     }
 
     return [];
+  }
+
+  function refreshStoryModeButton() {
+    window.gbsRefreshStoryModeButton?.();
   }
 
   function updatePlayerCardUi() {
@@ -80,6 +84,7 @@ function getUnitTrophyText(profile, unitId) {
       const accountListBtn = document.getElementById("accountListBtn");
       if (accountListBtn) accountListBtn.style.display = "none";
 
+      refreshStoryModeButton();
       return;
     }
 
@@ -112,6 +117,7 @@ ID：${profile.id}<br>
 
     ensureSettingsButton();
     ensureAccountListButton();
+    refreshStoryModeButton();
   }
 
   function ensureSettingsButton() {
@@ -290,6 +296,7 @@ ID：${profile.id}<br>
     ctx.syncExtraUnlockedUnitsFromProfile();
     updatePlayerCardUi();
     ctx.updateDebugButtonVisibility();
+    refreshStoryModeButton();
     ctx.ensureRandomMatchUi();
     ctx.listenRandomMatchAnnouncementsOnceReady();
     ctx.showPopup("ログインしました");
@@ -318,6 +325,7 @@ ID：${profile.id}<br>
     ctx.syncExtraUnlockedUnitsFromProfile();
     updatePlayerCardUi();
     ctx.updateDebugButtonVisibility();
+    refreshStoryModeButton();
     ctx.ensureRandomMatchUi();
     ctx.listenRandomMatchAnnouncementsOnceReady();
     ctx.showPopup("プレイヤー登録しました");
@@ -330,6 +338,7 @@ ID：${profile.id}<br>
     closeSettingsPanel();
     updatePlayerCardUi();
     ctx.updateDebugButtonVisibility();
+    refreshStoryModeButton();
     ctx.showPopup("ログアウトしました");
   }
 
