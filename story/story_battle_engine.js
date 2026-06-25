@@ -678,41 +678,46 @@ export function createStoryBattleEngine() {
   }
 
   function bind2v2Buttons() {
-    document.getElementById("storyTeamSlotBtn")?.addEventListener("click", () => {
-      if (!isAllowed("teamSlot")) return;
-      executeTeamSlot(["unit1", "unit2"]);
-      emit("teamSlot");
-    });
+  document.getElementById("storyTeamSlotBtn")?.addEventListener("click", () => {
+    if (!isAllowed("teamSlot")) return;
+    executeTeamSlot(["unit1", "unit2"]);
+    emit("teamSlot");
+  });
 
-    document.getElementById("storyUnit1SlotBtn")?.addEventListener("click", () => {
-      if (!isAllowed("teamSingle")) return;
-      executeTeamSlot(["unit1"]);
-      emit("teamSingle1");
-    });
+  document.getElementById("storyUnit1SlotBtn")?.addEventListener("click", () => {
+    if (!isAllowed("teamSingle")) return;
+    executeTeamSlot(["unit1"]);
+    emit("teamSingle1");
+  });
 
-    document.getElementById("storyUnit2SlotBtn")?.addEventListener("click", () => {
-      if (!isAllowed("teamSingle")) return;
-      executeTeamSlot(["unit2"]);
-      emit("teamSingle2");
-    });
+  document.getElementById("storyUnit2SlotBtn")?.addEventListener("click", () => {
+    if (!isAllowed("teamSingle")) return;
+    executeTeamSlot(["unit2"]);
+    emit("teamSingle2");
+  });
 
-    document.getElementById("storySimulateBtn")?.addEventListener("click", () => {
-      if (!isAllowed("sim")) return;
-      simulateTeamSlot();
-    });
+  document.getElementById("storySimulateBtn")?.addEventListener("click", () => {
+    if (!isAllowed("sim")) return;
+    simulateTeamSlot();
+  });
 
-    document.getElementById("storyEndTurnBtn")?.addEventListener("click", () => {
-      if (!isAllowed("end")) return;
+  document.getElementById("storyEndTurnBtn")?.addEventListener("click", () => {
+    if (isAllowed("endOnly")) {
+      endOnly2v2();
+      return;
+    }
 
-      if (pendingAttack) {
-        setLog("先に表示中の攻撃を処理してください。");
-        return;
-      }
+    if (!isAllowed("end")) return;
 
-      executeTeamEnemyTurn();
-      emit("teamEnemyTurn");
-    });
-  }
+    if (pendingAttack) {
+      setLog("先に表示中の攻撃を処理してください。");
+      return;
+    }
+
+    executeTeamEnemyTurn();
+    emit("teamEnemyTurn");
+  });
+}
 
   function simulateSlot() {
     const n = randomSlotNumber();
@@ -1106,6 +1111,15 @@ export function createStoryBattleEngine() {
     emit("endOnly");
   }
 
+function endOnly2v2() {
+  pendingAttack = null;
+  actionCount = 1;
+  turnCount += 1;
+  setLog("PLAYER A のターンです。");
+  redraw2v2();
+  emit("endOnly");
+}
+  
   function renderStoryAttackChoicesUI({
     currentAttack,
     battleNotice,
