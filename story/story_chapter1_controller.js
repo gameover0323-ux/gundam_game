@@ -20,31 +20,16 @@ export function createStoryChapter1Controller(ctx) {
   }
 
   function clearHighlight() {
-    if (currentHighlight) {
-      document.querySelectorAll(currentHighlight).forEach(el => {
-        el.style.color = "";
-        el.style.borderColor = "";
-        el.style.boxShadow = "";
-      });
-    }
+  battleEngine.clearHighlight();
+  currentHighlight = null;
+}
 
-    battleEngine.clearHighlight();
-    currentHighlight = null;
-  }
-
-  function setHighlight(selector) {
-    clearHighlight();
-    if (!selector) return;
-
-    currentHighlight = selector;
-    battleEngine.setHighlight(selector);
-
-    document.querySelectorAll(selector).forEach(el => {
-      el.style.color = "red";
-      el.style.borderColor = "red";
-      el.style.boxShadow = "0 0 10px red";
-    });
-  }
+function setHighlight(selector) {
+  clearHighlight();
+  if (!selector) return;
+  currentHighlight = selector;
+  battleEngine.setHighlight(selector);
+}
 
   function renderMovableTalkBox() {
     document.getElementById("storyTutorialTalkBox")?.remove();
@@ -405,14 +390,7 @@ export function createStoryChapter1Controller(ctx) {
       { text: "AI「いい感じです！2on2ならではの技ですね！ピンチの時はアリかもしれません！」" },
 
       {
-        highlight: "#storyEndTurnBtn",
-        text: "AI「ターン終了を押して、反撃です！」",
-        waitAction: true,
-        setup() {
-          battleEngine.allow(["end"]);
-          battleEngine.on("teamEnemyTurn", () => advanceTutorial());
-        }
-      },
+        { highlight: "#storyEndTurnBtn", text: "AI「ターン終了を押して、反撃です！」", waitAction: true, setup() { battleEngine.allow(["endOnly"]); battleEngine.on("endOnly", () => advanceTutorial()); } },
 
       {
         highlight: ".teamModeBtn",
