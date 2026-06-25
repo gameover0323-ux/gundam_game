@@ -416,21 +416,59 @@ import {
 } from "./js_unit_rules_cpu_zudah.js";
 
 import {
-  getDaisyDerivedState,
-  canUseDaisySpecial,
-  executeDaisySpecial,
-  onDaisyTurnEnd,
-  onDaisyBeforeSlot,
-  onDaisyAfterSlotResolved,
-  onDaisyActionResolved,
-  modifyDaisyTakenDamage,
-  modifyDaisyEvadeAttempt,
-  onDaisyResolveChoice
+
+ getDaisyDerivedState,
+
+ canUseDaisySpecial,
+
+ executeDaisySpecial,
+
+ onDaisyTurnEnd,
+
+ onDaisyBeforeSlot,
+
+ onDaisyAfterSlotResolved,
+
+ onDaisyActionResolved,
+
+ modifyDaisyTakenDamage,
+
+ modifyDaisyEvadeAttempt,
+
+ onDaisyResolveChoice
+
 } from "./js_unit_rules_daisy_ogre_ciel.js";
+
+import {
+  getProtoCreateDerivedState,
+  executeProtoCreateSpecial,
+  onProtoCreateTurnEnd,
+  onProtoCreateBeforeSlot,
+  onProtoCreateEnemyBeforeSlot,
+  onProtoCreateAfterSlotResolved,
+  onProtoCreateActionResolved,
+  onProtoCreateDamaged,
+  modifyProtoCreateTakenDamage,
+  modifyProtoCreateEvadeAttempt
+} from "./js_unit_rules_proto_create_gundam.js";
 
 
 export const unitRulesMap = {
-  gundam_mc: {
+
+ proto_create_gundam: {
+  getDerivedState: getProtoCreateDerivedState,
+  executeSpecial: executeProtoCreateSpecial,
+  onTurnEnd: onProtoCreateTurnEnd,
+  onBeforeSlot: onProtoCreateBeforeSlot,
+  onEnemyBeforeSlot: onProtoCreateEnemyBeforeSlot,
+  onAfterSlotResolved: onProtoCreateAfterSlotResolved,
+  onActionResolved: onProtoCreateActionResolved,
+  onDamaged: onProtoCreateDamaged,
+  modifyTakenDamage: modifyProtoCreateTakenDamage,
+  modifyEvadeAttempt: modifyProtoCreateEvadeAttempt
+ },
+
+ gundam_mc: {
     getDerivedState: getGundamMcDerivedState,
     executeSpecial: executeGundamMcSpecial,
     onTurnEnd: onGundamMcTurnEnd,
