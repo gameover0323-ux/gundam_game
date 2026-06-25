@@ -390,9 +390,14 @@ function setHighlight(selector) {
       { text: "AI「いい感じです！2on2ならではの技ですね！ピンチの時はアリかもしれません！」" },
 
       {
-        { highlight: "#storyEndTurnBtn", text: "AI「ターン終了を押して、反撃です！」", waitAction: true, setup() { battleEngine.allow(["endOnly"]); battleEngine.on("endOnly", () => advanceTutorial()); 
- } 
-      },
+  highlight: "#storyEndTurnBtn",
+  text: "AI「ターン終了を押して、反撃です！」",
+  waitAction: true,
+  setup() {
+    battleEngine.allow(["endOnly"]);
+    battleEngine.on("endOnly", () => advanceTutorial());
+  }
+},
 
       {
         highlight: ".teamModeBtn",
