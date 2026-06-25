@@ -142,10 +142,12 @@ export function createStoryChapter1Controller(ctx) {
 
     document.getElementById("storySimpleDialogueNextBtn").addEventListener("click", () => {
       currentLineIndex += 1;
+
       if (currentLineIndex >= currentLines.length) {
         onComplete?.();
         return;
       }
+
       show();
     });
 
@@ -199,22 +201,22 @@ export function createStoryChapter1Controller(ctx) {
       { text: "AI「僭越ながら、チュートリアルをさせていただきます！長くなりますよ！」" },
       { text: "AI「私のセリフは、掴んで動かせるので、適宜ちょうどいいところに動かしながら聞いてくださいね！」" },
       { highlight: "#storyTutorialSkipBtn", text: "AI「ドパガキはこの、スキップボタンを押してチュートリアル強制終了出来ます！まぁクソ長いですがあとから見返せるのでいいかもしれませんが！」" },
-      { highlight: "#storyMockPlayerA", text: "AI「見てください！これがあなたの機体のステータスです！カスタマイズしたステータスがそのまま反映されます！」" },
-      { highlight: "#storyMockPlayerB", text: "AI「こっちが敵です！今回はよわよわトレーニングマシンですが、敵のステータスも丸見えなので、戦闘の際はじっくり解析しましょう！」" },
-      { highlight: ".story-hp", text: "AI「ここがHPです！単純に0になった方が負けです！」" },
-      { highlight: ".story-evade", text: "AI「ここが回避ストックです！左が所持数、右が最大値です！最大値以上は持てませんが、超過分はターン終了までは切り捨てられません！」" },
+      { highlight: "#storyPlayerA", text: "AI「見てください！これがあなたの機体のステータスです！カスタマイズしたステータスがそのまま反映されます！」" },
+      { highlight: "#storyPlayerB", text: "AI「こっちが敵です！今回はよわよわトレーニングマシンですが、敵のステータスも丸見えなので、戦闘の際はじっくり解析しましょう！」" },
+      { highlight: "#storyBattleRoot .player div", text: "AI「ここがHPです！単純に0になった方が負けです！」" },
+      { highlight: ".criticalBoostBtn", text: "AI「ここが回避ストックです！左が所持数、右が最大値です！最大値以上は持てませんが、超過分はターン終了までは切り捨てられません！」" },
       { text: "AI「ただし、ストックが多い形態から少ない形態になった時は、最大値が保持されます！その場合、使用とともに減少します！」" },
-      { highlight: ".story-energy", text: "AI「これはクリエイトガンダムのみの仕様ですが、エネルギーがあります！ここが無くなるとエネルギー使用系の行動がなくなりますが、逆に上手く使うことで強く立ち回れますよ！」" },
-      { highlight: ".story-slot-area", text: "AI「ここがスロット行動です！名称をタップすると武装の説明が見られますよ！敵機体のも見れるので、あらかじめ分析しておくとよしです！」" },
-      { highlight: ".story-special-area", text: "AI「ここが特殊行動と言います！スロットに左右されない任意選択の行動です！」" },
+      { text: "AI「これはクリエイトガンダムのみの仕様ですが、エネルギーがあります！ここが無くなるとエネルギー使用系の行動がなくなりますが、逆に上手く使うことで強く立ち回れますよ！」" },
+      { highlight: ".slotArea", text: "AI「ここがスロット行動です！名称をタップすると武装の説明が見られますよ！敵機体のも見れるので、あらかじめ分析しておくとよしです！」" },
+      { highlight: ".specialArea", text: "AI「ここが特殊行動と言います！スロットに左右されない任意選択の行動です！」" },
       { text: "AI「しっかり説明を読んで、ここぞと言う時に効果を発揮しましょう！」" },
       { text: "AI「リロードは、弾数制の武器を使う際に重要になります！エネルギーチャージ、エネルギー調整はエネルギー制の武器を使用する際に重要になります！」" },
-      { highlight: "#storyMockSlotBtn,.story-action-counter", text: "AI「ここがスロット行動のボタンです！画面中央の行動の数、使えます！このゲームの基礎となる行動です！」" },
-      { highlight: "#storyMockSimBtn", text: "AI「このシミュレーションボタンは、押すと今出るはずだった行動が出ます！運試しや、運ずらしに使ってください！」" },
-      { highlight: "#storyMockEndBtn", text: "AI「このターン終了ボタンを押すと、相手のターンになります！わざと何もせずターンを飛ばすこともできますが、間違えて押しちゃった！ということがないよう、注意してくださいね！」" },
+      { highlight: "#storyExecuteSlotBtn,.story-action-counter", text: "AI「ここがスロット行動のボタンです！画面中央の行動の数、使えます！このゲームの基礎となる行動です！」" },
+      { highlight: "#storySimulateBtn", text: "AI「このシミュレーションボタンは、押すと今出るはずだった行動が出ます！運試しや、運ずらしに使ってください！」" },
+      { highlight: "#storyEndTurnBtn", text: "AI「このターン終了ボタンを押すと、相手のターンになります！わざと何もせずターンを飛ばすこともできますが、間違えて押しちゃった！ということがないよう、注意してくださいね！」" },
 
       {
-        highlight: "#storyMockSlotBtn",
+        highlight: "#storyExecuteSlotBtn",
         text: "AI「まずはスロット行動を押して、どんな感じか試してみましょう！」",
         waitAction: true,
         setup() {
@@ -224,11 +226,11 @@ export function createStoryChapter1Controller(ctx) {
         }
       },
       { text: "AI「結果が出ましたね！行動は4です！0ダメージですが、これは相手が回避をしたんですね！」" },
-      { highlight: "#storyMockPlayerB .story-evade", text: "AI「画面上部、相手回避を見てください！0/1となってますよね。これは、1回回避を消費したということです！」" },
+      { highlight: "#storyPlayerB .criticalBoostBtn", text: "AI「画面上部、相手回避を見てください！0/1となってますよね。これは、1回回避を消費したということです！」" },
       { text: "AI「このように、攻撃回数分回避を消費すると、攻撃を無効化出来るわけですね！」" },
 
       {
-        highlight: "#storyMockEndBtn",
+        highlight: "#storyEndTurnBtn",
         text: "AI「ターン終了ボタンを押してみましょう！相手からの行動が来ますよ！」",
         waitAction: true,
         setup() {
@@ -240,7 +242,7 @@ export function createStoryChapter1Controller(ctx) {
       { text: "AI「来ましたね！5ダメージの攻撃です！[格]は格闘属性です！まぁ今はあんま関係ないですが！」" },
 
       {
-        highlight: "#storyHitBtn",
+        highlight: ".hitBtn",
         text: "AI「とりあえず、今は被弾しておきましょう！被弾ボタンをタップしてください！」",
         waitAction: true,
         setup() {
@@ -248,10 +250,10 @@ export function createStoryChapter1Controller(ctx) {
           battleEngine.on("hit", () => advanceTutorial());
         }
       },
-      { highlight: "#storyMockPlayerA .story-hp", text: "AI「出ました！自分のHPを見てください！5ダメージ受けてますよね！こんなもんじゃ何発食らってもプロトクリエイトガンダムは堕ちません！」" },
+      { highlight: "#storyPlayerA", text: "AI「出ました！自分のHPを見てください！5ダメージ受けてますよね！こんなもんじゃ何発食らってもプロトクリエイトガンダムは堕ちません！」" },
 
       {
-        highlight: "#storyMockEndBtn",
+        highlight: "#storyEndTurnBtn",
         text: "AI「実戦では、体力と相談して被弾しましょう！それではターン終了ボタンを押しましょうか！」",
         waitAction: true,
         setup() {
@@ -261,7 +263,7 @@ export function createStoryChapter1Controller(ctx) {
       },
 
       {
-        highlight: "#storyMockSlotBtn",
+        highlight: "#storyExecuteSlotBtn",
         text: "AI「では、スロット行動をタップしてください！」",
         waitAction: true,
         setup() {
@@ -270,10 +272,10 @@ export function createStoryChapter1Controller(ctx) {
           battleEngine.on("playerSlot", () => advanceTutorial());
         }
       },
-      { highlight: "#storyMockPlayerA .story-evade", text: "AI「回避が出ましたね！自機の回避数を見てください！所持数がオーバーしてますよね！」" },
+      { highlight: "#storyPlayerA .criticalBoostBtn", text: "AI「回避が出ましたね！自機の回避数を見てください！所持数がオーバーしてますよね！」" },
 
       {
-        highlight: "#storyCriticalBtn",
+        highlight: "#storyPlayerA .criticalBoostBtn",
         text: "AI「このままターンを終了すると、端数分が無くなってしまいます！勿体ないのでこの会心ボタンを押してください！」",
         waitAction: true,
         setup() {
@@ -284,7 +286,7 @@ export function createStoryChapter1Controller(ctx) {
       { text: "AI「会心率が5%→9%になりましたね！回避1消費で、4%会心率が上がります！会心が出ると、ダメージが2倍になるんですよ！」" },
 
       {
-        highlight: "#storyMockEndBtn",
+        highlight: "#storyEndTurnBtn",
         text: "AI「見事、回避が無駄にならずに済みました！それでは、ターン終了を押しましょう！」",
         waitAction: true,
         setup() {
@@ -295,7 +297,7 @@ export function createStoryChapter1Controller(ctx) {
       },
 
       {
-        highlight: "#storyEvadeBtn",
+        highlight: ".evadeBtn",
         text: "AI「出ました！今度は5ダメージの[射]、つまり射撃属性ですね！今度は回避を選んでみましょうか！」",
         waitAction: true,
         setup() {
@@ -303,11 +305,11 @@ export function createStoryChapter1Controller(ctx) {
           battleEngine.on("evade", () => advanceTutorial());
         }
       },
-      { highlight: "#storyMockEndBtn", text: "AI「いいですね！ダメージが無効化できましたよ！勿体ない？いえいえ、今は練習ですからね！」" },
+      { highlight: "#storyEndTurnBtn", text: "AI「いいですね！ダメージが無効化できましたよ！勿体ない？いえいえ、今は練習ですからね！」" },
       { text: "AI「他にも[不]は軽減不可、つまりダメージを少なくできない攻撃、[必]は回避ができない攻撃です！何となく覚えておいてくださいね！では、ターン終了を押しましょう！」" },
 
       {
-        highlight: "#storyMockEndBtn",
+        highlight: "#storyEndTurnBtn",
         text: "AI「次は2on2ルールに進みますが、とりあえず飽きるまで1on1を触ってて大丈夫ですよ！次に進みたくなったら「次へ」ボタンをタップしてください！」",
         waitAction: true,
         setup() {
@@ -353,8 +355,8 @@ export function createStoryChapter1Controller(ctx) {
   function createTwoOnTwoSteps() {
     return [
       { text: "AI「よっこらしょ！2on2の場を精製しておきました！どうです？4機のステータスが見えますよね！壮観です！」" },
-      { highlight: ".story-status-switch-btn", text: "AI「このボタンはステータス表示のみを切り替えるボタンです！相手のものも押せるので、適宜押して見たい時に能力を見ましょう！」" },
-      { highlight: ".story-focus-btn", text: "AI「ここはフォーカスといって、現在プレイヤー機体で赤くなっているほうがフォーカスです！つまり、狙われる機体です！」" },
+      { highlight: ".switchUnitBtn", text: "AI「このボタンはステータス表示のみを切り替えるボタンです！相手のものも押せるので、適宜押して見たい時に能力を見ましょう！」" },
+      { highlight: ".focusUnitBtn", text: "AI「ここはフォーカスといって、現在プレイヤー機体で赤くなっているほうがフォーカスです！つまり、狙われる機体です！」" },
       { text: "AI「狙われてもいい方をフォーカス機体にしておくのが基本戦術です！」" },
 
       {
@@ -370,7 +372,7 @@ export function createStoryChapter1Controller(ctx) {
       { highlight: "#storyUnit1SlotBtn,#storyUnit2SlotBtn", text: "AI「単独で行動させたい時は、それぞれの単独行動を選んでみてくださいね！」" },
 
       {
-        highlight: "#storyMockEndBtn",
+        highlight: "#storyEndTurnBtn",
         text: "AI「それでは次のターンに行きましょう！相手の行動が来ますよ！」",
         waitAction: true,
         setup() {
@@ -380,7 +382,7 @@ export function createStoryChapter1Controller(ctx) {
       },
 
       {
-        highlight: "#storyEvadeBtn",
+        highlight: ".evadeBtn",
         text: "AI「出たー！来ましたね！では私の言う通りに処理してみましょう！上の攻撃は回避！」",
         waitAction: true,
         setup() {
@@ -392,7 +394,7 @@ export function createStoryChapter1Controller(ctx) {
       { text: "AI「回避できましたね！残った方は必中属性でした。回避できません。そこで便利な機能があります。」" },
 
       {
-        highlight: "#storyCoverBtn",
+        highlight: ".supportDefenseBtn",
         text: "AI「援護防御です！これは、フォーカス機体の相方、つまりパートナー機体の回避を1消費して、このダメージを半分にしてパートナーが肩代わりするコマンドです！押してみましょう！」",
         waitAction: true,
         setup() {
@@ -403,7 +405,7 @@ export function createStoryChapter1Controller(ctx) {
       { text: "AI「いい感じです！2on2ならではの技ですね！ピンチの時はアリかもしれません！」" },
 
       {
-        highlight: "#storyMockEndBtn",
+        highlight: "#storyEndTurnBtn",
         text: "AI「ターン終了を押して、反撃です！」",
         waitAction: true,
         setup() {
@@ -413,7 +415,7 @@ export function createStoryChapter1Controller(ctx) {
       },
 
       {
-        highlight: "#storyTeamStyleBtn",
+        highlight: ".teamModeBtn",
         text: "AI「画面上部、分散型って書いてありますよね。実は戦型がふたつあるんです。ここを押してみましょう！」",
         waitAction: true,
         setup() {
@@ -426,7 +428,7 @@ export function createStoryChapter1Controller(ctx) {
       { text: "AI「デメリットとしては、1番機が被弾する扱いになる、援護防御は使えない、[挑発]システムがつかえないというところですね。」" },
 
       {
-        highlight: "#storyTeamStyleBtn",
+        highlight: ".teamModeBtn",
         text: "AI「統合型は後で試してもらうとして、[挑発]、行きましょう！分散型に戻してください！」",
         waitAction: true,
         setup() {
@@ -436,7 +438,7 @@ export function createStoryChapter1Controller(ctx) {
       },
 
       {
-        highlight: "#storyTauntBtn",
+        highlight: ".tauntSystemBtn",
         text: "AI「挑発が使えます！早速押してみましょう！」",
         waitAction: true,
         setup() {
@@ -459,7 +461,7 @@ export function createStoryChapter1Controller(ctx) {
       { text: "AI「統合型の場合も1番機が挑発されていたとしてもダメです！分散型で、相手にその機体にフォーカスさせることを強いる行動ですね！」" },
 
       {
-        highlight: "#storyDuelBtn",
+        highlight: ".tauntSystemBtn",
         text: "AI「挑発ボタンが決戦になってますよね。これを押してみましょう！」",
         waitAction: true,
         setup() {
@@ -480,22 +482,40 @@ export function createStoryChapter1Controller(ctx) {
       { text: "AI「ピンク色になりましたね！自分の選んだ決戦機体と、相手が選んでいるフォーカス機体が決戦状態となり、ピンク色の機体同士で2倍のダメージが入るようになります！効果は5ターン！」" },
 
       {
-        highlight: "#storyBreakthroughBtn",
+        highlight: "#storyBattleExtraPanel",
         text: "AI「ハイリスクハイリターン！ここで押せるのが「打破」です！打破ボタンを押してみましょう！」",
         waitAction: true,
         setup() {
+          battleEngine.setExtraPanel(`<button id="storyBreakthroughBtn">打破</button>`);
+          document.getElementById("storyBreakthroughBtn").addEventListener("click", () => {
+            battleEngine.allow(["breakthrough"]);
+            battleEngine.on("breakthrough", () => advanceTutorial());
+          });
           battleEngine.allow(["breakthrough"]);
-          battleEngine.on("breakthrough", () => advanceTutorial());
+          document.getElementById("storyBreakthroughBtn").addEventListener("click", () => {
+            battleEngine.setExtraPanel(`
+              <div id="storyBreakthroughPanel">
+                ${Array.from({ length: 11 }, (_, i) => `<button class="story-bet-btn" data-bet="${i}">${i}</button>`).join("")}
+                <div id="storyBreakthroughResult"></div>
+              </div>
+            `);
+            battleEngine.on("breakthroughBet", () => advanceTutorial());
+            document.querySelectorAll(".story-bet-btn").forEach(btn => {
+              btn.addEventListener("click", () => {
+                const bet = Number(btn.dataset.bet || 0);
+                document.getElementById("storyBreakthroughResult").innerHTML =
+                  `<p>${bet}ターン分のシミュレーションを行いました。</p><p class="story-breakthrough-bonus">ボーナス行動権 +5</p>`;
+                advanceTutorial();
+              });
+            });
+          });
         }
       },
 
       {
         highlight: ".story-bet-btn[data-bet='10']",
         text: "AI「画面下部に、0～10のボタンが出ましたね！10を選んでみましょう！」",
-        waitAction: true,
-        setup() {
-          battleEngine.on("breakthroughBet", () => advanceTutorial());
-        }
+        waitAction: true
       },
 
       { text: "AI「ぶわーっと出ましたね！これが打破！10ターン分のシミュレーションを行い、与えるダメージ量が多い方の勝ちというモードになります！」" },
@@ -504,6 +524,49 @@ export function createStoryChapter1Controller(ctx) {
       { text: "AI「以上が挑発→決戦→打破の流れです！打破に勝利すれば最高の反撃を与えられます！」" },
       { text: "AI「長らく説明を聞いてもらってありがとうございます！それでは気が済むまでのんびりシミュレーション戦闘をお楽しみください！」", finish: true }
     ];
+  }
+
+  function showTutorialStep() {
+    battleEngine.clearHandlers();
+    battleEngine.allow([]);
+
+    const step = tutorialSteps[tutorialIndex];
+    if (!step) return;
+
+    if (step.finish) {
+      const nextBtn = document.getElementById("storyTutorialNextTalkBtn");
+      if (nextBtn) nextBtn.textContent = "終了";
+    }
+
+    setHighlight(step.highlight);
+
+    const talk = document.getElementById("storyTutorialTalkText");
+    if (talk) talk.textContent = step.text || "";
+
+    step.setup?.();
+
+    const nextBtn = document.getElementById("storyTutorialNextTalkBtn");
+    if (nextBtn) nextBtn.style.display = step.waitAction ? "none" : "";
+  }
+
+  function advanceTutorial() {
+    const step = tutorialSteps[tutorialIndex];
+
+    if (step?.finish) {
+      renderFreeTrainingButtons();
+      return;
+    }
+
+    tutorialIndex += 1;
+    showTutorialStep();
+  }
+
+  function startTwoOnTwoTutorial() {
+    battleEngine.renderTwoOnTwoTraining({ root: getRoot(), free: false });
+
+    tutorialSteps = createTwoOnTwoSteps();
+    tutorialIndex = 0;
+    showTutorialStep();
   }
 
   function renderFreeTrainingButtons() {
