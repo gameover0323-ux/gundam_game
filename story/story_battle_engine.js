@@ -1,4 +1,8 @@
-import { renderPlayerState, renderPlayerState2v2 } from "../js/js_ui.js";
+import {
+  renderPlayerState,
+  renderPlayerState2v2
+} from "../js/js_ui.js";
+
 import { getStoryCreateUnit } from "./story_units.js";
 import { training_machine } from "../js/js_units_training_machine.js";
 
@@ -56,6 +60,7 @@ function normalizeSpecials(rawSpecials) {
 function createBattleState(unit, options = {}) {
   const form = getForm(unit);
   const normalizedSpecials = normalizeSpecials(form.specials);
+
   const hp = Number(form.hp || 0);
   const evadeMax = Number(form.evadeMax || 0);
   const energyMax = Number(form.storyEnergyMax || 0);
@@ -65,22 +70,28 @@ function createBattleState(unit, options = {}) {
     unitId: unit.id,
     name: form.name || unit.name,
     formId: unit.defaultFormId || "normal",
+
     hp,
     maxHp: hp,
     storyInternalHp: hp,
     storyDisplayHp: form.displayHp || null,
+
     evade: evadeMax,
     evadeMax,
+
     rollableSlotOrder: Array.isArray(form.rollableSlotOrder)
       ? [...form.rollableSlotOrder]
       : Array.isArray(form.ownedSlotOrder)
         ? [...form.ownedSlotOrder]
         : [...SLOT_KEYS],
+
     slots: clone(form.slots || {}),
     specials: clone(normalizedSpecials.specials),
     specialOrder: [...normalizedSpecials.specialOrder],
+
     storyEnergy: energyMax,
     storyEnergyMax: energyMax,
+
     storyCriticalRate: Number(form.criticalRate ?? options.defaultCriticalRate ?? 5),
     statusList: []
   };
@@ -91,8 +102,8 @@ function createBattleState(unit, options = {}) {
 
 function refreshStoryStatus(state) {
   if (!state) return;
-  const status = [];
 
+  const status = [];
   if (Number(state.storyEnergyMax || 0) > 0) {
     status.push(`EN ${state.storyEnergy}/${state.storyEnergyMax}`);
   }
@@ -108,7 +119,7 @@ function makeAttackFromSlot(unit, slotNumber, slot) {
 
   return Array.from({ length: count }, (_, index) => ({
     damage: Number(effect.damage || 0),
-    type: effect.attackType || effect.typeTag || "shoot",
+    type: effect.attackType || "shoot",
     beam: effect.beam === true,
     ignoreReduction: effect.ignoreReduction === true,
     cannotEvade: effect.cannotEvade === true,
@@ -116,8 +127,14 @@ function makeAttackFromSlot(unit, slotNumber, slot) {
     sourceLabel: `${unit.name}の行動`,
     slotLabel: `${slotNumber}.${getSlotLabel(slot)}`,
     shotIndex: index + 1,
-    ownerUnit: unit
+    ownerUnitKey: null
   }));
+}
+
+function getSlotTotalDamage(slot) {
+  const effect = slot?.effect || {};
+  if (effect.type !== "attack") return 0;
+  return Number(effect.damage || 0) * Math.max(1, Number(effect.count || 1));
 }
 
 function applySimpleSlotEffect(unit, slotNumber, slot) {
@@ -142,12 +159,14 @@ function applySimpleSlotEffect(unit, slotNumber, slot) {
 
 export function createStoryBattleEngine() {
   let root = null;
+
   let playerA = null;
   let playerB = null;
+
   let teamA = null;
   let teamB = null;
-
   let twoVtwoPhase = "taunt";
+
   let pendingAttack = null;
   let actionCount = 1;
   let turnCount = 1;
@@ -187,8 +206,7 @@ export function createStoryBattleEngine() {
       ["storyUnit2SlotBtn", "teamSingle"],
       ["storySimulateBtn", "sim"],
       ["storyEndTurnBtn", "end"],
-      ["storyNext2v2Btn", "next2v2"],
-      ["storyBreakthroughBtn", "breakthrough"]
+      ["storyNext2v2Btn", "next2v2"]
     ];
 
     buttonMap.forEach(([id, action]) => {
@@ -276,19 +294,24 @@ export function createStoryBattleEngine() {
   function makePlayerHandlers() {
     return {
       getCriticalRate: state => Number(state.storyCriticalRate ?? 5),
+
       onCriticalBoost: state => {
         if (!isAllowed("critical")) return;
         spendCritical(state);
       },
+
       onSlotClick: slot => {
         setLog(getSlotDesc(slot));
       },
+
       onSpecialDesc: special => {
         setLog(special?.desc || "詳細なし");
       },
+
       onSpecialExec: () => {
         setLog("チュートリアル中は特殊行動の実行を制限しています。");
       },
+
       canExecuteSpecial: () => false
     };
   }
@@ -296,31 +319,39 @@ export function createStoryBattleEngine() {
   function make2v2Handlers(team, side) {
     return {
       getCriticalRate: state => Number(state?.storyCriticalRate ?? 5),
+
       onCriticalBoost: state => {
         if (!isAllowed("critical")) return;
         spendCritical(state);
       },
+
       onSlotClick: slot => {
         setLog(getSlotDesc(slot));
       },
+
       onSpecialDesc: special => {
         setLog(special?.desc || "詳細なし");
       },
+
       onSpecialExec: () => {
         setLog("チュートリアル中は特殊行動の実行を制限しています。");
       },
+
       canExecuteSpecial: () => false,
       canChangeFocus: pendingAttack === null,
+
       onSwitchActiveUnit: unitKey => {
         if (pendingAttack) return;
         team.activeUnitKey = unitKey;
         redraw2v2();
       },
+
       onSwitchFocusUnit: unitKey => {
         if (pendingAttack) return;
         team.focusUnitKey = unitKey;
         redraw2v2();
       },
+
       onToggleTeamMode: () => {
         if (!isAllowed("style")) return;
         if (pendingAttack) return;
@@ -328,11 +359,13 @@ export function createStoryBattleEngine() {
         redraw2v2();
         emit("style");
       },
+
       getTauntButtonLabel: () => {
         if (twoVtwoPhase === "duelReady" && side === "A") return "決戦";
-        if (twoVtwoPhase === "duel") return "打破";
+        if (twoVtwoPhase === "duel" && side === "A") return "打破";
         return "挑発";
       },
+
       onTauntSystemButton: () => {
         if (twoVtwoPhase === "duel") {
           if (!isAllowed("breakthrough")) return;
@@ -352,9 +385,11 @@ export function createStoryBattleEngine() {
         renderTauntChoice();
         emit("taunt");
       },
+
       isTauntTarget: unitKey => {
         return side === "B" && unitKey === "unit2" && twoVtwoPhase !== "taunt";
       },
+
       isDuelTarget: unitKey => {
         return side === "A" && unitKey === "unit1" && twoVtwoPhase === "duel";
       }
@@ -366,13 +401,9 @@ export function createStoryBattleEngine() {
     if (!root) return;
 
     const proto = getStoryCreateUnit("proto_create_gundam");
+
     playerA = createBattleState(proto, { defaultCriticalRate: 5 });
     playerB = createBattleState(training_machine, { defaultCriticalRate: free ? 5 : 0 });
-
-    if (playerB.storyDisplayHp) {
-      playerB.hp = playerB.storyDisplayHp;
-      playerB.maxHp = playerB.storyDisplayHp;
-    }
 
     pendingAttack = null;
     actionCount = 1;
@@ -383,26 +414,39 @@ export function createStoryBattleEngine() {
 
     root.style.justifyContent = "flex-start";
     root.style.overflowY = "auto";
+
     root.innerHTML = `
       ${styleBlock()}
       <div id="storyBattleRoot">
-        <h2>チャプター1 演習 1on1</h2>
-        <div class="story-battle-board">
-          <section id="storyPlayerA" class="story-player-area"></section>
-          <section id="storyPlayerB" class="story-player-area"></section>
+        <h2 id="storyTurnText">チャプター1 演習 1on1</h2>
+        <h3 id="storyCurrentPlayer">PLAYER A</h3>
+
+        <div class="container">
+          <div class="player" id="storyPlayerA"></div>
+
+          <div class="story-center-counters">
+            <div class="story-counter-box">
+              <div>TURN</div>
+              <div id="storyTurnCounterValue">1</div>
+            </div>
+            <div class="story-counter-box story-action-counter">
+              <div>行動</div>
+              <div id="storyActionCounterValue">1</div>
+            </div>
+          </div>
+
+          <div class="player" id="storyPlayerB"></div>
         </div>
-        <hr>
-        <div class="story-counter-row">
-          <div>TURN <span id="storyTurnCounterValue">1</span></div>
-          <div>行動 <span id="storyActionCounterValue">1</span></div>
-        </div>
-        <div id="storyAttackLog" class="story-attack-log">演習開始待機中</div>
-        <div class="story-command-row">
+
+        <div class="bottom">
+          <div id="storyAttackLog">演習開始待機中</div>
+
           <button id="storyExecuteSlotBtn">スロット行動実行</button>
           <button id="storySimulateBtn">シミュレーション</button>
           <button id="storyEndTurnBtn">ターン終了</button>
+
+          <div id="storyBattleExtraPanel"></div>
         </div>
-        <div id="storyBattleExtraPanel"></div>
       </div>
     `;
 
@@ -416,6 +460,7 @@ export function createStoryBattleEngine() {
     if (!root) return;
 
     const proto = getStoryCreateUnit("proto_create_gundam");
+
     const a1 = createBattleState(proto, { defaultCriticalRate: 5 });
     const a2 = createBattleState(proto, { defaultCriticalRate: 5 });
     const b1 = createBattleState(training_machine, { defaultCriticalRate: free ? 5 : 0 });
@@ -431,46 +476,71 @@ export function createStoryBattleEngine() {
 
     b2.name = "トレーニングマシン 2番機";
 
-    [b1, b2].forEach(unit => {
-      if (unit.storyDisplayHp) {
-        unit.hp = unit.storyDisplayHp;
-        unit.maxHp = unit.storyDisplayHp;
-      }
-    });
+    teamA = {
+      mode: "separate",
+      activeUnitKey: "unit1",
+      focusUnitKey: "unit1",
+      unit1: a1,
+      unit2: a2,
+      unified: {}
+    };
 
-    teamA = { mode: "separate", activeUnitKey: "unit1", focusUnitKey: "unit1", unit1: a1, unit2: a2, unified: {} };
-    teamB = { mode: "separate", activeUnitKey: "unit1", focusUnitKey: "unit1", unit1: b1, unit2: b2, unified: {} };
+    teamB = {
+      mode: "separate",
+      activeUnitKey: "unit1",
+      focusUnitKey: "unit1",
+      unit1: b1,
+      unit2: b2,
+      unified: {}
+    };
 
     twoVtwoPhase = "taunt";
     pendingAttack = null;
     actionCount = 1;
     turnCount = 1;
+    forcedPlayerSlots = [];
+    forcedEnemySlots = [];
     allowedActions = new Set();
 
     root.style.justifyContent = "flex-start";
     root.style.overflowY = "auto";
+
     root.innerHTML = `
       ${styleBlock()}
       <div id="storyBattleRoot">
-        <h2>チャプター1 演習 2on2</h2>
-        <div class="story-battle-board">
-          <section id="storyPlayerA" class="story-player-area"></section>
-          <section id="storyPlayerB" class="story-player-area"></section>
+        <h2 id="storyTurnText">チャプター1 演習 2on2</h2>
+        <h3 id="storyCurrentPlayer">PLAYER A</h3>
+
+        <div class="container">
+          <div class="player" id="storyPlayerA"></div>
+
+          <div class="story-center-counters">
+            <div class="story-counter-box">
+              <div>TURN</div>
+              <div id="storyTurnCounterValue">1</div>
+            </div>
+            <div class="story-counter-box story-action-counter">
+              <div>行動</div>
+              <div id="storyActionCounterValue">1</div>
+            </div>
+          </div>
+
+          <div class="player" id="storyPlayerB"></div>
         </div>
-        <hr>
-        <div class="story-counter-row">
-          <div>TURN <span id="storyTurnCounterValue">1</span></div>
-          <div>行動 <span id="storyActionCounterValue">1</span></div>
-        </div>
-        <div id="storyAttackLog" class="story-attack-log">2on2演習開始待機中</div>
-        <div class="story-command-row">
+
+        <div class="bottom">
+          <div id="storyAttackLog">2on2演習開始待機中</div>
+
           <button id="storyTeamSlotBtn">スロット行動実行</button>
-          <button id="storyUnit1SlotBtn">1単独行動</button>
-          <button id="storyUnit2SlotBtn">2単独行動</button>
+          <div id="storySingleTeamActionButtons">
+            <button id="storyUnit1SlotBtn">1単独行動</button>
+            <button id="storyUnit2SlotBtn">2単独行動</button>
+          </div>
           <button id="storySimulateBtn">シミュレーション</button>
           <button id="storyEndTurnBtn">ターン終了</button>
+
+          <div id="storyBattleExtraPanel"></div>
         </div>
-        <div id="storyBattleExtraPanel"></div>
       </div>
     `;
 
@@ -536,6 +606,7 @@ export function createStoryBattleEngine() {
         endOnly();
         return;
       }
+
       if (!isAllowed("end")) return;
       executeEnemyTurn();
     });
@@ -567,10 +638,12 @@ export function createStoryBattleEngine() {
 
     document.getElementById("storyEndTurnBtn")?.addEventListener("click", () => {
       if (!isAllowed("end")) return;
+
       if (pendingAttack) {
         setLog("先に表示中の攻撃を処理してください。");
         return;
       }
+
       executeTeamEnemyTurn();
       emit("teamEnemyTurn");
     });
@@ -584,14 +657,19 @@ export function createStoryBattleEngine() {
   }
 
   function simulateTeamSlot() {
-    const a1 = randomSlotNumber();
-    const a2 = randomSlotNumber();
+    const n1 = randomSlotNumber();
+    const n2 = randomSlotNumber();
+
+    const slot1 = teamA.unit1.slots?.[getSlotKeyFromNumber(n1)];
+    const slot2 = teamA.unit2.slots?.[getSlotKeyFromNumber(n2)];
+
     setLog(
       `PLAYER A の2on2スロット行動\n` +
-      `1機目：${teamA.unit1.name} ${a1}.${getSlotLabel(teamA.unit1.slots?.[getSlotKeyFromNumber(a1)])}\n` +
-      `2機目：${teamA.unit2.name} ${a2}.${getSlotLabel(teamA.unit2.slots?.[getSlotKeyFromNumber(a2)])}`
+      `1機目：${teamA.unit1.name} ${n1}.${getSlotLabel(slot1)} ` +
+      `2機目：${teamA.unit2.name} ${n2}.${getSlotLabel(slot2)}`
     );
-    emit("sim", { unit1: a1, unit2: a2 });
+
+    emit("sim", { unit1: n1, unit2: n2 });
   }
 
   function executePlayerSlot() {
@@ -626,7 +704,8 @@ export function createStoryBattleEngine() {
         result = "\n相手は回避しました。";
       }
 
-      playerB.storyInternalHp = Math.max(0, Number(playerB.storyInternalHp || 0) - damage);
+      playerB.hp = Math.max(0, Number(playerB.hp || 0) - damage);
+      playerB.storyInternalHp = playerB.hp;
       setLog(`PLAYER A の行動\n${slotNumber}.${getSlotLabel(slot)}\n${damage}ダメージ。${result}`);
     } else {
       setLog(`PLAYER A の行動\n${slotNumber}.${getSlotLabel(slot)}\n何も起きません。`);
@@ -645,9 +724,14 @@ export function createStoryBattleEngine() {
       return;
     }
 
+    if (actionCount <= 0) {
+      setLog("行動権がありません。ターン終了してください。");
+      return;
+    }
+
+    const defender = teamB[teamB.focusUnitKey || "unit1"];
     const lines = ["PLAYER A の2on2スロット行動"];
     let totalDamage = 0;
-    const defender = teamB[teamB.focusUnitKey || "unit1"];
 
     unitKeys.forEach(unitKey => {
       const unit = teamA[unitKey];
@@ -656,14 +740,14 @@ export function createStoryBattleEngine() {
       const slotNumber = nextPlayerSlot();
       const slot = unit.slots?.[getSlotKeyFromNumber(slotNumber)];
       const effect = slot?.effect || {};
+      const unitLabel = unitKey === "unit1" ? "1機目" : "2機目";
 
-      lines.push(`${unitKey === "unit1" ? "1機目" : "2機目"}：${unit.name} ${slotNumber}.${getSlotLabel(slot)}`);
+      lines.push(`${unitLabel}：${unit.name} ${slotNumber}.${getSlotLabel(slot)}`);
 
       if (effect.type === "attack") {
-        const attacks = makeAttackFromSlot(unit, slotNumber, slot);
-        const unitDamage = attacks.reduce((sum, attack) => sum + Number(attack.damage || 0), 0);
-        totalDamage += unitDamage;
-        lines.push(`${unit.name} ${slotNumber}.${getSlotLabel(slot)}\n→${unitDamage}ダメージ`);
+        const damage = getSlotTotalDamage(slot);
+        totalDamage += damage;
+        lines.push(`${unit.name} ${slotNumber}.${getSlotLabel(slot)}\n→${damage}ダメージ`);
       } else {
         lines.push(applySimpleSlotEffect(unit, slotNumber, slot));
       }
@@ -697,16 +781,16 @@ export function createStoryBattleEngine() {
     }
 
     const attacks = makeAttackFromSlot(playerB, slotNumber, slot);
+
     pendingAttack = {
       mode: "1v1",
-      attacks
+      attacks,
+      header: "トレーニングマシンの行動",
+      label: `${slotNumber}.${getSlotLabel(slot)}`,
+      canSupportDefense: false
     };
 
-    renderPendingAttackChoices({
-      currentActionHeader: "トレーニングマシンの行動",
-      currentActionLabel: `${slotNumber}.${getSlotLabel(slot)}`,
-      canSupportDefense: false
-    });
+    renderPendingAttackChoices();
 
     redraw1v1();
     emit("enemyTurn", { slotNumber, slot });
@@ -719,51 +803,41 @@ export function createStoryBattleEngine() {
     actionCount = 1;
     turnCount += 1;
 
-    const unitEntries = [
-      ["unit1", teamB.unit1],
-      ["unit2", teamB.unit2]
+    const n1 = nextEnemySlot();
+    const n2 = nextEnemySlot();
+
+    const slot1 = teamB.unit1.slots?.[getSlotKeyFromNumber(n1)];
+    const slot2 = teamB.unit2.slots?.[getSlotKeyFromNumber(n2)];
+
+    const attacks = [
+      ...makeAttackFromSlot(teamB.unit1, n1, slot1).map(attack => ({ ...attack, ownerUnitKey: "unit1" })),
+      ...makeAttackFromSlot(teamB.unit2, n2, slot2).map(attack => ({ ...attack, ownerUnitKey: "unit2" }))
     ];
-
-    const attacks = [];
-    const labels = [];
-
-    unitEntries.forEach(([unitKey, unit]) => {
-      const slotNumber = nextEnemySlot();
-      const slot = unit.slots?.[getSlotKeyFromNumber(slotNumber)];
-      const effect = slot?.effect || {};
-
-      labels.push(`${unitKey === "unit1" ? "1番機" : "2番機"}：${slotNumber}.${getSlotLabel(slot)}`);
-
-      if (effect.type === "attack") {
-        attacks.push(...makeAttackFromSlot(unit, slotNumber, slot));
-      } else {
-        setLog(applySimpleSlotEffect(unit, slotNumber, slot));
-      }
-    });
 
     pendingAttack = {
       mode: "2v2",
       attacks,
       focusTeam: teamA,
-      targetUnitKey: teamA.focusUnitKey || "unit1"
+      targetUnitKey: teamA.focusUnitKey || "unit1",
+      header: "PLAYER B の2on2スロット行動",
+      label: `1番機：${n1}.${getSlotLabel(slot1)} / 2番機：${n2}.${getSlotLabel(slot2)}`,
+      canSupportDefense: teamA.mode !== "unified"
     };
 
-    renderPendingAttackChoices({
-      currentActionHeader: "PLAYER B の2on2スロット行動",
-      currentActionLabel: labels.join(" / "),
-      canSupportDefense: teamA.mode !== "unified"
-    });
+    renderPendingAttackChoices();
 
     redraw2v2();
     refreshButtons();
   }
 
-  function renderPendingAttackChoices(options = {}) {
-    const attacks = pendingAttack?.attacks || [];
+  function renderPendingAttackChoices(battleNotice = "") {
+    if (!pendingAttack) return;
+
     renderStoryAttackChoicesUI({
-      currentAttack: attacks,
-      currentActionHeader: options.currentActionHeader,
-      currentActionLabel: options.currentActionLabel,
+      currentAttack: pendingAttack.attacks || [],
+      battleNotice,
+      currentActionHeader: pendingAttack.header,
+      currentActionLabel: pendingAttack.label,
       onHit: index => {
         if (!isAllowed("hit")) return;
         resolveHit(index);
@@ -776,7 +850,7 @@ export function createStoryBattleEngine() {
         if (!isAllowed("cover")) return;
         resolveSupportDefense(index);
       },
-      canSupportDefense: options.canSupportDefense
+      canSupportDefense: pendingAttack.canSupportDefense
     });
   }
 
@@ -796,22 +870,24 @@ export function createStoryBattleEngine() {
       targetUnit.storyInternalHp = targetUnit.hp;
     } else {
       playerA.hp = Math.max(0, Number(playerA.hp || 0) - damage);
+      playerA.storyInternalHp = playerA.hp;
     }
 
     pendingAttack.attacks.splice(index, 1);
 
-    const message = pendingAttack.attacks.length === 0
-      ? `被弾しました。${damage}ダメージ。`
-      : `被弾しました。${damage}ダメージ。\n残りの攻撃を処理してください。`;
-
-    if (pendingAttack.attacks.length === 0) pendingAttack = null;
-
-    setLog(message);
-    pendingAttack?.attacks?.length ? renderPendingAttackChoices({ canSupportDefense: pendingAttack.mode === "2v2" }) : null;
+    if (pendingAttack.attacks.length === 0) {
+      const mode = pendingAttack.mode;
+      pendingAttack = null;
+      setLog(`被弾しました。${damage}ダメージ。`);
+      if (mode === "2v2") emit("teamHit", { damage });
+      else emit("hit", { damage });
+    } else {
+      renderPendingAttackChoices(`被弾しました。${damage}ダメージ。`);
+      emit(pendingAttack.mode === "2v2" ? "teamHit" : "hit", { damage });
+    }
 
     redraw1v1();
     redraw2v2();
-    emit(pendingAttack?.mode === "2v2" ? "teamHit" : "hit", { damage });
   }
 
   function resolveEvade(index = 0) {
@@ -821,7 +897,7 @@ export function createStoryBattleEngine() {
     if (!attack) return;
 
     if (attack.cannotEvade) {
-      setLog("必中属性のため回避できません。");
+      renderPendingAttackChoices("必中属性のため回避できません。");
       return;
     }
 
@@ -829,26 +905,27 @@ export function createStoryBattleEngine() {
       ? teamA[teamA.focusUnitKey || "unit1"]
       : playerA;
 
-    if (Number(evader.evade || 0) <= 0) {
-      setLog("回避ストックが足りません。");
+    if (!evader || Number(evader.evade || 0) <= 0) {
+      renderPendingAttackChoices("回避ストックが足りません。");
       return;
     }
 
     evader.evade -= 1;
     pendingAttack.attacks.splice(index, 1);
 
-    const hadRest = pendingAttack.attacks.length > 0;
-
-    if (!hadRest) {
+    if (pendingAttack.attacks.length === 0) {
+      const mode = pendingAttack.mode;
       pendingAttack = null;
       setLog("回避しました。");
+      if (mode === "2v2") emit("teamEvade", { attack });
+      else emit("evade", { attack });
     } else {
-      renderPendingAttackChoices({ canSupportDefense: pendingAttack.mode === "2v2" });
+      renderPendingAttackChoices("上の攻撃を回避しました。");
+      emit(pendingAttack.mode === "2v2" ? "teamEvade" : "evade", { attack });
     }
 
     redraw1v1();
     redraw2v2();
-    emit(pendingAttack?.mode === "2v2" || teamA ? "teamEvade" : "evade", { attack });
   }
 
   function resolveSupportDefense(index = 0) {
@@ -862,7 +939,7 @@ export function createStoryBattleEngine() {
     const partner = teamA[partnerKey];
 
     if (!partner || Number(partner.evade || 0) <= 0) {
-      setLog("援護防御するパートナーの回避ストックが足りません。");
+      renderPendingAttackChoices("援護防御するパートナーの回避ストックが足りません。");
       return;
     }
 
@@ -880,7 +957,7 @@ export function createStoryBattleEngine() {
       pendingAttack = null;
       setLog(`援護防御が成立しました。\n${partner.name}が${damage}ダメージを肩代わりしました。`);
     } else {
-      renderPendingAttackChoices({ canSupportDefense: true });
+      renderPendingAttackChoices(`援護防御が成立しました。\n${partner.name}が${damage}ダメージを肩代わりしました。`);
     }
 
     redraw2v2();
@@ -898,7 +975,6 @@ export function createStoryBattleEngine() {
     state.storyCriticalRate = before + 4;
 
     setLog(`会心率が${before}%→${state.storyCriticalRate}%になりました。`);
-
     redraw1v1();
     redraw2v2();
     emit("critical", { before, after: state.storyCriticalRate });
@@ -933,7 +1009,7 @@ export function createStoryBattleEngine() {
       notice.style.color = "#ff6666";
       notice.style.fontWeight = "bold";
       notice.style.marginBottom = "4px";
-      notice.innerHTML = battleNotice;
+      notice.textContent = battleNotice;
       attackLog.appendChild(notice);
     }
 
@@ -956,7 +1032,7 @@ export function createStoryBattleEngine() {
     currentAttack.forEach((attack, index) => {
       if (attack.sourceLabel && attack.sourceLabel !== lastSourceLabel) {
         const source = document.createElement("div");
-        source.style.marginTop = "10px";
+        source.style.marginTop = "6px";
         source.style.fontWeight = "bold";
         source.textContent = attack.sourceLabel;
         attackLog.appendChild(source);
@@ -964,11 +1040,10 @@ export function createStoryBattleEngine() {
       }
 
       const row = document.createElement("div");
-      row.className = "story-qte-row";
 
-      const shot = document.createElement("span");
-      shot.textContent = `${attack.shotIndex || index + 1}発目：${attack.damage}ダメージ ${buildAttackTags(attack)} `;
-      row.appendChild(shot);
+      const text = document.createElement("span");
+      text.textContent = `${attack.shotIndex || index + 1}発目：${attack.damage}ダメージ ${buildAttackTags(attack)} `;
+      row.appendChild(text);
 
       const hitBtn = document.createElement("button");
       hitBtn.className = "hitBtn";
@@ -1052,7 +1127,6 @@ export function createStoryBattleEngine() {
   function renderBreakthroughChoice() {
     setExtraPanel(`
       <div id="storyBreakthroughPanel">
-        <div>打破賭け：0〜10を選択</div>
         ${Array.from({ length: 11 }, (_, i) => `<button class="story-bet-btn" data-bet="${i}">${i}</button>`).join("")}
         <div id="storyBreakthroughResult"></div>
       </div>
@@ -1073,9 +1147,9 @@ export function createStoryBattleEngine() {
     if (!result) return;
 
     const turns = Math.max(0, Math.min(10, Number(bet || 0)));
-    const lines = [];
     let aDamage = 0;
     let bDamage = 0;
+    const lines = [];
 
     for (let i = 1; i <= turns; i++) {
       const a1 = randomSlotNumber();
@@ -1088,20 +1162,20 @@ export function createStoryBattleEngine() {
       const b1Slot = teamB.unit1.slots?.[getSlotKeyFromNumber(b1)];
       const b2Slot = teamB.unit2.slots?.[getSlotKeyFromNumber(b2)];
 
-      const aTurnDamage = estimateSlotDamage(a1Slot) + estimateSlotDamage(a2Slot);
-      const bTurnDamage = estimateSlotDamage(b1Slot) + estimateSlotDamage(b2Slot);
+      const aTurnDamage = getSlotTotalDamage(a1Slot) + getSlotTotalDamage(a2Slot);
+      const bTurnDamage = getSlotTotalDamage(b1Slot) + getSlotTotalDamage(b2Slot);
 
       aDamage += aTurnDamage;
       bDamage += bTurnDamage;
 
       lines.push(
-        `<div>【${i}T】A：${a1}.${getSlotLabel(a1Slot)} / ${a2}.${getSlotLabel(a2Slot)} → ${aTurnDamage}ダメージ</div>` +
-        `<div>【${i}T】B：${b1}.${getSlotLabel(b1Slot)} / ${b2}.${getSlotLabel(b2Slot)} → ${bTurnDamage}ダメージ</div>`
+        `<div>【${i}T】PLAYER A：${a1}.${getSlotLabel(a1Slot)} / ${a2}.${getSlotLabel(a2Slot)} → ${aTurnDamage}ダメージ</div>` +
+        `<div>【${i}T】PLAYER B：${b1}.${getSlotLabel(b1Slot)} / ${b2}.${getSlotLabel(b2Slot)} → ${bTurnDamage}ダメージ</div>`
       );
     }
 
-    const win = aDamage >= bDamage;
-    const bonus = win ? Math.floor(turns / 2) + 1 : 0;
+    const success = aDamage >= bDamage;
+    const bonus = success ? Math.max(1, Math.floor(turns / 2)) : 0;
     actionCount += bonus;
 
     result.innerHTML = `
@@ -1110,106 +1184,86 @@ export function createStoryBattleEngine() {
       </div>
       <p>PLAYER A 合計：${aDamage}ダメージ</p>
       <p>PLAYER B 合計：${bDamage}ダメージ</p>
-      <p class="story-breakthrough-bonus">${win ? `打破成功：ボーナス行動権 +${bonus}` : "打破失敗：ボーナスなし"}</p>
+      <p class="story-breakthrough-bonus">${success ? `打破成功：ボーナス行動権 +${bonus}` : "打破失敗：ボーナスなし"}</p>
     `;
 
     redraw2v2();
     emit("breakthroughBet", { bet: turns, aDamage, bDamage, bonus });
   }
 
-  function estimateSlotDamage(slot) {
-    const effect = slot?.effect || {};
-    if (effect.type !== "attack") return 0;
-    return Number(effect.damage || 0) * Math.max(1, Number(effect.count || 1));
-  }
-
   function styleBlock() {
     return `
       <style>
         #storyBattleRoot {
-          width: 100%;
-          box-sizing: border-box;
-          padding: 12px;
-          color: #fff;
-          background: #000;
-          text-align: center;
+          width:100%;
+          color:white;
+          text-align:center;
         }
 
-        .story-battle-board {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 10px;
-          align-items: start;
+        #storyBattleRoot .container {
+          align-items:flex-start;
         }
 
-        .story-player-area {
-          border: 2px solid #fff;
-          padding: 8px;
-          min-width: 0;
+        #storyBattleRoot .story-center-counters {
+          display:flex;
+          flex-direction:column;
+          gap:8px;
+          margin:0 4px;
+          flex-shrink:0;
         }
 
-        .story-counter-row {
-          display: flex;
-          justify-content: center;
-          gap: 24px;
-          margin: 10px 0;
-          font-weight: bold;
+        #storyBattleRoot .story-counter-box {
+          width:35px;
+          height:35px;
+          border:1px solid white;
+          border-radius:8px;
+          display:flex;
+          flex-direction:column;
+          justify-content:center;
+          align-items:center;
+          font-size:11px;
+          line-height:1.2;
         }
 
-        .story-attack-log {
-          white-space: pre-line;
-          font-size: 18px;
-          line-height: 1.55;
-          margin: 10px auto;
-          max-width: 760px;
+        #storyBattleRoot .story-counter-box div:last-child {
+          font-size:18px;
+          font-weight:bold;
         }
 
-        .story-command-row {
-          display: flex;
-          flex-wrap: wrap;
-          justify-content: center;
-          gap: 8px;
-          margin: 10px 0;
+        #storyBattleRoot #storyAttackLog {
+          white-space:pre-wrap;
+          margin-bottom:8px;
         }
 
-        .story-command-row button,
-        #storyBattleExtraPanel button,
-        .story-qte-row button {
-          font-size: 16px;
-          padding: 8px 12px;
-          margin: 4px;
+        #storyBattleRoot .story-highlighted {
+          color:red !important;
+          border-color:red !important;
+          box-shadow:0 0 10px red !important;
         }
 
-        .story-qte-row {
-          margin: 8px 0;
+        #storyBattleRoot .criticalBoostBtn.story-highlighted,
+        #storyBattleRoot .hitBtn.story-highlighted,
+        #storyBattleRoot .evadeBtn.story-highlighted,
+        #storyBattleRoot .supportDefenseBtn.story-highlighted,
+        #storyBattleRoot button.story-highlighted {
+          color:red !important;
+          box-shadow:0 0 10px red !important;
         }
 
-        .story-highlighted {
-          outline: 3px solid #ff3333 !important;
-          box-shadow: 0 0 12px #ff3333 !important;
+        #storyBattleRoot #storySingleTeamActionButtons {
+          margin-top:4px;
         }
 
-        .story-breakthrough-result-lines {
-          text-align: left;
-          display: inline-block;
-          margin-top: 10px;
-          line-height: 1.5;
+        #storyBattleRoot .story-breakthrough-result-lines {
+          display:inline-block;
+          text-align:left;
+          margin-top:8px;
+          line-height:1.5;
         }
 
-        .story-breakthrough-bonus {
-          color: #ff6666;
-          font-weight: bold;
-        }
-
-        @media (max-width: 700px) {
-          .story-battle-board {
-            grid-template-columns: 1fr 1fr;
-            gap: 4px;
-          }
-
-          .story-attack-log {
-            font-size: 16px;
-          }
+        #storyBattleRoot .story-breakthrough-bonus {
+          color:#ff6666;
+          font-weight:bold;
         }
       </style>
     `;
