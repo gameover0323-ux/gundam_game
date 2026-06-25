@@ -1,8 +1,7 @@
 import {
   CHAPTER1_AFTER_CUSTOMIZE_LINES,
   CHAPTER1_TUTORIAL_INTRO_LINES,
-  CHAPTER1_SKIP_LINES,
-  CHAPTER1_TUTORIAL_LINES
+  CHAPTER1_SKIP_LINES
 } from "./story_chapter1_tutorial_script.js";
 
 import { createStoryBattleEngine } from "./story_battle_engine.js";
@@ -13,6 +12,8 @@ export function createStoryChapter1Controller(ctx) {
   let currentLineIndex = 0;
   let currentLines = [];
   let currentHighlight = null;
+  let tutorialSteps = [];
+  let tutorialIndex = 0;
 
   function getRoot() {
     return document.getElementById("storyModeRoot");
@@ -27,7 +28,7 @@ export function createStoryChapter1Controller(ctx) {
       });
     }
 
-    battleEngine.clearHighlight?.();
+    battleEngine.clearHighlight();
     currentHighlight = null;
   }
 
@@ -36,6 +37,8 @@ export function createStoryChapter1Controller(ctx) {
     if (!selector) return;
 
     currentHighlight = selector;
+    battleEngine.setHighlight(selector);
+
     document.querySelectorAll(selector).forEach(el => {
       el.style.color = "red";
       el.style.borderColor = "red";
@@ -44,8 +47,7 @@ export function createStoryChapter1Controller(ctx) {
   }
 
   function renderMovableTalkBox() {
-    const existing = document.getElementById("storyTutorialTalkBox");
-    if (existing) existing.remove();
+    document.getElementById("storyTutorialTalkBox")?.remove();
 
     const box = document.createElement("div");
     box.id = "storyTutorialTalkBox";
@@ -72,7 +74,7 @@ export function createStoryChapter1Controller(ctx) {
     document.body.appendChild(box);
     enableDrag(box);
 
-    document.getElementById("storyTutorialNextTalkBtn").addEventListener("click", nextTutorialLine);
+    document.getElementById("storyTutorialNextTalkBtn").addEventListener("click", advanceTutorial);
   }
 
   function enableDrag(target) {
@@ -93,28 +95,21 @@ export function createStoryChapter1Controller(ctx) {
 
     target.addEventListener("pointermove", event => {
       if (!dragging) return;
-
-      const nextX = baseX + event.clientX - startX;
-      const nextY = baseY + event.clientY - startY;
-
-      target.style.left = `${Math.max(0, nextX)}px`;
-      target.style.top = `${Math.max(0, nextY)}px`;
+      target.style.left = `${Math.max(0, baseX + event.clientX - startX)}px`;
+      target.style.top = `${Math.max(0, baseY + event.clientY - startY)}px`;
       target.style.bottom = "auto";
     });
 
-    target.addEventListener("pointerup", () => {
-      dragging = false;
-    });
-
-    target.addEventListener("pointercancel", () => {
-      dragging = false;
-    });
+    target.addEventListener("pointerup", () => dragging = false);
+    target.addEventListener("pointercancel", () => dragging = false);
   }
 
   function removeTutorialFloatingUi() {
     document.getElementById("storyTutorialTalkBox")?.remove();
     document.getElementById("storyTutorialSkipBtn")?.remove();
     clearHighlight();
+    battleEngine.allow([]);
+    battleEngine.clearHandlers();
   }
 
   function startAfterCustomize() {
@@ -129,14 +124,7 @@ export function createStoryChapter1Controller(ctx) {
     currentLineIndex = 0;
 
     root.innerHTML = `
-      <div style="
-        width:min(720px,96vw);
-        border:1px solid white;
-        background:black;
-        color:white;
-        padding:16px;
-        line-height:1.8;
-      ">
+      <div style="width:min(720px,96vw);border:1px solid white;background:black;color:white;padding:16px;line-height:1.8;">
         <div id="storySimpleDialogueText"></div>
         <button id="storySimpleDialogueNextBtn" style="margin-top:12px;">次へ</button>
       </div>
@@ -149,12 +137,10 @@ export function createStoryChapter1Controller(ctx) {
 
     document.getElementById("storySimpleDialogueNextBtn").addEventListener("click", () => {
       currentLineIndex += 1;
-
       if (currentLineIndex >= currentLines.length) {
-        if (typeof onComplete === "function") onComplete();
+        onComplete?.();
         return;
       }
-
       show();
     });
 
@@ -165,11 +151,7 @@ export function createStoryChapter1Controller(ctx) {
     const root = getRoot();
     if (!root) return;
 
-    battleEngine.renderOneOnOneTraining({
-      root,
-      free: false
-    });
-
+    battleEngine.renderOneOnOneTraining({ root, free: false });
     battleEngine.setExtraPanel(`
       <div style="text-align:center;margin-top:16px;">
         <div style="margin-bottom:12px;">${CHAPTER1_TUTORIAL_INTRO_LINES[0]}</div>
@@ -188,11 +170,7 @@ export function createStoryChapter1Controller(ctx) {
   }
 
   function startTutorialCourse() {
-    battleEngine.renderOneOnOneTraining({
-      root: getRoot(),
-      free: false
-    });
-
+    battleEngine.renderOneOnOneTraining({ root: getRoot(), free: false });
     renderMovableTalkBox();
 
     const skipBtn = document.createElement("button");
@@ -203,86 +181,326 @@ export function createStoryChapter1Controller(ctx) {
     skipBtn.style.bottom = "20px";
     skipBtn.style.zIndex = "22001";
     document.body.appendChild(skipBtn);
-
     skipBtn.addEventListener("click", startSkipCourse);
 
-    currentLines = CHAPTER1_TUTORIAL_LINES;
-    currentLineIndex = 0;
-
-    showTutorialLine();
+    tutorialSteps = createTutorialSteps();
+    tutorialIndex = 0;
+    showTutorialStep();
   }
 
-  function showTutorialLine() {
-    const line = currentLines[currentLineIndex];
-    if (!line) return;
-
-    setHighlight(line.highlight);
-
-    const talkText = document.getElementById("storyTutorialTalkText");
-    if (talkText) talkText.textContent = line.text || "";
-
-    if (line.finish) {
-      const nextBtn = document.getElementById("storyTutorialNextTalkBtn");
-      if (nextBtn) nextBtn.textContent = "終了";
-    }
+  function createTutorialSteps() {
+    return [
+      { text: "AI「僭越ながら、チュートリアルをさせていただきます！長くなりますよ！」" },
+      { text: "AI「私のセリフは、掴んで動かせるので、適宜ちょうどいいところに動かしながら聞いてくださいね！」" },
+      { highlight: "#storyTutorialSkipBtn", text: "AI「ドパガキはこの、スキップボタンを押してチュートリアル強制終了出来ます！まぁクソ長いですがあとから見返せるのでいいかもしれませんが！」" },
+      { highlight: "#storyMockPlayerA", text: "AI「見てください！これがあなたの機体のステータスです！カスタマイズしたステータスがそのまま反映されます！」" },
+      { highlight: "#storyMockPlayerB", text: "AI「こっちが敵です！今回はよわよわトレーニングマシンですが、敵のステータスも丸見えなので、戦闘の際はじっくり解析しましょう！」" },
+      { highlight: ".story-hp", text: "AI「ここがHPです！単純に0になった方が負けです！」" },
+      { highlight: ".story-evade", text: "AI「ここが回避ストックです！左が所持数、右が最大値です！最大値以上は持てませんが、超過分はターン終了までは切り捨てられません！」" },
+      { text: "AI「ただし、ストックが多い形態から少ない形態になった時は、最大値が保持されます！その場合、使用とともに減少します！」" },
+      { highlight: ".story-energy", text: "AI「これはクリエイトガンダムのみの仕様ですが、エネルギーがあります！ここが無くなるとエネルギー使用系の行動がなくなりますが、逆に上手く使うことで強く立ち回れますよ！」" },
+      { highlight: ".story-slot-area", text: "AI「ここがスロット行動です！名称をタップすると武装の説明が見られますよ！敵機体のも見れるので、あらかじめ分析しておくとよしです！」" },
+      { highlight: ".story-special-area", text: "AI「ここが特殊行動と言います！スロットに左右されない任意選択の行動です！」" },
+      { text: "AI「しっかり説明を読んで、ここぞと言う時に効果を発揮しましょう！」" },
+      { text: "AI「リロードは、弾数制の武器を使う際に重要になります！エネルギーチャージ、エネルギー調整はエネルギー制の武器を使用する際に重要になります！」" },
+      { highlight: "#storyMockSlotBtn,.story-action-counter", text: "AI「ここがスロット行動のボタンです！画面中央の行動の数、使えます！このゲームの基礎となる行動です！」" },
+      { highlight: "#storyMockSimBtn", text: "AI「このシミュレーションボタンは、押すと今出るはずだった行動が出ます！運試しや、運ずらしに使ってください！」" },
+      { highlight: "#storyMockEndBtn", text: "AI「このターン終了ボタンを押すと、相手のターンになります！わざと何もせずターンを飛ばすこともできますが、間違えて押しちゃった！ということがないよう、注意してくださいね！」" },
+      {
+        highlight: "#storyMockSlotBtn",
+        text: "AI「まずはスロット行動を押して、どんな感じか試してみましょう！」",
+        waitAction: "slot",
+        setup() {
+          battleEngine.forceNextPlayerSlot(4);
+          battleEngine.allow(["slot"]);
+          battleEngine.on("playerSlot", () => advanceTutorial());
+        }
+      },
+      { text: "AI「結果が出ましたね！行動は4です！0ダメージですが、これは相手が回避をしたんですね！」" },
+      { highlight: "#storyMockPlayerB .story-evade", text: "AI「画面上部、相手回避を見てください！0/1となってますよね。これは、1回回避を消費したということです！」" },
+      { text: "AI「このように、攻撃回数分回避を消費すると、攻撃を無効化出来るわけですね！」" },
+      {
+        highlight: "#storyMockEndBtn",
+        text: "AI「ターン終了ボタンを押してみましょう！相手からの行動が来ますよ！」",
+        waitAction: "end",
+        setup() {
+          battleEngine.forceNextEnemySlot(1);
+          battleEngine.allow(["end"]);
+          battleEngine.on("enemyTurn", () => advanceTutorial());
+        }
+      },
+      { text: "AI「来ましたね！5ダメージの攻撃です！[格]は格闘属性です！まぁ今はあんま関係ないですが！」" },
+      {
+        highlight: "#storyHitBtn",
+        text: "AI「とりあえず、今は被弾しておきましょう！被弾ボタンをタップしてください！」",
+        waitAction: "hit",
+        setup() {
+          battleEngine.allow(["hit"]);
+          battleEngine.on("hit", () => advanceTutorial());
+        }
+      },
+      { highlight: "#storyMockPlayerA .story-hp", text: "AI「出ました！自分のHPを見てください！5ダメージ受けてますよね！こんなもんじゃ何発食らってもプロトクリエイトガンダムは堕ちません！」" },
+      {
+        highlight: "#storyMockEndBtn",
+        text: "AI「実戦では、体力と相談して被弾しましょう！それではターン終了ボタンを押しましょうか！」",
+        waitAction: "end",
+        setup() {
+          battleEngine.allow(["end"]);
+          battleEngine.on("enemyTurn", () => advanceTutorial());
+        }
+      },
+      {
+        highlight: "#storyMockSlotBtn",
+        text: "AI「では、スロット行動をタップしてください！」",
+        waitAction: "slot",
+        setup() {
+          battleEngine.forceNextPlayerSlot(3);
+          battleEngine.allow(["slot"]);
+          battleEngine.on("playerSlot", () => advanceTutorial());
+        }
+      },
+      { highlight: "#storyMockPlayerA .story-evade", text: "AI「回避が出ましたね！自機の回避数を見てください！所持数がオーバーしてますよね！」" },
+      {
+        highlight: "#storyCriticalBtn",
+        text: "AI「このままターンを終了すると、端数分が無くなってしまいます！勿体ないのでこの会心ボタンを押してください！」",
+        waitAction: "critical",
+        setup() {
+          battleEngine.allow(["critical"]);
+          battleEngine.on("critical", () => advanceTutorial());
+        }
+      },
+      { text: "AI「会心率が5%→9%になりましたね！回避1消費で、4%会心率が上がります！会心が出ると、ダメージが2倍になるんですよ！」" },
+      {
+        highlight: "#storyMockEndBtn",
+        text: "AI「見事、回避が無駄にならずに済みました！それでは、ターン終了を押しましょう！」",
+        waitAction: "end",
+        setup() {
+          battleEngine.forceNextEnemySlot(2);
+          battleEngine.allow(["end"]);
+          battleEngine.on("enemyTurn", () => advanceTutorial());
+        }
+      },
+      {
+        highlight: "#storyEvadeBtn",
+        text: "AI「出ました！今度は5ダメージの[射]、つまり射撃属性ですね！今度は回避を選んでみましょうか！」",
+        waitAction: "evade",
+        setup() {
+          battleEngine.allow(["evade"]);
+          battleEngine.on("evade", () => advanceTutorial());
+        }
+      },
+      { highlight: "#storyMockEndBtn", text: "AI「いいですね！ダメージが無効化できましたよ！勿体ない？いえいえ、今は練習ですからね！」" },
+      { text: "AI「他にも[不]は軽減不可、つまりダメージを少なくできない攻撃、[必]は回避ができない攻撃です！何となく覚えておいてくださいね！では、ターン終了を押しましょう！」" },
+      {
+        highlight: "#storyMockEndBtn",
+        text: "AI「次は2on2ルールに進みますが、とりあえず飽きるまで1on1を触ってて大丈夫ですよ！次に進みたくなったら「次へ」ボタンをタップしてください！」",
+        waitAction: "next2v2",
+        setup() {
+          battleEngine.renderNext2v2Button();
+          battleEngine.allow(["next2v2"]);
+          battleEngine.on("next2v2", () => {
+            startTwoOnTwoTutorial();
+          });
+        }
+      }
+    ];
   }
 
-  function nextTutorialLine() {
-    const line = currentLines[currentLineIndex];
+  function showTutorialStep() {
+    battleEngine.clearHandlers();
+    battleEngine.allow([]);
 
-    if (line?.finish) {
-      removeTutorialFloatingUi();
-      renderFreeTrainingButtons();
-      return;
-    }
+    const step = tutorialSteps[tutorialIndex];
+    if (!step) return;
 
-    currentLineIndex += 1;
-    showTutorialLine();
+    setHighlight(step.highlight);
+
+    const talk = document.getElementById("storyTutorialTalkText");
+    if (talk) talk.textContent = step.text || "";
+
+    step.setup?.();
+
+    const nextBtn = document.getElementById("storyTutorialNextTalkBtn");
+    if (nextBtn) nextBtn.style.display = step.waitAction ? "none" : "";
+  }
+
+  function advanceTutorial() {
+    tutorialIndex += 1;
+    showTutorialStep();
+  }
+
+  function startTwoOnTwoTutorial() {
+    battleEngine.renderTwoOnTwoTraining({ root: getRoot(), free: false });
+
+    tutorialSteps = createTwoOnTwoSteps();
+    tutorialIndex = 0;
+    showTutorialStep();
+  }
+
+  function createTwoOnTwoSteps() {
+    return [
+      { text: "AI「よっこらしょ！2on2の場を精製しておきました！どうです？4機のステータスが見えますよね！壮観です！」" },
+      { highlight: ".story-status-switch-btn", text: "AI「このボタンはステータス表示のみを切り替えるボタンです！相手のものも押せるので、適宜押して見たい時に能力を見ましょう！」" },
+      { highlight: ".story-focus-btn", text: "AI「ここはフォーカスといって、現在プレイヤー機体で赤くなっているほうがフォーカスです！つまり、狙われる機体です！」" },
+      { text: "AI「狙われてもいい方をフォーカス機体にしておくのが基本戦術です！」" },
+      {
+        highlight: "#storyMockSlotBtn",
+        text: "AI「ではスロット行動を押してみましょうか！」",
+        waitAction: "teamSlot",
+        setup() {
+          battleEngine.allow(["teamSlot"]);
+          battleEngine.on("teamSlot", () => advanceTutorial());
+        }
+      },
+      { text: "AI「どうですか！1回で同時に連携攻撃です！これが相手のフォーカス機体に向けて打たれるわけです！」" },
+      { highlight: "#storyUnit1SlotBtn,#storyUnit2SlotBtn", text: "AI「単独で行動させたい時は、それぞれの単独行動を選んでみてくださいね！」" },
+      {
+        highlight: "#storyMockEndBtn",
+        text: "AI「それでは次のターンに行きましょう！相手の行動が来ますよ！」",
+        waitAction: "end",
+        setup() {
+          battleEngine.allow(["end"]);
+          battleEngine.on("teamEnemyTurn", () => advanceTutorial());
+        }
+      },
+      {
+        highlight: "#storyEvadeBtn",
+        text: "AI「出たー！来ましたね！では私の言う通りに処理してみましょう！上の攻撃は回避！」",
+        waitAction: "evade",
+        setup() {
+          battleEngine.allow(["evade"]);
+          battleEngine.on("teamEvade", () => advanceTutorial());
+        }
+      },
+      {
+        highlight: "#storyEvadeBtn",
+        text: "AI「回避できましたね！残った方も回避を押しましょう！」",
+        waitAction: "evadeFailed",
+        setup() {
+          battleEngine.allow(["evade"]);
+          battleEngine.on("teamEvade", () => advanceTutorial());
+        }
+      },
+      { text: "AI「と、思いましたが、必中属性でしたね。回避できませんでした。そこで便利な機能があります。」" },
+      {
+        highlight: "#storyCoverBtn",
+        text: "AI「援護防御です！これは、フォーカス機体の相方、つまりパートナー機体の回避を1消費して、このダメージを半分にしてパートナーが肩代わりするコマンドです！押してみましょう！」",
+        waitAction: "cover",
+        setup() {
+          battleEngine.allow(["cover"]);
+          battleEngine.on("cover", () => advanceTutorial());
+        }
+      },
+      { text: "AI「いい感じです！2on2ならではの技ですね！ピンチの時はアリかもしれません！」" },
+      {
+        highlight: "#storyMockEndBtn",
+        text: "AI「ターン終了を押して、反撃です！」",
+        waitAction: "end",
+        setup() {
+          battleEngine.allow(["end"]);
+          battleEngine.on("teamEnemyTurn", () => advanceTutorial());
+        }
+      },
+      {
+        highlight: "#storyTeamStyleBtn",
+        text: "AI「画面上部、分散型って書いてありますよね。実は戦型がふたつあるんです。ここを押してみましょう！」",
+        waitAction: "style",
+        setup() {
+          battleEngine.allow(["style"]);
+          battleEngine.on("style", () => advanceTutorial());
+        }
+      },
+      { text: "AI「どん！これが統合型です！2機のステータスを一緒くたにして、1機として扱う戦術です！」" },
+      { text: "AI「この型は非常に強力で、回避は折半、ダメージも折半、特殊行動効果がどちらにも着く、行動権利も共有するので増えると2機分と、めちゃくちゃ強力です！」" },
+      { text: "AI「デメリットとしては、1番機が被弾する扱いになる、援護防御は使えない、[挑発]システムがつかえないというところですね。」" },
+      {
+        highlight: "#storyTeamStyleBtn",
+        text: "AI「統合型は後で試してもらうとして、[挑発]、行きましょう！分散型に戻してください！」",
+        waitAction: "style",
+        setup() {
+          battleEngine.allow(["style"]);
+          battleEngine.on("style", () => advanceTutorial());
+        }
+      },
+      {
+        highlight: "#storyTauntBtn",
+        text: "AI「挑発が使えます！早速押してみましょう！」",
+        waitAction: "taunt",
+        setup() {
+          battleEngine.allow(["taunt"]);
+          battleEngine.on("taunt", () => advanceTutorial());
+        }
+      },
+      {
+        highlight: "#storyTauntTarget2Btn",
+        text: "AI「2機目のトレーニングマシンを指定してみましょう！」",
+        waitAction: "tauntTarget",
+        setup() {
+          battleEngine.allow([]);
+          battleEngine.on("tauntTarget", () => advanceTutorial());
+        }
+      },
+      { text: "AI「見てください！2番機が青くなりましたね！この状態の時は、分散型にして青くなった機体をフォーカスにしないと、ダメージが1.5倍になります！効果は5ターンです！」" },
+      { text: "AI「統合型の場合も1番機が挑発されていたとしてもダメです！分散型で、相手にその機体にフォーカスさせることを強いる行動ですね！」" },
+      {
+        highlight: "#storyDuelBtn",
+        text: "AI「挑発ボタンが決戦になってますよね。これを押してみましょう！」",
+        waitAction: "duel",
+        setup() {
+          battleEngine.allow(["duel"]);
+          battleEngine.on("duel", () => advanceTutorial());
+        }
+      },
+      {
+        highlight: "#storyDuelUnit1Btn,#storyDuelUnit2Btn",
+        text: "AI「画面下部、決戦する機体を選べます！選んでください！」",
+        waitAction: "duelSelected",
+        setup() {
+          battleEngine.on("duelSelected", () => advanceTutorial());
+        }
+      },
+      { text: "AI「ピンク色になりましたね！自分の選んだ決戦機体と、相手が選んでいるフォーカス機体が決戦状態となり、ピンク色の機体同士で2倍のダメージが入るようになります！効果は5ターン！」" },
+      {
+        highlight: "#storyBreakthroughBtn",
+        text: "AI「ハイリスクハイリターン！ここで押せるのが「打破」です！打破ボタンを押してみましょう！」",
+        waitAction: "breakthrough",
+        setup() {
+          battleEngine.allow(["breakthrough"]);
+          battleEngine.on("breakthrough", () => advanceTutorial());
+        }
+      },
+      {
+        highlight: ".story-bet-btn[data-bet='10']",
+        text: "AI「画面下部に、0～10のボタンが出ましたね！10を選んでみましょう！」",
+        waitAction: "breakthroughBet",
+        setup() {
+          battleEngine.on("breakthroughBet", () => advanceTutorial());
+        }
+      },
+      { text: "AI「ぶわーっと出ましたね！これが打破！10ターン分のシミュレーションを行い、与えるダメージ量が多い方の勝ちというモードになります！」" },
+      { highlight: ".story-breakthrough-bonus", text: "AI「勝利すると、賭けた数に比例したボーナス行動権が手に入ります！」" },
+      { text: "AI「打破賭け中に獲得した強化、回避はそのまま戦闘で使えます！あえて強化を狙うのもアリかもしれませんね！」" },
+      { text: "AI「以上が挑発→決戦→打破の流れです！打破に勝利すれば最高の反撃を与えられます！」" },
+      { text: "AI「長らく説明を聞いてもらってありがとうございます！それでは気が済むまでのんびりシミュレーション戦闘をお楽しみください！」", finish: true }
+    ];
   }
 
   function renderFreeTrainingButtons() {
-    const root = getRoot();
-    if (!root) return;
+    removeTutorialFloatingUi();
 
-    battleEngine.renderOneOnOneTraining({
-      root,
-      free: true
-    });
-
+    battleEngine.renderOneOnOneTraining({ root: getRoot(), free: true });
     battleEngine.setLog("フリー演習です。1on1、2on2、終了を選べます。");
 
     battleEngine.renderModeButtons({
-      on1v1: () => {
-        battleEngine.renderOneOnOneTraining({
-          root: getRoot(),
-          free: true
-        });
-
-        battleEngine.setLog("1on1演習をリセットしました。");
-
-        battleEngine.renderModeButtons({
-          on1v1: renderFreeTrainingButtons,
-          on2v2: renderFreeTwoOnTwo,
-          onEnd: clearChapter1
-        });
-      },
-
+      on1v1: renderFreeTrainingButtons,
       on2v2: renderFreeTwoOnTwo,
-
       onEnd: clearChapter1
     });
   }
 
   function renderFreeTwoOnTwo() {
-    const root = getRoot();
-    if (!root) return;
-
-    battleEngine.renderTwoOnTwoTraining({
-      root,
-      free: true
-    });
-
-    battleEngine.setLog("2on2演習を開始しました。");
+    battleEngine.renderTwoOnTwoTraining({ root: getRoot(), free: true });
+    battleEngine.setLog("2on2フリー演習です。");
 
     battleEngine.renderModeButtons({
       on1v1: renderFreeTrainingButtons,
