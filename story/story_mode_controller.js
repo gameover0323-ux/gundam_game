@@ -4,12 +4,19 @@ import {
   STORY_SLOT_OPTIONS,
   STORY_EQUIPMENT_OPTIONS,
   STORY_SKILL_OPTIONS,
-  createInitialProtoCreateLabState,
   findStorySlotOption,
   findStoryEquipmentOption,
   findStorySkillOption,
   calculateProtoCreateLabCost
 } from "./story_create_lab_data.js";
+
+import {
+  loadStorySave,
+  saveStorySave,
+  getProtoCreateLevelInfo,
+  getProtoCreateMaxCost,
+  updateProtoCreateLabState
+} from "./story_save.js";
 
 export function createStoryModeController(ctx) {
   const DEBUG_ROLES = new Set(["debug", "Ciel_debugger"]);
@@ -17,12 +24,28 @@ export function createStoryModeController(ctx) {
   let activeScene = null;
   let lineIndex = 0;
   let locked = false;
-  let customizeState = createInitialProtoCreateLabState();
+
+  let storySave = loadStorySave();
+  let customizeState = storySave.createUnits.proto_create_gundam.lab;
 
   const chapter1Controller = createStoryChapter1Controller(ctx);
 
+  function refreshStorySave() {
+    storySave = loadStorySave();
+    customizeState = storySave.createUnits.proto_create_gundam.lab;
+  }
+
+  function persistCustomizeState() {
+    updateProtoCreateLabState(() => customizeState);
+    refreshStorySave();
+  }
+
+  function getMaxCost() {
+    return getProtoCreateMaxCost(storySave);
+  }
+
   function getRemainCost() {
-    return PROTO_CREATE_BASE.maxCost - calculateProtoCreateLabCost(customizeState);
+    return getMaxCost() - calculateProtoCreateLabCost(customizeState);
   }
 
   function canUseStoryMode() {
@@ -45,6 +68,8 @@ export function createStoryModeController(ctx) {
 
   function createRoot() {
     clearStoryScreen();
+
+    refreshStorySave();
 
     const root = document.createElement("div");
     root.id = "storyModeRoot";
@@ -206,6 +231,7 @@ export function createStoryModeController(ctx) {
 
     customizeState.hp += delta > 0 ? PROTO_CREATE_BASE.hpStep : -PROTO_CREATE_BASE.hpStep;
     customizeState.hpCost += delta > 0 ? PROTO_CREATE_BASE.hpCostStep : -PROTO_CREATE_BASE.hpCostStep;
+    persistCustomizeState();
     renderCustomizeValues();
   }
 
@@ -215,6 +241,7 @@ export function createStoryModeController(ctx) {
 
     customizeState.evade += delta > 0 ? PROTO_CREATE_BASE.evadeStep : -PROTO_CREATE_BASE.evadeStep;
     customizeState.evadeCost += delta > 0 ? PROTO_CREATE_BASE.evadeCostStep : -PROTO_CREATE_BASE.evadeCostStep;
+    persistCustomizeState();
     renderCustomizeValues();
   }
 
@@ -224,6 +251,7 @@ export function createStoryModeController(ctx) {
 
     customizeState.energy += delta > 0 ? PROTO_CREATE_BASE.energyStep : -PROTO_CREATE_BASE.energyStep;
     customizeState.energyCost += delta > 0 ? PROTO_CREATE_BASE.energyCostStep : -PROTO_CREATE_BASE.energyCostStep;
+    persistCustomizeState();
     renderCustomizeValues();
   }
 
@@ -254,9 +282,21 @@ export function createStoryModeController(ctx) {
   }
 
   function renderCustomizeValues() {
+    const levelInfo = getProtoCreateLevelInfo(storySave);
+    const maxCost = getMaxCost();
+
+    const levelText = document.getElementById("storyLevelText");
+    if (levelText) {
+      levelText.innerHTML = [
+        `Lv${levelInfo.level}`,
+        `${levelInfo.currentExp} / ${levelInfo.nextExp} Exp`,
+        `次Lvまで${levelInfo.remainingExp}`
+      ].join("<br>");
+    }
+
     const costText = document.getElementById("storyCostText");
     if (costText) {
-      costText.textContent = `コスト ${PROTO_CREATE_BASE.maxCost}[残${getRemainCost()}]`;
+      costText.textContent = `コスト ${maxCost}[残${getRemainCost()}]`;
     }
 
     const hpText = document.getElementById("storyHpText");
@@ -276,6 +316,8 @@ export function createStoryModeController(ctx) {
   }
 
   function renderCustomizeTutorial() {
+    refreshStorySave();
+
     const root = document.getElementById("storyModeRoot");
     root.style.justifyContent = "flex-start";
     root.style.overflowY = "auto";
@@ -284,8 +326,8 @@ export function createStoryModeController(ctx) {
       <h2 style="text-align:center;">${PROTO_CREATE_BASE.unitName}</h2>
 
       <div id="storyCustomizePanel">
-        <div class="story-level">レベル${PROTO_CREATE_BASE.level}</div>
-        <div id="storyCostText" class="story-cost">コスト ${PROTO_CREATE_BASE.maxCost}[残${getRemainCost()}]</div>
+        <div id="storyLevelText" class="story-level"></div>
+        <div id="storyCostText" class="story-cost"></div>
 
         <div class="story-row">
           <span id="storyHpText" class="story-label">HP ${customizeState.hp}</span>
@@ -531,6 +573,8 @@ export function createStoryModeController(ctx) {
     if (kind === "slot") customizeState.selectedSlots[key] = optionId;
     if (kind === "equipment") customizeState.equipment[key] = optionId;
     if (kind === "skill") customizeState.skill = optionId;
+
+    persistCustomizeState();
     renderLabRows();
   }
 
