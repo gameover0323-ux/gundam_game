@@ -3,7 +3,7 @@ import { training_machine } from "../js/js_units_training_machine.js";
 
 const SLOT_KEYS = ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"];
 
-function deepClone(value) {
+function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
@@ -31,19 +31,16 @@ function getSlotDesc(slot) {
   return slot?.desc || slot?.detail || "詳細なし";
 }
 
-function formatAttackTags(effect) {
-  if (!effect || effect.type !== "attack") return "";
-
-  const tags = [];
-
-  if (effect.attackType === "melee") tags.push("[格]");
-  if (effect.attackType === "shoot") tags.push("[射]");
-  if (effect.beam) tags.push("[ビ]");
-  if (effect.ignoreReduction) tags.push("[不]");
-  if (effect.cannotEvade) tags.push("[必]");
-  if (effect.criticalHit) tags.push("[会心]");
-
-  return tags.join("");
+function tags(effect = {}) {
+  if (effect.type !== "attack") return "";
+  const list = [];
+  if (effect.attackType === "melee") list.push("[格]");
+  if (effect.attackType === "shoot") list.push("[射]");
+  if (effect.beam) list.push("[ビ]");
+  if (effect.ignoreReduction) list.push("[不]");
+  if (effect.cannotEvade) list.push("[必]");
+  if (effect.criticalHit) list.push("[会心]");
+  return list.join("");
 }
 
 function createBattleUnit(unit, options = {}) {
@@ -52,8 +49,6 @@ function createBattleUnit(unit, options = {}) {
   return {
     id: unit.id,
     name: form.name || unit.name,
-    unit,
-    form,
     hp: Number(form.hp || 0),
     maxHp: Number(form.hp || 0),
     displayHp: form.displayHp || null,
@@ -62,44 +57,76 @@ function createBattleUnit(unit, options = {}) {
     energy: Number(form.storyEnergyMax || 0),
     energyMax: Number(form.storyEnergyMax || 0),
     criticalRate: Number(form.criticalRate ?? options.defaultCriticalRate ?? 5),
-    slots: deepClone(form.slots || {}),
-    slotOrder: Array.isArray(form.ownedSlotOrder)
-      ? form.ownedSlotOrder
-      : SLOT_KEYS,
-    specials: deepClone(form.specials || [])
+    slots: clone(form.slots || {}),
+    slotOrder: Array.isArray(form.ownedSlotOrder) ? form.ownedSlotOrder : SLOT_KEYS,
+    specials: clone(form.specials || [])
   };
 }
 
-export function createStoryBattleEngine(ctx = {}) {
+export function createStoryBattleEngine() {
   let root = null;
-  let battleMode = "1v1";
-  let freeMode = false;
-
   let playerA = null;
   let playerB = null;
-
-  let playerTeam = null;
-  let enemyTeam = null;
-
   let pendingAttack = null;
+  let actionCount = 1;
   let forcedPlayerSlots = [];
   let forcedEnemySlots = [];
-  let logText = "演習開始待機中";
-  let actionCount = 1;
+  let allowedActions = new Set();
+  let handlers = {};
 
-  function getRoot() {
-    return root || document.getElementById("storyModeRoot");
+  function emit(name, payload = {}) {
+    if (typeof handlers[name] === "function") handlers[name](payload);
+  }
+
+  function on(name, handler) {
+    handlers[name] = handler;
+  }
+
+  function clearHandlers() {
+    handlers = {};
+  }
+
+  function allow(actions) {
+    allowedActions = new Set(actions || []);
+    refreshButtons();
+  }
+
+  function isAllowed(action) {
+    if (allowedActions.size === 0) return true;
+    return allowedActions.has(action);
+  }
+
+  function refreshButtons() {
+    const pairs = [
+      ["storyMockSlotBtn", "slot"],
+      ["storyMockEndBtn", "end"],
+      ["storyMockSimBtn", "sim"],
+      ["storyCriticalBtn", "critical"],
+      ["storyHitBtn", "hit"],
+      ["storyEvadeBtn", "evade"],
+      ["storyNext2v2Btn", "next2v2"],
+      ["storyTeamStyleBtn", "style"],
+      ["storyTauntBtn", "taunt"],
+      ["storyDuelBtn", "duel"],
+      ["storyBreakthroughBtn", "breakthrough"],
+      ["storyUnit1SlotBtn", "teamSlot"],
+      ["storyUnit2SlotBtn", "teamSingle"]
+    ];
+
+    pairs.forEach(([id, key]) => {
+      const btn = document.getElementById(id);
+      if (btn) btn.disabled = allowedActions.size > 0 && !allowedActions.has(key);
+    });
+  }
+
+  function setLog(text) {
+    const log = document.getElementById("storyBattleLog");
+    if (log) log.textContent = String(text || "");
   }
 
   function setExtraPanel(html) {
     const panel = document.getElementById("storyBattleExtraPanel");
     if (panel) panel.innerHTML = html || "";
-  }
-
-  function setLog(text) {
-    logText = String(text || "");
-    const log = document.getElementById("storyBattleLog");
-    if (log) log.textContent = logText;
   }
 
   function clearHighlight() {
@@ -111,7 +138,6 @@ export function createStoryBattleEngine(ctx = {}) {
   function setHighlight(selector) {
     clearHighlight();
     if (!selector) return;
-
     document.querySelectorAll(selector).forEach(el => {
       el.classList.add("story-highlighted");
     });
@@ -125,47 +151,41 @@ export function createStoryBattleEngine(ctx = {}) {
     forcedEnemySlots.push(Number(slotNumber));
   }
 
-  function getNextPlayerSlotNumber() {
-    if (forcedPlayerSlots.length > 0) return forcedPlayerSlots.shift();
-    return randomSlotNumber();
+  function nextPlayerSlot() {
+    return forcedPlayerSlots.length ? forcedPlayerSlots.shift() : randomSlotNumber();
   }
 
-  function getNextEnemySlotNumber() {
-    if (forcedEnemySlots.length > 0) return forcedEnemySlots.shift();
-    return randomSlotNumber();
+  function nextEnemySlot() {
+    return forcedEnemySlots.length ? forcedEnemySlots.shift() : randomSlotNumber();
   }
 
-  function renderOneOnOneTraining(options = {}) {
-    root = options.root || getRoot();
+  function renderOneOnOneTraining({ root: targetRoot, free = false } = {}) {
+    root = targetRoot || document.getElementById("storyModeRoot");
     if (!root) return;
 
-    battleMode = "1v1";
-    freeMode = options.free === true;
-    forcedPlayerSlots = [];
-    forcedEnemySlots = [];
+    const proto = getStoryCreateUnit("proto_create_gundam");
+    playerA = createBattleUnit(proto, { defaultCriticalRate: 5 });
+    playerB = createBattleUnit(training_machine, { defaultCriticalRate: free ? 5 : 0 });
+
     pendingAttack = null;
     actionCount = 1;
-
-    const protoUnit = getStoryCreateUnit("proto_create_gundam");
-    playerA = createBattleUnit(protoUnit, { defaultCriticalRate: 5 });
-    playerB = createBattleUnit(training_machine, {
-      defaultCriticalRate: freeMode ? 5 : 0
-    });
+    forcedPlayerSlots = [];
+    forcedEnemySlots = [];
 
     root.style.justifyContent = "flex-start";
     root.style.overflowY = "auto";
 
     root.innerHTML = `
-      ${renderStyle()}
+      ${styleBlock()}
       <div id="storyBattleRoot">
-        <h2 id="storyBattleTitle">チャプター1 演習 1on1</h2>
+        <h2>チャプター1 演習 1on1</h2>
 
         <div class="story-top-line">
-          <div class="story-turn-box">
+          <div class="story-counter story-turn-counter">
             <div>TURN</div>
-            <strong id="storyTurnValue">1</strong>
+            <strong>1</strong>
           </div>
-          <div class="story-turn-box story-action-box">
+          <div class="story-counter story-action-counter">
             <div>行動</div>
             <strong id="storyActionCounter">1</strong>
           </div>
@@ -177,7 +197,7 @@ export function createStoryBattleEngine(ctx = {}) {
         </div>
 
         <div class="story-bottom">
-          <div id="storyBattleLog">${escapeHtml(logText)}</div>
+          <div id="storyBattleLog">演習開始待機中</div>
 
           <div id="storyQteArea" class="story-qte-area" style="display:none;">
             <button id="storyHitBtn">被弾</button>
@@ -194,74 +214,59 @@ export function createStoryBattleEngine(ctx = {}) {
       </div>
     `;
 
-    bindOneOnOneButtons();
-    redrawOneOnOne();
-    setLog("演習開始待機中");
+    bind1v1();
+    allow([]);
+    redraw1v1();
   }
 
-  function renderTwoOnTwoTraining(options = {}) {
-    root = options.root || getRoot();
+  function renderTwoOnTwoTraining({ root: targetRoot, free = false } = {}) {
+    root = targetRoot || document.getElementById("storyModeRoot");
     if (!root) return;
 
-    battleMode = "2v2";
-    freeMode = options.free === true;
-    pendingAttack = null;
-    actionCount = 1;
+    const proto = getStoryCreateUnit("proto_create_gundam");
+    const a1 = createBattleUnit(proto, { defaultCriticalRate: 5 });
+    const a2 = createBattleUnit(proto, { defaultCriticalRate: 5 });
+    const b1 = createBattleUnit(training_machine, { defaultCriticalRate: free ? 5 : 0 });
+    const b2 = createBattleUnit(training_machine, { defaultCriticalRate: free ? 5 : 0 });
 
-    const protoUnit = getStoryCreateUnit("proto_create_gundam");
-    const proto1 = createBattleUnit(protoUnit, { defaultCriticalRate: 5 });
-    const proto2 = createBattleUnit(protoUnit, { defaultCriticalRate: 5 });
-
-    proto2.name = "プロトクリエイトガンダム 2番機";
-    proto2.hp = Number(getForm(protoUnit).hp || 200);
-    proto2.maxHp = proto2.hp;
-    proto2.evade = 1;
-    proto2.evadeMax = 1;
-    proto2.energy = 100;
-    proto2.energyMax = 100;
-    proto2.slotOrder = [...SLOT_KEYS].reverse();
-
-    const tm1 = createBattleUnit(training_machine, { defaultCriticalRate: freeMode ? 5 : 0 });
-    const tm2 = createBattleUnit(training_machine, { defaultCriticalRate: freeMode ? 5 : 0 });
-    tm2.name = "トレーニングマシン 2番機";
-
-    playerTeam = {
-      style: "分散型",
-      focus: "unit1",
-      unit1: proto1,
-      unit2: proto2
-    };
-
-    enemyTeam = {
-      style: "分散型",
-      focus: "unit1",
-      unit1: tm1,
-      unit2: tm2
-    };
+    a2.name = "プロトクリエイトガンダム 2番機";
+    a2.evade = 1;
+    a2.evadeMax = 1;
+    a2.energy = 100;
+    a2.energyMax = 100;
+    a2.slotOrder = [...SLOT_KEYS].reverse();
+    b2.name = "トレーニングマシン 2番機";
 
     root.style.justifyContent = "flex-start";
     root.style.overflowY = "auto";
 
     root.innerHTML = `
-      ${renderStyle()}
+      ${styleBlock()}
       <div id="storyBattleRoot">
-        <h2 id="storyBattleTitle">チャプター1 演習 2on2</h2>
+        <h2>チャプター1 演習 2on2</h2>
 
         <div class="story-team-mode-row">
           <button id="storyTeamStyleBtn">自軍：分散型</button>
           <button id="storyTauntBtn">挑発</button>
+          <button id="storyDuelBtn">決戦</button>
           <button id="storyBreakthroughBtn">打破</button>
         </div>
 
         <div class="story-battle-container story-battle-container-2v2">
-          ${renderTeamUnitCard(playerTeam.unit1, "A1", "storyPlayerUnit1", true)}
-          ${renderTeamUnitCard(playerTeam.unit2, "A2", "storyPlayerUnit2", false)}
-          ${renderTeamUnitCard(enemyTeam.unit1, "B1", "storyEnemyUnit1", true)}
-          ${renderTeamUnitCard(enemyTeam.unit2, "B2", "storyEnemyUnit2", false)}
+          ${renderTeamCard(a1, "A1", "storyPlayerUnit1", true)}
+          ${renderTeamCard(a2, "A2", "storyPlayerUnit2", false)}
+          ${renderTeamCard(b1, "B1", "storyEnemyUnit1", true)}
+          ${renderTeamCard(b2, "B2", "storyEnemyUnit2", false)}
         </div>
 
         <div class="story-bottom">
-          <div id="storyBattleLog">${escapeHtml(logText)}</div>
+          <div id="storyBattleLog">2on2演習開始待機中</div>
+
+          <div id="storyQteArea" class="story-qte-area" style="display:none;">
+            <button id="storyHitBtn">被弾</button>
+            <button id="storyEvadeBtn">回避</button>
+            <button id="storyCoverBtn">援護防御</button>
+          </div>
 
           <button id="storyMockSlotBtn">スロット行動</button>
           <button id="storyUnit1SlotBtn">1単独行動</button>
@@ -273,86 +278,62 @@ export function createStoryBattleEngine(ctx = {}) {
       </div>
     `;
 
-    bindTwoOnTwoButtons();
-    setLog("2on2演習開始待機中");
+    bind2v2();
+    allow([]);
   }
 
-  function renderUnitCard(unit, sideLabel, id) {
-    const hpText = unit.displayHp
-      ? unit.displayHp
-      : `${unit.hp}/${unit.maxHp}`;
+  function renderUnitCard(unit, label, id) {
+    const hpText = unit.displayHp ? unit.displayHp : `${unit.hp}/${unit.maxHp}`;
 
     return `
       <div id="${id}" class="story-unit-card">
-        <h3>PLAYER ${sideLabel}</h3>
+        <h3>PLAYER ${label}</h3>
         <div class="story-unit-name">${escapeHtml(unit.name)}</div>
         <div class="story-hp">HP ${escapeHtml(hpText)}</div>
         <div class="story-evade">回避 ${unit.evade}/${unit.evadeMax}</div>
         ${unit.energyMax > 0 ? `<div class="story-energy">EN ${unit.energy}/${unit.energyMax}</div>` : ""}
         <div class="story-critical">会心率 ${unit.criticalRate}%</div>
-
-        <div class="story-slot-area">
-          <b>スロット</b>
-          ${renderSlotList(unit)}
-        </div>
-
-        ${renderSpecialList(unit)}
+        <div class="story-slot-area"><b>スロット</b>${renderSlots(unit)}</div>
+        ${renderSpecials(unit)}
       </div>
     `;
   }
 
-  function renderTeamUnitCard(unit, sideLabel, id, focused) {
-    const hpText = unit.displayHp
-      ? unit.displayHp
-      : `${unit.hp}/${unit.maxHp}`;
+  function renderTeamCard(unit, label, id, focus) {
+    const hpText = unit.displayHp ? unit.displayHp : `${unit.hp}/${unit.maxHp}`;
 
     return `
-      <div id="${id}" class="story-unit-card ${focused ? "story-focus-unit" : ""}">
-        <h3>${sideLabel}</h3>
-        <button class="story-status-switch-btn" type="button">表示切替</button>
-        <button class="story-focus-btn" type="button">フォーカス</button>
+      <div id="${id}" class="story-unit-card ${focus ? "story-focus-unit" : ""}">
+        <h3>${label}</h3>
+        <button class="story-status-switch-btn">表示切替</button>
+        <button class="story-focus-btn">フォーカス</button>
         <div class="story-unit-name">${escapeHtml(unit.name)}</div>
         <div class="story-hp">HP ${escapeHtml(hpText)}</div>
         <div class="story-evade">回避 ${unit.evade}/${unit.evadeMax}</div>
         ${unit.energyMax > 0 ? `<div class="story-energy">EN ${unit.energy}/${unit.energyMax}</div>` : ""}
-        <div class="story-slot-area">
-          <b>スロット</b>
-          ${renderSlotList(unit)}
-        </div>
+        <div class="story-slot-area"><b>スロット</b>${renderSlots(unit)}</div>
       </div>
     `;
   }
 
-  function renderSlotList(unit) {
+  function renderSlots(unit) {
     return unit.slotOrder.map((slotKey, index) => {
       const slot = unit.slots?.[slotKey];
-      const effect = slot?.effect || {};
       return `
-        <button
-          class="story-slot-name"
-          data-unit-id="${escapeHtml(unit.id)}"
-          data-slot-key="${slotKey}"
-          data-slot-desc="${escapeHtml(getSlotDesc(slot))}"
-          type="button"
-        >
-          ${index + 1}.${escapeHtml(getSlotLabel(slot))}${formatAttackTags(effect)}
+        <button class="story-slot-name" data-desc="${escapeHtml(getSlotDesc(slot))}">
+          ${index + 1}.${escapeHtml(getSlotLabel(slot))}${tags(slot?.effect)}
         </button>
       `;
     }).join("");
   }
 
-  function renderSpecialList(unit) {
-    if (!Array.isArray(unit.specials) || unit.specials.length === 0) return "";
-
+  function renderSpecials(unit) {
+    if (!unit.specials?.length) return "";
     return `
       <div class="story-special-area">
         <b>特殊行動</b>
         ${unit.specials.map((special, index) => `
-          <button
-            class="story-special-name"
-            data-special-desc="${escapeHtml(special.desc || "詳細なし")}"
-            type="button"
-          >
+          <button class="story-special-name" data-desc="${escapeHtml(special.desc || "詳細なし")}">
             ${index + 1}.${escapeHtml(special.name || "特殊行動")}
           </button>
         `).join("")}
@@ -360,234 +341,127 @@ export function createStoryBattleEngine(ctx = {}) {
     `;
   }
 
-  function renderStyle() {
-    return `
-      <style>
-        #storyBattleRoot {
-          width: min(900px, 98vw);
-          margin: 0 auto;
-          color: white;
-          box-sizing: border-box;
-        }
-
-        #storyBattleRoot button {
-          margin: 3px;
-        }
-
-        .story-top-line {
-          display: flex;
-          justify-content: center;
-          gap: 8px;
-          margin: 8px 0;
-        }
-
-        .story-turn-box {
-          width: 48px;
-          height: 42px;
-          border: 1px solid white;
-          border-radius: 8px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          font-size: 11px;
-        }
-
-        .story-turn-box strong {
-          font-size: 18px;
-        }
-
-        .story-battle-container {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 10px;
-        }
-
-        .story-battle-container-2v2 {
-          grid-template-columns: 1fr 1fr;
-        }
-
-        .story-unit-card {
-          border: 1px solid white;
-          border-radius: 8px;
-          padding: 10px;
-          background: rgba(0,0,0,0.45);
-          box-sizing: border-box;
-          min-width: 0;
-        }
-
-        .story-focus-unit {
-          outline: 2px solid red;
-        }
-
-        .story-unit-name {
-          font-weight: bold;
-          margin-bottom: 6px;
-        }
-
-        .story-slot-area,
-        .story-special-area {
-          margin-top: 8px;
-          border-top: 1px solid #777;
-          padding-top: 8px;
-        }
-
-        .story-slot-name,
-        .story-special-name {
-          display: block;
-          width: 100%;
-          text-align: left;
-          white-space: normal;
-        }
-
-        .story-bottom {
-          margin-top: 12px;
-          text-align: center;
-        }
-
-        #storyBattleLog {
-          border: 1px solid white;
-          min-height: 44px;
-          padding: 8px;
-          margin-bottom: 8px;
-          white-space: pre-wrap;
-          background: rgba(0,0,0,0.8);
-        }
-
-        .story-qte-area {
-          border: 1px solid #777;
-          padding: 6px;
-          margin-bottom: 6px;
-        }
-
-        .story-highlighted {
-          color: red !important;
-          border-color: red !important;
-          box-shadow: 0 0 10px red !important;
-        }
-
-        .story-team-mode-row {
-          text-align: center;
-          margin-bottom: 8px;
-        }
-
-        @media (max-width: 520px) {
-          .story-battle-container,
-          .story-battle-container-2v2 {
-            grid-template-columns: 1fr 1fr;
-            gap: 6px;
-          }
-
-          .story-unit-card {
-            padding: 6px;
-            font-size: 13px;
-          }
-
-          #storyBattleRoot button {
-            font-size: 12px;
-            padding: 4px;
-          }
-        }
-      </style>
-    `;
-  }
-
-  function bindOneOnOneButtons() {
-    document.querySelectorAll(".story-slot-name").forEach(btn => {
-      btn.addEventListener("click", () => {
-        setLog(btn.dataset.slotDesc || "詳細なし");
-      });
-    });
-
-    document.querySelectorAll(".story-special-name").forEach(btn => {
-      btn.addEventListener("click", () => {
-        setLog(btn.dataset.specialDesc || "詳細なし");
-      });
-    });
-
-    document.getElementById("storyMockSlotBtn")?.addEventListener("click", executePlayerSlot);
-    document.getElementById("storyMockSimBtn")?.addEventListener("click", simulatePlayerSlot);
-    document.getElementById("storyMockEndBtn")?.addEventListener("click", executeEnemyTurn);
-    document.getElementById("storyHitBtn")?.addEventListener("click", resolveHit);
-    document.getElementById("storyEvadeBtn")?.addEventListener("click", resolveEvade);
-    document.getElementById("storyCriticalBtn")?.addEventListener("click", spendEvadeForCritical);
-  }
-
-  function bindTwoOnTwoButtons() {
+  function bind1v1() {
+    bindDetails();
     document.getElementById("storyMockSlotBtn")?.addEventListener("click", () => {
-      setLog("2機同時スロット行動。実処理は次段階で接続します。");
+      if (!isAllowed("slot")) return;
+      executePlayerSlot();
+    });
+    document.getElementById("storyMockSimBtn")?.addEventListener("click", () => {
+      if (!isAllowed("sim")) return;
+      simulateSlot();
+    });
+    document.getElementById("storyMockEndBtn")?.addEventListener("click", () => {
+      if (!isAllowed("end")) return;
+      executeEnemyTurn();
+    });
+    document.getElementById("storyHitBtn")?.addEventListener("click", () => {
+      if (!isAllowed("hit")) return;
+      resolveHit();
+    });
+    document.getElementById("storyEvadeBtn")?.addEventListener("click", () => {
+      if (!isAllowed("evade")) return;
+      resolveEvade();
+    });
+    document.getElementById("storyCriticalBtn")?.addEventListener("click", () => {
+      if (!isAllowed("critical")) return;
+      spendCritical();
+    });
+  }
+
+  function bind2v2() {
+    bindDetails();
+
+    document.getElementById("storyMockSlotBtn")?.addEventListener("click", () => {
+      if (!isAllowed("teamSlot")) return;
+      setLog("2機同時にスロット行動を行いました。相手フォーカス機体へ連携攻撃します。");
+      emit("teamSlot");
     });
 
     document.getElementById("storyUnit1SlotBtn")?.addEventListener("click", () => {
-      setLog("1番機単独行動。実処理は次段階で接続します。");
+      if (!isAllowed("teamSingle")) return;
+      setLog("1番機単独行動を選びました。");
+      emit("teamSingle1");
     });
 
     document.getElementById("storyUnit2SlotBtn")?.addEventListener("click", () => {
-      setLog("2番機単独行動。実処理は次段階で接続します。");
+      if (!isAllowed("teamSingle")) return;
+      setLog("2番機単独行動を選びました。");
+      emit("teamSingle2");
     });
 
     document.getElementById("storyMockEndBtn")?.addEventListener("click", () => {
-      setLog("敵2機の行動。強制出目処理は次段階で接続します。");
+      if (!isAllowed("end")) return;
+      setLog("トレーニングマシン1番機：3.演習属性攻撃[不]\nトレーニングマシン2番機：4.演習属性攻撃[必]");
+      document.getElementById("storyQteArea").style.display = "";
+      emit("teamEnemyTurn");
+    });
+
+    document.getElementById("storyEvadeBtn")?.addEventListener("click", () => {
+      if (!isAllowed("evade")) return;
+      setLog("上の攻撃を回避しました。");
+      emit("teamEvade");
+    });
+
+    document.getElementById("storyCoverBtn")?.addEventListener("click", () => {
+      if (!isAllowed("cover")) return;
+      setLog("援護防御が成立しました。パートナーが半分のダメージを肩代わりします。");
+      document.getElementById("storyQteArea").style.display = "none";
+      emit("cover");
     });
 
     document.getElementById("storyTeamStyleBtn")?.addEventListener("click", () => {
-      if (!playerTeam) return;
-      playerTeam.style = playerTeam.style === "分散型" ? "統合型" : "分散型";
-      document.getElementById("storyTeamStyleBtn").textContent = `自軍：${playerTeam.style}`;
-      setLog(`${playerTeam.style}に変更しました。`);
+      if (!isAllowed("style")) return;
+      const btn = document.getElementById("storyTeamStyleBtn");
+      btn.textContent = btn.textContent.includes("分散型") ? "自軍：統合型" : "自軍：分散型";
+      setLog(btn.textContent.replace("自軍：", "") + "に変更しました。");
+      emit("style");
     });
 
     document.getElementById("storyTauntBtn")?.addEventListener("click", () => {
-      setLog("挑発UI。対象選択処理は次段階で接続します。");
+      if (!isAllowed("taunt")) return;
+      renderTauntChoice();
+      emit("taunt");
+    });
+
+    document.getElementById("storyDuelBtn")?.addEventListener("click", () => {
+      if (!isAllowed("duel")) return;
+      renderDuelChoice();
+      emit("duel");
     });
 
     document.getElementById("storyBreakthroughBtn")?.addEventListener("click", () => {
-      renderBreakthroughMock();
+      if (!isAllowed("breakthrough")) return;
+      renderBreakthroughChoice();
+      emit("breakthrough");
     });
   }
 
-  function redrawOneOnOne() {
-    const aCard = document.getElementById("storyMockPlayerA");
-    const bCard = document.getElementById("storyMockPlayerB");
-
-    if (aCard && playerA) {
-      aCard.outerHTML = renderUnitCard(playerA, "A", "storyMockPlayerA");
-    }
-
-    if (bCard && playerB) {
-      bCard.outerHTML = renderUnitCard(playerB, "B", "storyMockPlayerB");
-    }
-
-    const action = document.getElementById("storyActionCounter");
-    if (action) action.textContent = String(actionCount);
-
-    bindSlotDetailButtonsOnly();
-  }
-
-  function bindSlotDetailButtonsOnly() {
-    document.querySelectorAll(".story-slot-name").forEach(btn => {
-      btn.addEventListener("click", () => {
-        setLog(btn.dataset.slotDesc || "詳細なし");
-      });
-    });
-
-    document.querySelectorAll(".story-special-name").forEach(btn => {
-      btn.addEventListener("click", () => {
-        setLog(btn.dataset.specialDesc || "詳細なし");
-      });
+  function bindDetails() {
+    document.querySelectorAll(".story-slot-name,.story-special-name").forEach(btn => {
+      btn.addEventListener("click", () => setLog(btn.dataset.desc || "詳細なし"));
     });
   }
 
-  function simulatePlayerSlot() {
-    const slotNumber = randomSlotNumber();
-    const slotKey = `slot${slotNumber}`;
-    const slot = playerA?.slots?.[slotKey];
+  function redraw1v1() {
+    const a = document.getElementById("storyMockPlayerA");
+    const b = document.getElementById("storyMockPlayerB");
+    if (a) a.outerHTML = renderUnitCard(playerA, "A", "storyMockPlayerA");
+    if (b) b.outerHTML = renderUnitCard(playerB, "B", "storyMockPlayerB");
+    const counter = document.getElementById("storyActionCounter");
+    if (counter) counter.textContent = String(actionCount);
+    bindDetails();
+    refreshButtons();
+  }
 
-    setLog(`シミュレーション：${slotNumber}. ${getSlotLabel(slot)}`);
+  function simulateSlot() {
+    const n = randomSlotNumber();
+    const slot = playerA.slots?.[`slot${n}`];
+    setLog(`シミュレーション：${n}.${getSlotLabel(slot)}`);
+    emit("sim", { slotNumber: n, slot });
   }
 
   function executePlayerSlot() {
-    if (!playerA || !playerB) return;
     if (pendingAttack) {
       setLog("先に相手の攻撃を処理してください。");
       return;
@@ -598,42 +472,55 @@ export function createStoryBattleEngine(ctx = {}) {
       return;
     }
 
-    const slotNumber = getNextPlayerSlotNumber();
-    const slotKey = `slot${slotNumber}`;
-    const slot = playerA.slots?.[slotKey];
+    const n = nextPlayerSlot();
+    const slot = playerA.slots?.[`slot${n}`];
+    const effect = slot?.effect || {};
 
-    applySlotEffect(playerA, playerB, slotNumber, slot, "player");
+    if (effect.type === "evade") {
+      playerA.evade += Number(effect.amount || 0);
+      setLog(`結果：${n}.${getSlotLabel(slot)}\n回避+${effect.amount || 0}`);
+    } else if (effect.type === "heal") {
+      playerA.hp = Math.min(playerA.maxHp, playerA.hp + Number(effect.amount || 0));
+      setLog(`結果：${n}.${getSlotLabel(slot)}\nHPを${effect.amount || 0}回復。`);
+    } else if (effect.type === "attack") {
+      const count = Number(effect.count || 1);
+      let damage = Number(effect.damage || 0) * count;
+      let evadeText = "";
+
+      if (!effect.cannotEvade && playerB.evade >= count) {
+        playerB.evade -= count;
+        damage = 0;
+        evadeText = "\n相手は回避しました。";
+      }
+
+      playerB.hp = Math.max(0, playerB.hp - damage);
+      setLog(`結果：${n}.${getSlotLabel(slot)}${tags(effect)}\n${damage}ダメージ。${evadeText}`);
+    } else {
+      setLog(`結果：${n}.${getSlotLabel(slot)}\n何も起きません。`);
+    }
+
     actionCount = Math.max(0, actionCount - 1);
-    redrawOneOnOne();
+    redraw1v1();
+    emit("playerSlot", { slotNumber: n, slot });
   }
 
   function executeEnemyTurn() {
-    if (!playerA || !playerB) return;
-
     actionCount = 1;
 
-    const slotNumber = getNextEnemySlotNumber();
-    const slotKey = `slot${slotNumber}`;
-    const slot = playerB.slots?.[slotKey];
+    const n = nextEnemySlot();
+    const slot = playerB.slots?.[`slot${n}`];
     const effect = slot?.effect || {};
 
     if (effect.type === "evade") {
       playerB.evade = Math.min(playerB.evadeMax, playerB.evade + Number(effect.amount || 0));
-      setLog(`トレーニングマシン：${slotNumber}. ${getSlotLabel(slot)}\n回避が増えました。`);
-      redrawOneOnOne();
-      return;
-    }
-
-    if (effect.type !== "attack") {
-      setLog(`トレーニングマシン：${slotNumber}. ${getSlotLabel(slot)}\n何も起きません。`);
-      redrawOneOnOne();
+      setLog(`トレーニングマシン：${n}.${getSlotLabel(slot)}\n回避が増えました。`);
+      redraw1v1();
+      emit("enemyTurn", { slotNumber: n, slot });
       return;
     }
 
     pendingAttack = {
-      attacker: playerB,
-      defender: playerA,
-      slotNumber,
+      slotNumber: n,
       slot,
       effect,
       damage: Number(effect.damage || 0) * Number(effect.count || 1)
@@ -642,175 +529,174 @@ export function createStoryBattleEngine(ctx = {}) {
     const qte = document.getElementById("storyQteArea");
     if (qte) qte.style.display = "";
 
-    setLog(`トレーニングマシン：${slotNumber}. ${getSlotLabel(slot)}${formatAttackTags(effect)}\n対応を選んでください。`);
-    redrawOneOnOne();
-  }
-
-  function applySlotEffect(actor, target, slotNumber, slot, actorType) {
-    const effect = slot?.effect || {};
-
-    if (effect.type === "heal") {
-      const amount = Number(effect.amount || 0);
-      actor.hp = Math.min(actor.maxHp, actor.hp + amount);
-      setLog(`${actor.name}：${slotNumber}. ${getSlotLabel(slot)}\nHPを${amount}回復。`);
-      return;
-    }
-
-    if (effect.type === "evade") {
-      const amount = Number(effect.amount || 0);
-      actor.evade += amount;
-      setLog(`${actor.name}：${slotNumber}. ${getSlotLabel(slot)}\n回避+${amount}。`);
-      return;
-    }
-
-    if (effect.type !== "attack") {
-      setLog(`${actor.name}：${slotNumber}. ${getSlotLabel(slot)}\n何も起きません。`);
-      return;
-    }
-
-    const count = Number(effect.count || 1);
-    const damage = Number(effect.damage || 0) * count;
-
-    let finalDamage = damage;
-    let evadeText = "";
-
-    if (actorType === "player" && target.evade >= count && !effect.cannotEvade) {
-      target.evade -= count;
-      finalDamage = 0;
-      evadeText = "\n相手は回避しました。";
-    }
-
-    target.hp = Math.max(0, target.hp - finalDamage);
-
-    setLog(`${actor.name}：${slotNumber}. ${getSlotLabel(slot)}${formatAttackTags(effect)}\n${finalDamage}ダメージ。${evadeText}`);
-
-    if (target.hp <= 0) {
-      setLog(`${target.name}を撃破しました。`);
-    }
+    setLog(`トレーニングマシン：${n}.${getSlotLabel(slot)}${tags(effect)}\n対応を選んでください。`);
+    redraw1v1();
+    emit("enemyTurn", { slotNumber: n, slot });
   }
 
   function resolveHit() {
-    if (!pendingAttack) {
-      setLog("処理中の攻撃がありません。");
-      return;
-    }
+    if (!pendingAttack) return;
 
-    const { attacker, defender, slot, slotNumber, effect } = pendingAttack;
+    let damage = pendingAttack.damage;
+    if (pendingAttack.effect.criticalHit) damage *= 2;
 
-    let damage = Number(effect.damage || 0) * Number(effect.count || 1);
-    if (effect.criticalHit) damage *= 2;
-
-    defender.hp = Math.max(0, defender.hp - damage);
-
+    playerA.hp = Math.max(0, playerA.hp - damage);
+    const info = pendingAttack;
     pendingAttack = null;
-    hideQte();
+    document.getElementById("storyQteArea").style.display = "none";
 
-    setLog(`${attacker.name}：${slotNumber}. ${getSlotLabel(slot)}${formatAttackTags(effect)}\n被弾しました。${damage}ダメージ。`);
-    redrawOneOnOne();
+    setLog(`被弾しました。${damage}ダメージ。`);
+    redraw1v1();
+    emit("hit", info);
   }
 
   function resolveEvade() {
-    if (!pendingAttack) {
-      setLog("処理中の攻撃がありません。");
+    if (!pendingAttack) return;
+
+    const count = Number(pendingAttack.effect.count || 1);
+
+    if (pendingAttack.effect.cannotEvade) {
+      setLog("必中属性のため回避できません。");
+      emit("evadeFailed", pendingAttack);
       return;
     }
 
-    const { attacker, defender, slot, slotNumber, effect } = pendingAttack;
-    const count = Number(effect.count || 1);
-
-    if (effect.cannotEvade) {
-      setLog(`${attacker.name}：${slotNumber}. ${getSlotLabel(slot)}${formatAttackTags(effect)}\n必中属性のため回避できません。`);
-      return;
-    }
-
-    if (defender.evade < count) {
+    if (playerA.evade < count) {
       setLog("回避ストックが足りません。");
       return;
     }
 
-    defender.evade -= count;
-
+    playerA.evade -= count;
+    const info = pendingAttack;
     pendingAttack = null;
-    hideQte();
+    document.getElementById("storyQteArea").style.display = "none";
 
-    setLog(`${attacker.name}：${slotNumber}. ${getSlotLabel(slot)}${formatAttackTags(effect)}\n回避しました。`);
-    redrawOneOnOne();
+    setLog("回避しました。");
+    redraw1v1();
+    emit("evade", info);
   }
 
-  function hideQte() {
-    const qte = document.getElementById("storyQteArea");
-    if (qte) qte.style.display = "none";
-  }
-
-  function spendEvadeForCritical() {
-    if (!playerA) return;
-
+  function spendCritical() {
     if (playerA.evade <= 0) {
       setLog("回避ストックがありません。");
       return;
     }
 
+    const before = playerA.criticalRate;
     playerA.evade -= 1;
     playerA.criticalRate += 4;
 
-    setLog(`会心率が${playerA.criticalRate - 4}%→${playerA.criticalRate}%になりました。`);
-    redrawOneOnOne();
+    setLog(`会心率が${before}%→${playerA.criticalRate}%になりました。`);
+    redraw1v1();
+    emit("critical", { before, after: playerA.criticalRate });
   }
 
-  function renderBreakthroughMock() {
-    setExtraPanel(`
-      <div id="storyBreakthroughMock" style="border:1px solid white;margin-top:8px;padding:8px;">
-        <div>打破賭け</div>
-        <div>
-          ${Array.from({ length: 11 }, (_, i) => `<button class="story-breakthrough-bet-btn" data-bet="${i}">${i}</button>`).join("")}
-        </div>
-        <div id="storyBreakthroughResult"></div>
-      </div>
-    `);
-
-    document.querySelectorAll(".story-breakthrough-bet-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const bet = Number(btn.dataset.bet || 0);
-        const bonus = Math.max(1, Math.ceil(bet / 2));
-        document.getElementById("storyBreakthroughResult").innerHTML = `
-          <p>${bet}ターン分のシミュレーションを行いました。</p>
-          <p class="story-breakthrough-bonus">ボーナス行動権 +${bonus}</p>
-        `;
-      });
+  function renderNext2v2Button() {
+    setExtraPanel(`<button id="storyNext2v2Btn">次へ</button>`);
+    document.getElementById("storyNext2v2Btn").addEventListener("click", () => {
+      if (!isAllowed("next2v2")) return;
+      emit("next2v2");
     });
+    refreshButtons();
   }
 
   function renderModeButtons({ on1v1, on2v2, onEnd } = {}) {
     setExtraPanel(`
-      <div style="margin-top:10px;">
-        <button id="storyFree1v1Btn">1on1</button>
-        <button id="storyFree2v2Btn">2on2</button>
-        <button id="storyChapter1EndBtn">終了</button>
+      <button id="storyFree1v1Btn">1on1</button>
+      <button id="storyFree2v2Btn">2on2</button>
+      <button id="storyChapter1EndBtn">終了</button>
+    `);
+
+    document.getElementById("storyFree1v1Btn").addEventListener("click", () => on1v1?.());
+    document.getElementById("storyFree2v2Btn").addEventListener("click", () => on2v2?.());
+    document.getElementById("storyChapter1EndBtn").addEventListener("click", () => onEnd?.());
+  }
+
+  function renderTauntChoice() {
+    setExtraPanel(`<button id="storyTauntTarget2Btn">2番機を指定</button>`);
+    document.getElementById("storyTauntTarget2Btn").addEventListener("click", () => {
+      document.getElementById("storyEnemyUnit2")?.classList.add("story-taunted-unit");
+      setLog("2番機を挑発対象にしました。");
+      emit("tauntTarget");
+    });
+  }
+
+  function renderDuelChoice() {
+    setExtraPanel(`
+      <button id="storyDuelUnit1Btn">1番機で決戦</button>
+      <button id="storyDuelUnit2Btn">2番機で決戦</button>
+    `);
+
+    ["storyDuelUnit1Btn", "storyDuelUnit2Btn"].forEach(id => {
+      document.getElementById(id).addEventListener("click", () => {
+        document.getElementById("storyPlayerUnit1")?.classList.add("story-duel-unit");
+        document.getElementById("storyEnemyUnit1")?.classList.add("story-duel-unit");
+        setLog("決戦状態になりました。");
+        emit("duelSelected");
+      });
+    });
+  }
+
+  function renderBreakthroughChoice() {
+    setExtraPanel(`
+      <div id="storyBreakthroughPanel">
+        ${Array.from({ length: 11 }, (_, i) => `<button class="story-bet-btn" data-bet="${i}">${i}</button>`).join("")}
+        <div id="storyBreakthroughResult"></div>
       </div>
     `);
 
-    document.getElementById("storyFree1v1Btn")?.addEventListener("click", () => {
-      if (typeof on1v1 === "function") on1v1();
+    document.querySelectorAll(".story-bet-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const bet = Number(btn.dataset.bet || 0);
+        document.getElementById("storyBreakthroughResult").innerHTML =
+          `<p>${bet}ターン分のシミュレーションを行いました。</p><p class="story-breakthrough-bonus">ボーナス行動権 +5</p>`;
+        emit("breakthroughBet", { bet });
+      });
     });
+  }
 
-    document.getElementById("storyFree2v2Btn")?.addEventListener("click", () => {
-      if (typeof on2v2 === "function") on2v2();
-    });
-
-    document.getElementById("storyChapter1EndBtn")?.addEventListener("click", () => {
-      if (typeof onEnd === "function") onEnd();
-    });
+  function styleBlock() {
+    return `
+      <style>
+        #storyBattleRoot{width:min(900px,98vw);margin:0 auto;color:white;box-sizing:border-box;}
+        #storyBattleRoot button{margin:3px;}
+        .story-top-line{display:flex;justify-content:center;gap:8px;margin:8px 0;}
+        .story-counter{width:48px;height:42px;border:1px solid white;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;}
+        .story-counter strong{font-size:18px;}
+        .story-battle-container{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+        .story-unit-card{border:1px solid white;border-radius:8px;padding:10px;background:rgba(0,0,0,.45);box-sizing:border-box;min-width:0;}
+        .story-unit-name{font-weight:bold;margin-bottom:6px;}
+        .story-slot-area,.story-special-area{margin-top:8px;border-top:1px solid #777;padding-top:8px;}
+        .story-slot-name,.story-special-name{display:block;width:100%;text-align:left;white-space:normal;}
+        .story-bottom{margin-top:12px;text-align:center;}
+        #storyBattleLog{border:1px solid white;min-height:44px;padding:8px;margin-bottom:8px;white-space:pre-wrap;background:rgba(0,0,0,.8);}
+        .story-qte-area{border:1px solid #777;padding:6px;margin-bottom:6px;}
+        .story-highlighted{color:red!important;border-color:red!important;box-shadow:0 0 10px red!important;}
+        .story-focus-unit{outline:2px solid red;}
+        .story-taunted-unit{outline:2px solid dodgerblue;}
+        .story-duel-unit{outline:3px solid hotpink;}
+        @media(max-width:520px){
+          .story-battle-container{grid-template-columns:1fr 1fr;gap:6px;}
+          .story-unit-card{padding:6px;font-size:13px;}
+          #storyBattleRoot button{font-size:12px;padding:4px;}
+        }
+      </style>
+    `;
   }
 
   return {
     renderOneOnOneTraining,
     renderTwoOnTwoTraining,
     renderModeButtons,
+    renderNext2v2Button,
     setExtraPanel,
     setLog,
     setHighlight,
     clearHighlight,
     forceNextPlayerSlot,
-    forceNextEnemySlot
+    forceNextEnemySlot,
+    allow,
+    on,
+    clearHandlers
   };
 }
