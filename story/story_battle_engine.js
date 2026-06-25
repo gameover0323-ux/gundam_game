@@ -75,6 +75,7 @@ function createBattleState(unit, options = {}) {
     maxHp: hp,
     storyInternalHp: hp,
     storyDisplayHp: form.displayHp || null,
+    storyMaskHp: !!form.displayHp || options.maskHp === true,
 
     evade: evadeMax,
     evadeMax,
@@ -109,6 +110,27 @@ function refreshStoryStatus(state) {
   }
 
   state.statusList = status;
+}
+
+function makeDisplayState(state) {
+  if (!state || !state.storyMaskHp) return state;
+
+  return {
+    ...state,
+    hp: "？？？",
+    maxHp: "？？？",
+    isDefeated: false
+  };
+}
+
+function makeDisplayTeam(team) {
+  if (!team) return team;
+
+  return {
+    ...team,
+    unit1: makeDisplayState(team.unit1),
+    unit2: makeDisplayState(team.unit2)
+  };
 }
 
 function makeAttackFromSlot(unit, slotNumber, slot) {
@@ -173,6 +195,11 @@ export function createStoryBattleEngine() {
 
   let forcedPlayerSlots = [];
   let forcedEnemySlots = [];
+  let forcedEnemyTeamSlots = [];
+
+  let twoVtwoFreeMode = false;
+  let tutorialTeamEnemyTurnCount = 0;
+
   let allowedActions = new Set();
   let handlers = {};
 
@@ -283,12 +310,46 @@ export function createStoryBattleEngine() {
     forcedEnemySlots.push(Number(slotNumber));
   }
 
+  function forceNextEnemyTeamSlots(unit1SlotNumber, unit2SlotNumber) {
+    forcedEnemyTeamSlots.push({
+      unit1: Number(unit1SlotNumber),
+      unit2: Number(unit2SlotNumber)
+    });
+  }
+
   function nextPlayerSlot() {
     return forcedPlayerSlots.length ? forcedPlayerSlots.shift() : randomSlotNumber();
   }
 
   function nextEnemySlot() {
     return forcedEnemySlots.length ? forcedEnemySlots.shift() : randomSlotNumber();
+  }
+
+  function nextEnemyTeamSlots() {
+    if (forcedEnemyTeamSlots.length) return forcedEnemyTeamSlots.shift();
+
+    if (forcedEnemySlots.length >= 2) {
+      return {
+        unit1: forcedEnemySlots.shift(),
+        unit2: forcedEnemySlots.shift()
+      };
+    }
+
+    if (forcedEnemySlots.length === 1) {
+      return {
+        unit1: forcedEnemySlots.shift(),
+        unit2: randomSlotNumber()
+      };
+    }
+
+    if (!twoVtwoFreeMode && tutorialTeamEnemyTurnCount === 0) {
+      return { unit1: 3, unit2: 4 };
+    }
+
+    return {
+      unit1: randomSlotNumber(),
+      unit2: randomSlotNumber()
+    };
   }
 
   function makePlayerHandlers() {
@@ -403,13 +464,14 @@ export function createStoryBattleEngine() {
     const proto = getStoryCreateUnit("proto_create_gundam");
 
     playerA = createBattleState(proto, { defaultCriticalRate: 5 });
-    playerB = createBattleState(training_machine, { defaultCriticalRate: free ? 5 : 0 });
+    playerB = createBattleState(training_machine, { defaultCriticalRate: free ? 5 : 0, maskHp: true });
 
     pendingAttack = null;
     actionCount = 1;
     turnCount = 1;
     forcedPlayerSlots = [];
     forcedEnemySlots = [];
+    forcedEnemyTeamSlots = [];
     allowedActions = new Set();
 
     root.style.justifyContent = "flex-start";
@@ -463,8 +525,8 @@ export function createStoryBattleEngine() {
 
     const a1 = createBattleState(proto, { defaultCriticalRate: 5 });
     const a2 = createBattleState(proto, { defaultCriticalRate: 5 });
-    const b1 = createBattleState(training_machine, { defaultCriticalRate: free ? 5 : 0 });
-    const b2 = createBattleState(training_machine, { defaultCriticalRate: free ? 5 : 0 });
+    const b1 = createBattleState(training_machine, { defaultCriticalRate: free ? 5 : 0, maskHp: true });
+    const b2 = createBattleState(training_machine, { defaultCriticalRate: free ? 5 : 0, maskHp: true });
 
     a2.name = "プロトクリエイトガンダム 2番機";
     a2.evade = 1;
@@ -500,6 +562,9 @@ export function createStoryBattleEngine() {
     turnCount = 1;
     forcedPlayerSlots = [];
     forcedEnemySlots = [];
+    forcedEnemyTeamSlots = [];
+    twoVtwoFreeMode = !!free;
+    tutorialTeamEnemyTurnCount = 0;
     allowedActions = new Set();
 
     root.style.justifyContent = "flex-start";
@@ -559,7 +624,7 @@ export function createStoryBattleEngine() {
     const playerBContainer = document.getElementById("storyPlayerB");
 
     if (playerAContainer) renderPlayerState(playerA, playerAContainer, "PLAYER A", makePlayerHandlers());
-    if (playerBContainer) renderPlayerState(playerB, playerBContainer, "PLAYER B", makePlayerHandlers());
+    if (playerBContainer) renderPlayerState(makeDisplayState(playerB), playerBContainer, "PLAYER B", makePlayerHandlers());
 
     const action = document.getElementById("storyActionCounterValue");
     if (action) action.textContent = String(actionCount);
@@ -579,7 +644,7 @@ export function createStoryBattleEngine() {
     const playerBContainer = document.getElementById("storyPlayerB");
 
     if (playerAContainer) renderPlayerState2v2(teamA, playerAContainer, "PLAYER A", make2v2Handlers(teamA, "A"));
-    if (playerBContainer) renderPlayerState2v2(teamB, playerBContainer, "PLAYER B", make2v2Handlers(teamB, "B"));
+    if (playerBContainer) renderPlayerState2v2(makeDisplayTeam(teamB), playerBContainer, "PLAYER B", make2v2Handlers(teamB, "B"));
 
     const action = document.getElementById("storyActionCounterValue");
     if (action) action.textContent = String(actionCount);
@@ -803,20 +868,72 @@ export function createStoryBattleEngine() {
     actionCount = 1;
     turnCount += 1;
 
-    const n1 = nextEnemySlot();
-    const n2 = nextEnemySlot();
+    const forced = nextEnemyTeamSlots();
+    const isTutorialFirstTeamEnemyTurn = !twoVtwoFreeMode && tutorialTeamEnemyTurnCount === 0;
+
+    const n1 = Number(forced.unit1 || 1);
+    const n2 = Number(forced.unit2 || 1);
+
+    tutorialTeamEnemyTurnCount += 1;
 
     const slot1 = teamB.unit1.slots?.[getSlotKeyFromNumber(n1)];
     const slot2 = teamB.unit2.slots?.[getSlotKeyFromNumber(n2)];
 
-    const attacks = [
-      ...makeAttackFromSlot(teamB.unit1, n1, slot1).map(attack => ({ ...attack, ownerUnitKey: "unit1" })),
-      ...makeAttackFromSlot(teamB.unit2, n2, slot2).map(attack => ({ ...attack, ownerUnitKey: "unit2" }))
-    ];
+    let unit1Attacks = makeAttackFromSlot(teamB.unit1, n1, slot1).map(attack => ({
+      ...attack,
+      ownerUnitKey: "unit1"
+    }));
+
+    let unit2Attacks = makeAttackFromSlot(teamB.unit2, n2, slot2).map(attack => ({
+      ...attack,
+      ownerUnitKey: "unit2"
+    }));
+
+    if (isTutorialFirstTeamEnemyTurn) {
+      unit1Attacks = unit1Attacks.map(attack => ({
+        ...attack,
+        cannotEvade: false
+      }));
+
+      unit2Attacks = unit2Attacks.map(attack => ({
+        ...attack,
+        cannotEvade: true
+      }));
+
+      if (!unit1Attacks.length) {
+        unit1Attacks = [{
+          damage: 5,
+          type: "shoot",
+          cannotEvade: false,
+          ignoreReduction: false,
+          beam: false,
+          criticalHit: false,
+          sourceLabel: `${teamB.unit1.name}の行動`,
+          slotLabel: `${n1}.${getSlotLabel(slot1)}`,
+          shotIndex: 1,
+          ownerUnitKey: "unit1"
+        }];
+      }
+
+      if (!unit2Attacks.length) {
+        unit2Attacks = [{
+          damage: 5,
+          type: "melee",
+          cannotEvade: true,
+          ignoreReduction: false,
+          beam: false,
+          criticalHit: false,
+          sourceLabel: `${teamB.unit2.name}の行動`,
+          slotLabel: `${n2}.${getSlotLabel(slot2)}`,
+          shotIndex: 1,
+          ownerUnitKey: "unit2"
+        }];
+      }
+    }
 
     pendingAttack = {
       mode: "2v2",
-      attacks,
+      attacks: [...unit1Attacks, ...unit2Attacks],
       focusTeam: teamA,
       targetUnitKey: teamA.focusUnitKey || "unit1",
       header: "PLAYER B の2on2スロット行動",
@@ -1281,6 +1398,7 @@ export function createStoryBattleEngine() {
     clearHighlight,
     forceNextPlayerSlot,
     forceNextEnemySlot,
+    forceNextEnemyTeamSlots,
     allow,
     on,
     clearHandlers
