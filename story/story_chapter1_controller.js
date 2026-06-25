@@ -5,11 +5,11 @@ import {
   CHAPTER1_TUTORIAL_LINES
 } from "./story_chapter1_tutorial_script.js";
 
-import {
-  STORY_TRAINING_MACHINE
-} from "./story_training_machine_data.js";
+import { createStoryBattleEngine } from "./story_battle_engine.js";
 
 export function createStoryChapter1Controller(ctx) {
+  const battleEngine = createStoryBattleEngine(ctx);
+
   let currentLineIndex = 0;
   let currentLines = [];
   let currentHighlight = null;
@@ -19,18 +19,22 @@ export function createStoryChapter1Controller(ctx) {
   }
 
   function clearHighlight() {
-    if (!currentHighlight) return;
-    document.querySelectorAll(currentHighlight).forEach(el => {
-      el.style.color = "";
-      el.style.borderColor = "";
-      el.style.boxShadow = "";
-    });
+    if (currentHighlight) {
+      document.querySelectorAll(currentHighlight).forEach(el => {
+        el.style.color = "";
+        el.style.borderColor = "";
+        el.style.boxShadow = "";
+      });
+    }
+
+    battleEngine.clearHighlight?.();
     currentHighlight = null;
   }
 
   function setHighlight(selector) {
     clearHighlight();
     if (!selector) return;
+
     currentHighlight = selector;
     document.querySelectorAll(selector).forEach(el => {
       el.style.color = "red";
@@ -89,8 +93,10 @@ export function createStoryChapter1Controller(ctx) {
 
     target.addEventListener("pointermove", event => {
       if (!dragging) return;
+
       const nextX = baseX + event.clientX - startX;
       const nextY = baseY + event.clientY - startY;
+
       target.style.left = `${Math.max(0, nextX)}px`;
       target.style.top = `${Math.max(0, nextY)}px`;
       target.style.bottom = "auto";
@@ -105,12 +111,20 @@ export function createStoryChapter1Controller(ctx) {
     });
   }
 
+  function removeTutorialFloatingUi() {
+    document.getElementById("storyTutorialTalkBox")?.remove();
+    document.getElementById("storyTutorialSkipBtn")?.remove();
+    clearHighlight();
+  }
+
   function startAfterCustomize() {
     renderSimpleDialogue(CHAPTER1_AFTER_CUSTOMIZE_LINES, renderTrainingIntro);
   }
 
   function renderSimpleDialogue(lines, onComplete) {
     const root = getRoot();
+    if (!root) return;
+
     currentLines = lines.map(text => ({ text }));
     currentLineIndex = 0;
 
@@ -135,10 +149,12 @@ export function createStoryChapter1Controller(ctx) {
 
     document.getElementById("storySimpleDialogueNextBtn").addEventListener("click", () => {
       currentLineIndex += 1;
+
       if (currentLineIndex >= currentLines.length) {
         if (typeof onComplete === "function") onComplete();
         return;
       }
+
       show();
     });
 
@@ -147,84 +163,36 @@ export function createStoryChapter1Controller(ctx) {
 
   function renderTrainingIntro() {
     const root = getRoot();
-    root.style.justifyContent = "flex-start";
-    root.style.overflowY = "auto";
+    if (!root) return;
 
-    root.innerHTML = `
-      <h2>演習戦闘</h2>
-      ${renderMockBattleField()}
+    battleEngine.renderOneOnOneTraining({
+      root,
+      free: false
+    });
+
+    battleEngine.setExtraPanel(`
       <div style="text-align:center;margin-top:16px;">
         <div style="margin-bottom:12px;">${CHAPTER1_TUTORIAL_INTRO_LINES[0]}</div>
         <button id="storyTutorialYesBtn">はい</button>
         <button id="storyTutorialNoBtn">いいえ</button>
       </div>
-    `;
+    `);
 
     document.getElementById("storyTutorialYesBtn").addEventListener("click", startTutorialCourse);
     document.getElementById("storyTutorialNoBtn").addEventListener("click", startSkipCourse);
   }
 
-  function renderMockBattleField() {
-    return `
-      <div id="storyMockBattle" style="width:min(760px,96vw);margin:0 auto;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div id="storyMockPlayerA" style="border:1px solid white;padding:10px;">
-            <h3>PLAYER A</h3>
-            <div>プロトクリエイトガンダム</div>
-            <div class="story-hp">HP 200/200</div>
-            <div class="story-evade">回避 1/1</div>
-            <div class="story-energy">EN 100</div>
-            <div class="story-slot-area">
-              <b>スロット</b><br>
-              1.汎用マシンガン<br>
-              2.回復 30<br>
-              3.回避 1<br>
-              4.ビームガン<br>
-              5.バズーカ<br>
-              6.心中蹴り
-            </div>
-            <div class="story-special-area">
-              <b>特殊行動</b><br>
-              リロード<br>
-              エネルギーチャージ<br>
-              装備品1<br>
-              装備品2<br>
-              エネルギー調整
-            </div>
-          </div>
-
-          <div id="storyMockPlayerB" style="border:1px solid white;padding:10px;">
-            <h3>PLAYER B</h3>
-            <div>${STORY_TRAINING_MACHINE.name}</div>
-            <div class="story-hp">HP ${STORY_TRAINING_MACHINE.displayHp}</div>
-            <div class="story-evade">回避 1/1</div>
-            <div class="story-slot-area">
-              <b>スロット</b><br>
-              1.演習攻撃<br>
-              2.演習射撃<br>
-              3.演習属性攻撃[不]<br>
-              4.演習属性攻撃[必]<br>
-              5.確定会心攻撃<br>
-              6.回避
-            </div>
-          </div>
-        </div>
-
-        <div style="text-align:center;margin-top:12px;">
-          <button id="storyMockSlotBtn">スロット行動</button>
-          <button id="storyMockSimBtn">シミュレーション</button>
-          <button id="storyMockEndBtn">ターン終了</button>
-        </div>
-      </div>
-    `;
-  }
-
   function startSkipCourse() {
+    removeTutorialFloatingUi();
     renderSimpleDialogue(CHAPTER1_SKIP_LINES, renderFreeTrainingButtons);
   }
 
   function startTutorialCourse() {
-    renderTrainingIntro();
+    battleEngine.renderOneOnOneTraining({
+      root: getRoot(),
+      free: false
+    });
+
     renderMovableTalkBox();
 
     const skipBtn = document.createElement("button");
@@ -236,15 +204,11 @@ export function createStoryChapter1Controller(ctx) {
     skipBtn.style.zIndex = "22001";
     document.body.appendChild(skipBtn);
 
-    skipBtn.addEventListener("click", () => {
-      clearHighlight();
-      document.getElementById("storyTutorialTalkBox")?.remove();
-      document.getElementById("storyTutorialSkipBtn")?.remove();
-      startSkipCourse();
-    });
+    skipBtn.addEventListener("click", startSkipCourse);
 
     currentLines = CHAPTER1_TUTORIAL_LINES;
     currentLineIndex = 0;
+
     showTutorialLine();
   }
 
@@ -259,9 +223,7 @@ export function createStoryChapter1Controller(ctx) {
 
     if (line.finish) {
       const nextBtn = document.getElementById("storyTutorialNextTalkBtn");
-      if (nextBtn) {
-        nextBtn.textContent = "終了";
-      }
+      if (nextBtn) nextBtn.textContent = "終了";
     }
   }
 
@@ -269,9 +231,7 @@ export function createStoryChapter1Controller(ctx) {
     const line = currentLines[currentLineIndex];
 
     if (line?.finish) {
-      clearHighlight();
-      document.getElementById("storyTutorialTalkBox")?.remove();
-      document.getElementById("storyTutorialSkipBtn")?.remove();
+      removeTutorialFloatingUi();
       renderFreeTrainingButtons();
       return;
     }
@@ -282,25 +242,61 @@ export function createStoryChapter1Controller(ctx) {
 
   function renderFreeTrainingButtons() {
     const root = getRoot();
-    root.innerHTML = `
-      <h2>チャプター1 演習</h2>
-      ${renderMockBattleField()}
-      <div style="text-align:center;margin-top:16px;">
-        <button id="storyFree1v1Btn">1on1</button>
-        <button id="storyFree2v2Btn">2on2</button>
-        <button id="storyChapter1EndBtn">終了</button>
-      </div>
-    `;
+    if (!root) return;
 
-    document.getElementById("storyFree1v1Btn").addEventListener("click", renderTrainingIntro);
-    document.getElementById("storyFree2v2Btn").addEventListener("click", () => {
-      ctx.showPopup?.("2on2チュートリアル接続は次段階で実装します");
+    battleEngine.renderOneOnOneTraining({
+      root,
+      free: true
     });
-    document.getElementById("storyChapter1EndBtn").addEventListener("click", clearChapter1);
+
+    battleEngine.setLog("フリー演習です。1on1、2on2、終了を選べます。");
+
+    battleEngine.renderModeButtons({
+      on1v1: () => {
+        battleEngine.renderOneOnOneTraining({
+          root: getRoot(),
+          free: true
+        });
+
+        battleEngine.setLog("1on1演習をリセットしました。");
+
+        battleEngine.renderModeButtons({
+          on1v1: renderFreeTrainingButtons,
+          on2v2: renderFreeTwoOnTwo,
+          onEnd: clearChapter1
+        });
+      },
+
+      on2v2: renderFreeTwoOnTwo,
+
+      onEnd: clearChapter1
+    });
+  }
+
+  function renderFreeTwoOnTwo() {
+    const root = getRoot();
+    if (!root) return;
+
+    battleEngine.renderTwoOnTwoTraining({
+      root,
+      free: true
+    });
+
+    battleEngine.setLog("2on2演習を開始しました。");
+
+    battleEngine.renderModeButtons({
+      on1v1: renderFreeTrainingButtons,
+      on2v2: renderFreeTwoOnTwo,
+      onEnd: clearChapter1
+    });
   }
 
   function clearChapter1() {
+    removeTutorialFloatingUi();
+
     const root = getRoot();
+    if (!root) return;
+
     root.innerHTML = `
       <h2>チャプター1 クリア</h2>
       <p>クリエイトガンダムラボ機能が開設されました。</p>
