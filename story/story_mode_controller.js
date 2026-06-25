@@ -1,4 +1,3 @@
-
 import { createStoryChapter1Controller } from "./story_chapter1_controller.js";
 import {
   PROTO_CREATE_BASE,
@@ -20,12 +19,10 @@ export function createStoryModeController(ctx) {
   let locked = false;
   let customizeState = createInitialProtoCreateLabState();
 
-  function getUsedCost() {
-    return calculateProtoCreateLabCost(customizeState);
-  }
+  const chapter1Controller = createStoryChapter1Controller(ctx);
 
   function getRemainCost() {
-    return PROTO_CREATE_BASE.maxCost - getUsedCost();
+    return PROTO_CREATE_BASE.maxCost - calculateProtoCreateLabCost(customizeState);
   }
 
   function canUseStoryMode() {
@@ -43,8 +40,7 @@ export function createStoryModeController(ctx) {
   }
 
   function clearStoryScreen() {
-    const old = document.getElementById("storyModeRoot");
-    if (old) old.remove();
+    document.getElementById("storyModeRoot")?.remove();
   }
 
   function createRoot() {
@@ -242,14 +238,11 @@ export function createStoryModeController(ctx) {
       repeatTimer = null;
     }
 
-    btn.addEventListener("click", () => {
-      action();
-    });
+    btn.addEventListener("click", action);
 
     btn.addEventListener("pointerdown", event => {
       event.preventDefault();
       clearHold();
-
       holdTimer = setTimeout(() => {
         repeatTimer = setInterval(action, 60);
       }, 1000);
@@ -313,11 +306,8 @@ export function createStoryModeController(ctx) {
         </div>
 
         <hr>
-
         <div id="storySlotRows"></div>
-
         <hr>
-
         <div id="storyOptionalRows"></div>
 
         <div style="text-align:center;margin-top:16px;">
@@ -538,18 +528,9 @@ export function createStoryModeController(ctx) {
   }
 
   function setOption(kind, key, optionId) {
-    if (kind === "slot") {
-      customizeState.selectedSlots[key] = optionId;
-    }
-
-    if (kind === "equipment") {
-      customizeState.equipment[key] = optionId;
-    }
-
-    if (kind === "skill") {
-      customizeState.skill = optionId;
-    }
-
+    if (kind === "slot") customizeState.selectedSlots[key] = optionId;
+    if (kind === "equipment") customizeState.equipment[key] = optionId;
+    if (kind === "skill") customizeState.skill = optionId;
     renderLabRows();
   }
 
@@ -620,42 +601,15 @@ export function createStoryModeController(ctx) {
     const steps = [
       { text: "AI「カスタマイズ画面です！すいませんこんな弱くて…！」" },
       { text: "AI「でも大丈夫です！そのためのカスタマイズですから！説明していきますね。」" },
-      {
-        selector: ".story-level",
-        text: "AI「ここがレベルです！今は0ですが、経験を積むとレベルが上がります！レベルが上がると、コストや様々な能力が上がります！プレイあるのみです！」"
-      },
-      {
-        selector: ".story-cost",
-        text: "AI「ここがコストです！今は100までしかありませんが、レベルが上がれば増えますよ！どうやらまだ40ポイント余っているようですね！この後振り分けしてみましょうか！」"
-      },
-      {
-        selector: ".story-inject",
-        text: "AI「このボタンでコストを注入出来ます！項目しだいで1注入コストは変わりますが、詳しくはかったるいので説明しません！色々触ってみてくださいね！」"
-      },
-      {
-        selector: ".story-release",
-        text: "AI「このボタンでコストを抜き取れます！一気には抜けないです！大変なんですよ抜くの！ボタンを押すと私がコスト無料で抜いてあげるんですからそれで勘弁してください！」"
-      },
-      {
-        selector: ".story-swap",
-        text: "AI「このボタンでその項目の装備を入れ替えられます！対応した入れ替え先のものを所持していれば入れ替えられます！」"
-      },
-      {
-        selector: ".story-slot",
-        text: "AI「スロットで選ばれるアクションです！戦闘の基本となるので、ここの噛み合わせが悪かったりすると弱くなりがちです！」"
-      },
-      {
-        selector: ".story-equipment",
-        text: "AI「この機体に後付けする装備品です！今はシールドしか持ってませんが、ここに装備したものはスロット行動に関係なく特殊行動で効果を発揮できます！とりあえずあとでシールドをつけてみましょう！」"
-      },
-      {
-        selector: ".story-skill",
-        text: "AI「あなたが持っている特殊技能です！おお！？どうやら何か持っているようですね…？これもコストがかかりますが、セットしたればセットしてください！」"
-      },
-      {
-        text: "AI「さぁ早速カスタマイズしてみましょう！色々いじってみてください！」",
-        finish: true
-      }
+      { selector: ".story-level", text: "AI「ここがレベルです！今は0ですが、経験を積むとレベルが上がります！レベルが上がると、コストや様々な能力が上がります！プレイあるのみです！」" },
+      { selector: ".story-cost", text: "AI「ここがコストです！今は100までしかありませんが、レベルが上がれば増えますよ！どうやらまだ40ポイント余っているようですね！この後振り分けしてみましょうか！」" },
+      { selector: ".story-inject", text: "AI「このボタンでコストを注入出来ます！項目しだいで1注入コストは変わりますが、詳しくはかったるいので説明しません！色々触ってみてくださいね！」" },
+      { selector: ".story-release", text: "AI「このボタンでコストを抜き取れます！一気には抜けないです！大変なんですよ抜くの！ボタンを押すと私がコスト無料で抜いてあげるんですからそれで勘弁してください！」" },
+      { selector: ".story-swap", text: "AI「このボタンでその項目の装備を入れ替えられます！対応した入れ替え先のものを所持していれば入れ替えられます！」" },
+      { selector: ".story-slot", text: "AI「スロットで選ばれるアクションです！戦闘の基本となるので、ここの噛み合わせが悪かったりすると弱くなりがちです！」" },
+      { selector: ".story-equipment", text: "AI「この機体に後付けする装備品です！今はシールドしか持ってませんが、ここに装備したものはスロット行動に関係なく特殊行動で効果を発揮できます！とりあえずあとでシールドをつけてみましょう！」" },
+      { selector: ".story-skill", text: "AI「あなたが持っている特殊技能です！おお！？どうやら何か持っているようですね…？これもコストがかかりますが、セットしたればセットしてください！」" },
+      { text: "AI「さぁ早速カスタマイズしてみましょう！色々いじってみてください！」", finish: true }
     ];
 
     let stepIndex = 0;
@@ -674,7 +628,11 @@ export function createStoryModeController(ctx) {
 
       if (step.finish) {
         document.getElementById("storyTutorialNextBtn").style.display = "none";
-        document.getElementById("storyReadyBtn").disabled = false;
+        const readyBtn = document.getElementById("storyReadyBtn");
+        readyBtn.disabled = false;
+        readyBtn.onclick = () => {
+          chapter1Controller.startAfterCustomize();
+        };
       }
     }
 
