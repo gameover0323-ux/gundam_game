@@ -1366,11 +1366,10 @@ function endOnly2v2() {
           margin-bottom:8px;
         }
 
-        #storyBattleRoot .story-highlighted {
-          color:red !important;
-          border-color:red !important;
-          box-shadow:0 0 10px red !important;
-        }
+     #storyBattleRoot .story-highlighted {
+  outline:3px solid red !important;
+  box-shadow:0 0 10px red !important;
+}
 
         #storyBattleRoot .criticalBoostBtn.story-highlighted,
         #storyBattleRoot .hitBtn.story-highlighted,
