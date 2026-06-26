@@ -189,7 +189,7 @@ function setHighlight(selector) {
       { highlight: "#storyPlayerA", text: "AI「見てください！これがあなたの機体のステータスです！カスタマイズしたステータスがそのまま反映されます！」" },
       { highlight: "#storyPlayerB", text: "AI「こっちが敵です！今回はよわよわトレーニングマシンですが、敵のステータスも丸見えなので、戦闘の際はじっくり解析しましょう！」" },
     { highlight: "__storyHpLines", text: "AI「ここがHPです！単純に0になった方が負けです！」" },
-{ highlight: "__storyEvadeLines", text: "AI「ここが回避ストックです！左が所持数、右が最大値です！最大値以上は持てませんが、超過分はターン終了までは切り捨てられません！」" },
+{ highlight: "__storyEvadeLines", text: "AI「その下が回避ストックです！左が所持数、右が最大値です！最大値以上は持てませんが、超過分はターン終了までは切り捨てられません！」" },
       { text: "AI「ただし、ストックが多い形態から少ない形態になった時は、最大値が保持されます！その場合、使用とともに減少します！」" },
      { highlight: "__storyPlayerAEnergyLines", text: "AI「これはクリエイトガンダムのみの仕様ですが、エネルギーがあります！ここが無くなるとエネルギー使用系の行動がなくなりますが、逆に上手く使うことで強く立ち回れますよ！」" },
       { highlight: ".slotArea", text: "AI「ここがスロット行動です！名称をタップすると武装の説明が見られますよ！敵機体のも見れるので、あらかじめ分析しておくとよしです！」" },
@@ -294,8 +294,7 @@ function setHighlight(selector) {
       { text: "AI「他にも[不]は軽減不可、つまりダメージを少なくできない攻撃、[必]は回避ができない攻撃です！何となく覚えておいてくださいね！では、ターン終了を押しましょう！」" },
 
       {
-        highlight: "#storyEndTurnBtn",
-        text: "AI「次は2on2ルールに進みますが、とりあえず飽きるまで1on1を触ってて大丈夫ですよ！次に進みたくなったら「次へ」ボタンをタップしてください！」",
+        text: "AI「次は2on2ルールに進みます！「次へ」ボタンをタップしてください！」",
         waitAction: true,
         setup() {
           battleEngine.renderNext2v2Button();
@@ -339,7 +338,7 @@ function setHighlight(selector) {
 
   function createTwoOnTwoSteps() {
     return [
-      { text: "AI「よっこらしょ！2on2の場を精製しておきました！どうです？4機のステータスが見えますよね！壮観です！」" },
+      { text: "AI「よっこらしょ！2on2の場を精製しました！どうです？4機のステータスが見えますよね！壮観です！」" },
       { highlight: ".switchUnitBtn", text: "AI「このボタンはステータス表示のみを切り替えるボタンです！相手のものも押せるので、適宜押して見たい時に能力を見ましょう！」" },
       { highlight: ".focusUnitBtn", text: "AI「ここはフォーカスといって、現在プレイヤー機体で赤くなっているほうがフォーカスです！つまり、狙われる機体です！」" },
       { text: "AI「狙われてもいい方をフォーカス機体にしておくのが基本戦術です！」" },
