@@ -133,6 +133,20 @@ function makeDisplayTeam(team) {
   };
 }
 
+function updateTeamUnifiedState(team) {
+  if (!team) return;
+
+  const unit1 = team.unit1 || {};
+  const unit2 = team.unit2 || {};
+
+  team.unified = {
+    hp: Number(unit1.hp || 0) + Number(unit2.hp || 0),
+    maxHp: Number(unit1.maxHp || 0) + Number(unit2.maxHp || 0),
+    evade: Number(unit1.evade || 0) + Number(unit2.evade || 0),
+    evadeMax: Number(unit1.evadeMax || 0) + Number(unit2.evadeMax || 0)
+  };
+}
+
 function makeAttackFromSlot(unit, slotNumber, slot) {
   const effect = slot?.effect || {};
   const count = Math.max(1, Number(effect.count || 1));
@@ -273,8 +287,12 @@ let duelBUnitKey = null;
     });
 
     document.querySelectorAll("#storyBattleRoot .tauntSystemBtn").forEach(btn => {
-      btn.disabled = allowedActions.size > 0 && !(allowedActions.has("taunt") || allowedActions.has("duel"));
-    });
+  btn.disabled = allowedActions.size > 0 && !(
+    allowedActions.has("taunt") ||
+    allowedActions.has("duel") ||
+    allowedActions.has("breakthrough")
+  );
+});
 
     document.querySelectorAll("#storyBattleRoot .story-bet-btn").forEach(btn => {
       btn.disabled = allowedActions.size > 0 && !allowedActions.has("breakthroughBet");
@@ -314,15 +332,30 @@ function setHighlight(selector) {
   clearHighlight();
   if (!selector) return;
 
-  if (selector === "__storyHpLines") {
-    highlightSmallTextLine("#storyPlayerA,#storyPlayerB", text => text.startsWith("HP:"));
-    return;
-  }
+if (selector === "__storyHpLines") {
+  highlightSmallTextLine("#storyPlayerA,#storyPlayerB", text => text.startsWith("HP:"));
+  return;
+}
 
-  if (selector === "__storyEvadeLines") {
-    highlightSmallTextLine("#storyPlayerA,#storyPlayerB", text => text.startsWith("回避:"));
-    return;
-  }
+if (selector === "__storyPlayerAHpLines") {
+  highlightSmallTextLine("#storyPlayerA", text => text.startsWith("HP:"));
+  return;
+}
+
+if (selector === "__storyEvadeLines") {
+  highlightSmallTextLine("#storyPlayerA,#storyPlayerB", text => text.startsWith("回避:"));
+  return;
+}
+
+if (selector === "__storyPlayerAEvadeLines") {
+  highlightSmallTextLine("#storyPlayerA", text => text.startsWith("回避:"));
+  return;
+}
+
+if (selector === "__storyPlayerAEnergyLines") {
+  highlightSmallTextLine("#storyPlayerA", text => text.startsWith("EN "));
+  return;
+}
 
   document.querySelectorAll(selector).forEach(el => {
     el.classList.add("story-highlighted");
@@ -425,7 +458,7 @@ function setHighlight(selector) {
       },
 
       canExecuteSpecial: () => false,
-      canChangeFocus: pendingAttack === null && !(side === "B" && tauntTargetUnitKey),
+      canChangeFocus: pendingAttack === null && !(side === "B" && tauntTargetUnitKey && twoVtwoPhase === "duelReady"),
 
       onSwitchActiveUnit: unitKey => {
         if (pendingAttack) return;
@@ -436,10 +469,10 @@ function setHighlight(selector) {
       onSwitchFocusUnit: unitKey => {
         if (pendingAttack) return;
 
-        if (side === "B" && tauntTargetUnitKey) {
-          team.focusUnitKey = "unit1";
-          redraw2v2();
-          return;
+        if (side === "B" && tauntTargetUnitKey && twoVtwoPhase === "duelReady") {
+  team.focusUnitKey = "unit1";
+  redraw2v2();
+  return;
         }
 
         team.focusUnitKey = unitKey;
@@ -481,8 +514,8 @@ function setHighlight(selector) {
       },
 
       isTauntTarget: unitKey => {
-        return side === "B" && unitKey === tauntTargetUnitKey && twoVtwoPhase !== "taunt";
-      },
+  return side === "B" && unitKey === tauntTargetUnitKey && twoVtwoPhase === "duelReady";
+},
 
       isDuelTarget: unitKey => {
         if (side === "A") return unitKey === duelAUnitKey;
@@ -592,7 +625,10 @@ function setHighlight(selector) {
     };
 
     twoVtwoPhase = "taunt";
-    pendingAttack = null;
+tauntTargetUnitKey = null;
+duelAUnitKey = null;
+duelBUnitKey = null;
+pendingAttack = null;
     actionCount = 1;
     turnCount = 1;
     forcedPlayerSlots = [];
@@ -673,8 +709,10 @@ function setHighlight(selector) {
   function redraw2v2() {
     if (!teamA || !teamB) return;
 
-    [teamA.unit1, teamA.unit2, teamB.unit1, teamB.unit2].forEach(refreshStoryStatus);
-
+   [teamA.unit1, teamA.unit2, teamB.unit1, teamB.unit2].forEach(refreshStoryStatus);
+updateTeamUnifiedState(teamA);
+updateTeamUnifiedState(teamB);
+    
     const playerAContainer = document.getElementById("storyPlayerA");
     const playerBContainer = document.getElementById("storyPlayerB");
 
