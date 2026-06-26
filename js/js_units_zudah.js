@@ -32,7 +32,7 @@ export const zudah = {
         },
         slot5: {
           label: "加速",
-          desc: "次の行動ターンから行動数+1、回避ストック最大値と現在の回避所持数を倍加し、HP60回復。5回重ね掛けで自爆する。",
+          desc: "次の行動ターンから行動数+1、回避ストック最大値と現在の回避所持数を倍加し、HP60回復。4回重ね掛けで自爆する。",
           effect: { type: "custom", customType: "zudah_accel" }
         },
         slot6: {
