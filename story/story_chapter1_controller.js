@@ -191,7 +191,7 @@ function setHighlight(selector) {
     { highlight: "__storyHpLines", text: "AI「ここがHPです！単純に0になった方が負けです！」" },
 { highlight: "__storyEvadeLines", text: "AI「ここが回避ストックです！左が所持数、右が最大値です！最大値以上は持てませんが、超過分はターン終了までは切り捨てられません！」" },
       { text: "AI「ただし、ストックが多い形態から少ない形態になった時は、最大値が保持されます！その場合、使用とともに減少します！」" },
-      { text: "AI「これはクリエイトガンダムのみの仕様ですが、エネルギーがあります！ここが無くなるとエネルギー使用系の行動がなくなりますが、逆に上手く使うことで強く立ち回れますよ！」" },
+     { highlight: "__storyPlayerAEnergyLines", text: "AI「これはクリエイトガンダムのみの仕様ですが、エネルギーがあります！ここが無くなるとエネルギー使用系の行動がなくなりますが、逆に上手く使うことで強く立ち回れますよ！」" },
       { highlight: ".slotArea", text: "AI「ここがスロット行動です！名称をタップすると武装の説明が見られますよ！敵機体のも見れるので、あらかじめ分析しておくとよしです！」" },
       { highlight: ".specialArea", text: "AI「ここが特殊行動と言います！スロットに左右されない任意選択の行動です！」" },
       { text: "AI「しっかり説明を読んで、ここぞと言う時に効果を発揮しましょう！」" },
@@ -235,7 +235,7 @@ function setHighlight(selector) {
           battleEngine.on("hit", () => advanceTutorial());
         }
       },
-      { highlight: "#storyPlayerA", text: "AI「出ました！自分のHPを見てください！5ダメージ受けてますよね！こんなもんじゃ何発食らってもプロトクリエイトガンダムは堕ちません！」" },
+   { highlight: "__storyPlayerAHpLines", text: "AI「出ました！自分のHPを見てください！5ダメージ受けてますよね！こんなもんじゃ何発食らってもプロトクリエイトガンダムは堕ちません！」" },
 
       {
         highlight: "#storyEndTurnBtn",
