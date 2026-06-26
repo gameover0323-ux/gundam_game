@@ -189,7 +189,7 @@ export function createStoryModeController(ctx) {
 
   function startNormalRoute() {
     renderDialogue([
-   "AI「ストーリーモードを選択してくださり、ありがとうございまーす！」"
+   "AI「ストーリーモードを選択してくださり、ありがとうございまーす！」",
       "AI「申し遅れました！私はひとり寂しくこのゲームに設置されたナビゲーターAIです！」",
       "AI「このモードは、私と一緒に色々なデータを集め、貴方が最強のガンダムを作り上げるモードです！」",
       "AI「そのベースこそ、この機体です！」",
