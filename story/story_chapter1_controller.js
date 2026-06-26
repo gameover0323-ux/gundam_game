@@ -523,7 +523,7 @@ function setHighlight(selector) {
     const step = tutorialSteps[tutorialIndex];
 
     if (step?.finish) {
-      renderFreeTrainingButtons();
+      renderFreeModeSelect();
       return;
     }
 
@@ -538,7 +538,26 @@ function setHighlight(selector) {
     tutorialIndex = 0;
     showTutorialStep();
   }
+function renderFreeModeSelect() {
+    removeTutorialFloatingUi();
 
+    const root = getRoot();
+    if (!root) return;
+
+    root.innerHTML = `
+      <div style="width:min(720px,96vw);border:1px solid white;background:black;color:white;padding:16px;line-height:1.8;text-align:center;">
+        <h2>チャプター1 フリー演習</h2>
+        <p>実戦UIで演習します。モードを選んでください。</p>
+        <button id="storyFree1v1Btn">1on1</button>
+        <button id="storyFree2v2Btn">2on2</button>
+        <button id="storyChapter1EndBtn">チャプター1終了</button>
+      </div>
+    `;
+
+    document.getElementById("storyFree1v1Btn")?.addEventListener("click", renderFreeTrainingButtons);
+    document.getElementById("storyFree2v2Btn")?.addEventListener("click", renderFreeTwoOnTwo);
+    document.getElementById("storyChapter1EndBtn")?.addEventListener("click", clearChapter1);
+}
   function renderFreeTrainingButtons() {
     removeTutorialFloatingUi();
 
@@ -566,8 +585,24 @@ function setHighlight(selector) {
   function clearChapter1() {
     removeTutorialFloatingUi();
 
-    const root = getRoot();
-    if (!root) return;
+    let root = getRoot();
+
+    if (!root) {
+      root = document.createElement("div");
+      root.id = "storyModeRoot";
+      root.style.position = "fixed";
+      root.style.inset = "0";
+      root.style.zIndex = "20000";
+      root.style.background = "black";
+      root.style.color = "white";
+      root.style.display = "flex";
+      root.style.flexDirection = "column";
+      root.style.alignItems = "center";
+      root.style.justifyContent = "center";
+      root.style.padding = "16px";
+      root.style.boxSizing = "border-box";
+      document.body.appendChild(root);
+    }
 
     root.innerHTML = `
       <h2>チャプター1 クリア</h2>
