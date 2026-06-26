@@ -26,8 +26,8 @@ export const zudah = {
           effect: { type: "evade", amount: 1 }
         },
         slot4: {
-          label: "対艦砲 60ダメージ",
-          desc: "60ダメージ。射撃",
+          label: "対艦砲 50ダメージ",
+          desc: "50ダメージ。射撃",
           effect: { type: "attack", attackType: "shoot", damage: 60, count: 1 }
         },
         slot5: {
@@ -36,12 +36,12 @@ export const zudah = {
           effect: { type: "custom", customType: "zudah_accel" }
         },
         slot6: {
-          label: "シュツルムファウスト 30ダメージ×2回",
-          desc: "30ダメージ×2回。射撃、軽減不可",
+          label: "シュツルムファウスト 20ダメージ×2回",
+          desc: "20ダメージ×2回。射撃、軽減不可",
           effect: {
             type: "attack",
             attackType: "shoot",
-            damage: 30,
+            damage: 20,
             count: 2,
             ignoreReduction: true
           }
