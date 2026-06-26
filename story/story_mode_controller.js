@@ -175,20 +175,21 @@ export function createStoryModeController(ctx) {
     document.getElementById("storyRegisterYesBtn").addEventListener("click", async () => {
       await ctx.playerAccountUi?.handleRegister?.();
       renderDialogue([
-        "AI「ふむふむ。いい名前ですね！これからよろしくお願いしますね！」"
+        "AI「ふむふむ。いい名前ですね！これからよろしくお願いしますね！それじゃ改めて…」"
       ], startNormalRoute);
     });
 
     document.getElementById("storyRegisterNoBtn").addEventListener("click", () => {
       renderDialogue([
         "AI「なんと…！まさかこのモードをノーセーブで不眠不休でクリアまで持っていく気ですか！」",
-        "AI「それもまたよし！見届けますよ！私も！」"
+        "AI「それもまたよし！見届けますよ！私も！それじゃ改めて…」"
       ], startNormalRoute);
     });
   }
 
   function startNormalRoute() {
     renderDialogue([
+   "AI「ストーリーモードを選択してくださり、ありがとうございまーす！」"
       "AI「申し遅れました！私はひとり寂しくこのゲームに設置されたナビゲーターAIです！」",
       "AI「このモードは、私と一緒に色々なデータを集め、貴方が最強のガンダムを作り上げるモードです！」",
       "AI「そのベースこそ、この機体です！」",
