@@ -394,9 +394,9 @@ export function onZudahAfterSlotResolved(state, slotNumber, context = {}) {
   ) {
     state.zudahAccelStack++;
 
-    if (state.zudahAccelStack >= 5) {
+    if (state.zudahAccelStack >= 4) {
       setRuleHpZero(state, context);
-      return { redraw: true, message: "ヅダは加速を5回重ね掛けし、自爆した" };
+      return { redraw: true, message: "ヅダは加速を4回重ね掛けし、自爆した" };
     }
 
     setRuleBaseActionCount(state, 1 + state.zudahAccelStack, context);
@@ -405,7 +405,7 @@ export function onZudahAfterSlotResolved(state, slotNumber, context = {}) {
 
     return {
       redraw: true,
-      message: `加速：行動数+1、回避上限・現在回避倍加、HP60回復（${state.zudahAccelStack}/5）`
+      message: `加速：行動数+1、回避上限・現在回避倍加、HP60回復（${state.zudahAccelStack}/4）`
     };
   }
 
