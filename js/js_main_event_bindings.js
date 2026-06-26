@@ -20,10 +20,11 @@ export function bindMainEvents(ctx) {
   } = ctx;
 
   const storyModeController = createStoryModeController({
-    getPlayerProfile: ctx.getPlayerProfile,
-    playerAccountUi,
-    showPopup: ctx.showPopup
-  });
+  getPlayerProfile: ctx.getPlayerProfile,
+  playerAccountUi,
+  showPopup: ctx.showPopup,
+  startStoryFreeBattle: ctx.startStoryFreeBattle
+});
 
   window.gbsRefreshStoryModeButton = () => {
     storyModeController.updateStartButtonVisibility();
