@@ -188,7 +188,11 @@ export function createStoryBattleEngine() {
   let teamA = null;
   let teamB = null;
   let twoVtwoPhase = "taunt";
-
+  
+let tauntTargetUnitKey = null;
+let duelAUnitKey = null;
+let duelBUnitKey = null;
+  
   let pendingAttack = null;
   let actionCount = 1;
   let turnCount = 1;
@@ -288,20 +292,42 @@ export function createStoryBattleEngine() {
     refreshButtons();
   }
 
-  function clearHighlight() {
-    document.querySelectorAll("#storyBattleRoot .story-highlighted").forEach(el => {
-      el.classList.remove("story-highlighted");
+ function clearHighlight() {
+  document.querySelectorAll("#storyBattleRoot .story-highlighted").forEach(el => {
+    el.classList.remove("story-highlighted");
+  });
+}
+
+function highlightSmallTextLine(rootSelector, matcher) {
+  const roots = document.querySelectorAll(rootSelector);
+  roots.forEach(root => {
+    const candidates = [...root.querySelectorAll("*")].filter(el => {
+      const text = String(el.textContent || "").trim();
+      return el.children.length === 0 && matcher(text);
     });
+
+    candidates.forEach(el => el.classList.add("story-highlighted"));
+  });
+}
+
+function setHighlight(selector) {
+  clearHighlight();
+  if (!selector) return;
+
+  if (selector === "__storyHpLines") {
+    highlightSmallTextLine("#storyPlayerA,#storyPlayerB", text => text.startsWith("HP:"));
+    return;
   }
 
-  function setHighlight(selector) {
-    clearHighlight();
-    if (!selector) return;
-    document.querySelectorAll(selector).forEach(el => {
-      el.classList.add("story-highlighted");
-    });
+  if (selector === "__storyEvadeLines") {
+    highlightSmallTextLine("#storyPlayerA,#storyPlayerB", text => text.startsWith("回避:"));
+    return;
   }
 
+  document.querySelectorAll(selector).forEach(el => {
+    el.classList.add("story-highlighted");
+  });
+}
   function forceNextPlayerSlot(slotNumber) {
     forcedPlayerSlots.push(Number(slotNumber));
   }
@@ -377,7 +403,7 @@ export function createStoryBattleEngine() {
     };
   }
 
-  function make2v2Handlers(team, side) {
+ function make2v2Handlers(team, side) {
     return {
       getCriticalRate: state => Number(state?.storyCriticalRate ?? 5),
 
@@ -399,7 +425,7 @@ export function createStoryBattleEngine() {
       },
 
       canExecuteSpecial: () => false,
-      canChangeFocus: pendingAttack === null,
+      canChangeFocus: pendingAttack === null && !(side === "B" && tauntTargetUnitKey),
 
       onSwitchActiveUnit: unitKey => {
         if (pendingAttack) return;
@@ -409,6 +435,13 @@ export function createStoryBattleEngine() {
 
       onSwitchFocusUnit: unitKey => {
         if (pendingAttack) return;
+
+        if (side === "B" && tauntTargetUnitKey) {
+          team.focusUnitKey = "unit1";
+          redraw2v2();
+          return;
+        }
+
         team.focusUnitKey = unitKey;
         redraw2v2();
       },
@@ -448,11 +481,13 @@ export function createStoryBattleEngine() {
       },
 
       isTauntTarget: unitKey => {
-        return side === "B" && unitKey === "unit2" && twoVtwoPhase !== "taunt";
+        return side === "B" && unitKey === tauntTargetUnitKey && twoVtwoPhase !== "taunt";
       },
 
       isDuelTarget: unitKey => {
-        return side === "A" && unitKey === "unit1" && twoVtwoPhase === "duel";
+        if (side === "A") return unitKey === duelAUnitKey;
+        if (side === "B") return unitKey === duelBUnitKey;
+        return false;
       }
     };
   }
@@ -1228,33 +1263,42 @@ function endOnly2v2() {
   }
 
   function renderTauntChoice() {
-    setExtraPanel(`<button id="storyTauntTarget2Btn">2番機を指定</button>`);
+  setExtraPanel(`<button id="storyTauntTarget2Btn">2番機を指定</button>`);
 
-    document.getElementById("storyTauntTarget2Btn")?.addEventListener("click", () => {
-      twoVtwoPhase = "duelReady";
-      teamB.focusUnitKey = "unit2";
-      setLog("2番機を挑発対象にしました。");
-      redraw2v2();
-      emit("tauntTarget");
-    });
-  }
+  document.getElementById("storyTauntTarget2Btn")?.addEventListener("click", () => {
+    twoVtwoPhase = "duelReady";
+    tauntTargetUnitKey = "unit2";
+    teamB.focusUnitKey = "unit1";
+    setLog("2番機を挑発対象にしました。");
+    redraw2v2();
+    emit("tauntTarget");
+  });
+}
 
-  function renderDuelChoice() {
-    setExtraPanel(`
-      <button id="storyDuelUnit1Btn">1番機で決戦</button>
-      <button id="storyDuelUnit2Btn">2番機で決戦</button>
-    `);
+function renderDuelChoice() {
+  setExtraPanel(`
+    <button id="storyDuelUnit1Btn">1番機で決戦</button>
+    <button id="storyDuelUnit2Btn">2番機で決戦</button>
+  `);
 
-    ["storyDuelUnit1Btn", "storyDuelUnit2Btn"].forEach(id => {
-      document.getElementById(id)?.addEventListener("click", () => {
-        twoVtwoPhase = "duel";
-        setLog("決戦状態になりました。");
-        redraw2v2();
-        emit("duelSelected");
-      });
-    });
-  }
+  document.getElementById("storyDuelUnit1Btn")?.addEventListener("click", () => {
+    twoVtwoPhase = "duel";
+    duelAUnitKey = "unit1";
+    duelBUnitKey = teamB.focusUnitKey || "unit1";
+    setLog("決戦状態になりました。");
+    redraw2v2();
+    emit("duelSelected");
+  });
 
+  document.getElementById("storyDuelUnit2Btn")?.addEventListener("click", () => {
+    twoVtwoPhase = "duel";
+    duelAUnitKey = "unit2";
+    duelBUnitKey = teamB.focusUnitKey || "unit1";
+    setLog("決戦状態になりました。");
+    redraw2v2();
+    emit("duelSelected");
+  });
+}
   function renderBreakthroughChoice() {
     setExtraPanel(`
       <div id="storyBreakthroughPanel">
