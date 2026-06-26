@@ -250,7 +250,7 @@ export function getZudahDerivedState(state) {
 
   const status = [
     "特性：超回避",
-    `加速重ね掛け:${state.zudahAccelStack}/5`,
+    `加速重ね掛け:${state.zudahAccelStack}/4`,
     `シールド残り:${Math.max(0, Number(state.shieldCount || 0))}/3`
   ];
 
