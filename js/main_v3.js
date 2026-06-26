@@ -1215,8 +1215,25 @@ function startStoryFreeBattle(mode = "1v1", options = {}) {
   exitBtn.style.right = "8px";
   exitBtn.style.top = "8px";
   exitBtn.style.zIndex = "30000";
-  exitBtn.addEventListener("click", () => {
+ exitBtn.addEventListener("click", () => {
     exitBtn.remove();
+
+    let storyRoot = document.getElementById("storyModeRoot");
+    if (!storyRoot) {
+      storyRoot = document.createElement("div");
+      storyRoot.id = "storyModeRoot";
+      storyRoot.style.position = "fixed";
+      storyRoot.style.inset = "0";
+      storyRoot.style.zIndex = "20000";
+      storyRoot.style.background = "black";
+      storyRoot.style.color = "white";
+      storyRoot.style.display = "flex";
+      storyRoot.style.justifyContent = "center";
+      storyRoot.style.alignItems = "center";
+      storyRoot.style.textAlign = "center";
+      document.body.appendChild(storyRoot);
+    }
+
     options.onEnd?.();
   });
   document.body.appendChild(exitBtn);
