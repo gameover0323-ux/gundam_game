@@ -149,6 +149,9 @@ import { createActionLayer } from "./js_action_layer.js";
 import { createFeedbackForm } from "./js_feedback_form.js";
 import { createSpecTutorialController } from "./js_spec_tutorial_controller.js";
 
+import { getStoryCreateUnit } from "../story/story_units.js";
+import { training_machine } from "./js_units_training_machine.js";
+
 
 
 const screens = {
@@ -1174,7 +1177,50 @@ function initOnline1v1Battle(unitA, unitB) {
 function init2v2(unitsA, unitsB) {
   return battleInitController.init2v2(unitsA, unitsB);
 }
+function cloneStoryBattleUnit(unit, name = null) {
+  const cloned = JSON.parse(JSON.stringify(unit));
+  if (name) {
+    cloned.name = name;
+    const formId = cloned.defaultFormId || "normal";
+    if (cloned.forms?.[formId]) cloned.forms[formId].name = name;
+  }
+  return cloned;
+}
 
+function startStoryFreeBattle(mode = "1v1", options = {}) {
+  document.getElementById("storyModeRoot")?.remove();
+  document.getElementById("storyTutorialTalkBox")?.remove();
+  document.getElementById("storyTutorialSkipBtn")?.remove();
+  document.getElementById("storyFreeBattleExitBtn")?.remove();
+
+  resetOnlineStateForLocalBattle();
+
+  const proto1 = getStoryCreateUnit("proto_create_gundam");
+  const proto2 = cloneStoryBattleUnit(proto1, "プロトクリエイトガンダム 2番機");
+  const training1 = cloneStoryBattleUnit(training_machine);
+  const training2 = cloneStoryBattleUnit(training_machine, "トレーニングマシン 2番機");
+
+  if (mode === "2v2") {
+    battleMode = "vscpu2v2";
+    init2v2([proto1, proto2], [training1, training2]);
+  } else {
+    battleMode = "vscpu1v1";
+    battleInitController.init1v1(proto1, training1);
+  }
+
+  const exitBtn = document.createElement("button");
+  exitBtn.id = "storyFreeBattleExitBtn";
+  exitBtn.textContent = "チャプター1終了";
+  exitBtn.style.position = "fixed";
+  exitBtn.style.right = "8px";
+  exitBtn.style.top = "8px";
+  exitBtn.style.zIndex = "30000";
+  exitBtn.addEventListener("click", () => {
+    exitBtn.remove();
+    options.onEnd?.();
+  });
+  document.body.appendChild(exitBtn);
+}
 function initChallenge1v1(unitA, bossUnit) {
   return battleInitController.initChallenge1v1(unitA, bossUnit);
 }
@@ -2728,7 +2774,10 @@ bindMainEvents({
   online2v2RoomController,
   localModeController,
   twoVtwoActions,
-  playerAccountUi,
+playerAccountUi,
+
+  getPlayerProfile: () => playerSession.profile,
+  startStoryFreeBattle,
 
   executeSlot,
   executeUnit1Slot,
