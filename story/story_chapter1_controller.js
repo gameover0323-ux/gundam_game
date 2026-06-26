@@ -188,8 +188,8 @@ function setHighlight(selector) {
       { highlight: "#storyTutorialSkipBtn", text: "AI「ドパガキはこの、スキップボタンを押してチュートリアル強制終了出来ます！まぁクソ長いですがあとから見返せるのでいいかもしれませんが！」" },
       { highlight: "#storyPlayerA", text: "AI「見てください！これがあなたの機体のステータスです！カスタマイズしたステータスがそのまま反映されます！」" },
       { highlight: "#storyPlayerB", text: "AI「こっちが敵です！今回はよわよわトレーニングマシンですが、敵のステータスも丸見えなので、戦闘の際はじっくり解析しましょう！」" },
-      { highlight: "#storyBattleRoot .player div", text: "AI「ここがHPです！単純に0になった方が負けです！」" },
-      { highlight: ".criticalBoostBtn", text: "AI「ここが回避ストックです！左が所持数、右が最大値です！最大値以上は持てませんが、超過分はターン終了までは切り捨てられません！」" },
+    { highlight: "__storyHpLines", text: "AI「ここがHPです！単純に0になった方が負けです！」" },
+{ highlight: "__storyEvadeLines", text: "AI「ここが回避ストックです！左が所持数、右が最大値です！最大値以上は持てませんが、超過分はターン終了までは切り捨てられません！」" },
       { text: "AI「ただし、ストックが多い形態から少ない形態になった時は、最大値が保持されます！その場合、使用とともに減少します！」" },
       { text: "AI「これはクリエイトガンダムのみの仕様ですが、エネルギーがあります！ここが無くなるとエネルギー使用系の行動がなくなりますが、逆に上手く使うことで強く立ち回れますよ！」" },
       { highlight: ".slotArea", text: "AI「ここがスロット行動です！名称をタップすると武装の説明が見られますよ！敵機体のも見れるので、あらかじめ分析しておくとよしです！」" },
@@ -466,33 +466,15 @@ function setHighlight(selector) {
 
       { text: "AI「ピンク色になりましたね！自分の選んだ決戦機体と、相手が選んでいるフォーカス機体が決戦状態となり、ピンク色の機体同士で2倍のダメージが入るようになります！効果は5ターン！」" },
 
-      {
-        highlight: "#storyBattleExtraPanel",
+{
+        highlight: ".tauntSystemBtn",
         text: "AI「ハイリスクハイリターン！ここで押せるのが「打破」です！打破ボタンを押してみましょう！」",
         waitAction: true,
         setup() {
-          battleEngine.setExtraPanel(`<button id="storyBreakthroughBtn">打破</button>`);
-          document.getElementById("storyBreakthroughBtn").addEventListener("click", () => {
-            battleEngine.allow(["breakthrough"]);
-            battleEngine.on("breakthrough", () => advanceTutorial());
-          });
           battleEngine.allow(["breakthrough"]);
-          document.getElementById("storyBreakthroughBtn").addEventListener("click", () => {
-            battleEngine.setExtraPanel(`
-              <div id="storyBreakthroughPanel">
-                ${Array.from({ length: 11 }, (_, i) => `<button class="story-bet-btn" data-bet="${i}">${i}</button>`).join("")}
-                <div id="storyBreakthroughResult"></div>
-              </div>
-            `);
-            battleEngine.on("breakthroughBet", () => advanceTutorial());
-            document.querySelectorAll(".story-bet-btn").forEach(btn => {
-              btn.addEventListener("click", () => {
-                const bet = Number(btn.dataset.bet || 0);
-                document.getElementById("storyBreakthroughResult").innerHTML =
-                  `<p>${bet}ターン分のシミュレーションを行いました。</p><p class="story-breakthrough-bonus">ボーナス行動権 +5</p>`;
-                advanceTutorial();
-              });
-            });
+          battleEngine.on("breakthrough", () => {
+            battleEngine.allow(["breakthroughBet"]);
+            advanceTutorial();
           });
         }
       },
@@ -500,7 +482,11 @@ function setHighlight(selector) {
       {
         highlight: ".story-bet-btn[data-bet='10']",
         text: "AI「画面下部に、0～10のボタンが出ましたね！10を選んでみましょう！」",
-        waitAction: true
+        waitAction: true,
+        setup() {
+          battleEngine.allow(["breakthroughBet"]);
+          battleEngine.on("breakthroughBet", () => advanceTutorial());
+        }
       },
 
       { text: "AI「ぶわーっと出ましたね！これが打破！10ターン分のシミュレーションを行い、与えるダメージ量が多い方の勝ちというモードになります！」" },
