@@ -543,25 +543,25 @@ function setHighlight(selector) {
   function renderFreeTrainingButtons() {
     removeTutorialFloatingUi();
 
-    battleEngine.renderOneOnOneTraining({ root: getRoot(), free: true });
-    battleEngine.setLog("フリー演習です。1on1、2on2、終了を選べます。");
+    if (typeof ctx.startStoryFreeBattle === "function") {
+      ctx.startStoryFreeBattle("1v1", { onEnd: clearChapter1 });
+      return;
+    }
 
-    battleEngine.renderModeButtons({
-      on1v1: renderFreeTrainingButtons,
-      on2v2: renderFreeTwoOnTwo,
-      onEnd: clearChapter1
-    });
+    battleEngine.renderOneOnOneTraining({ root: getRoot(), free: true });
+    battleEngine.setLog("フリー演習です。");
   }
 
   function renderFreeTwoOnTwo() {
+    removeTutorialFloatingUi();
+
+    if (typeof ctx.startStoryFreeBattle === "function") {
+      ctx.startStoryFreeBattle("2v2", { onEnd: clearChapter1 });
+      return;
+    }
+
     battleEngine.renderTwoOnTwoTraining({ root: getRoot(), free: true });
     battleEngine.setLog("2on2フリー演習です。");
-
-    battleEngine.renderModeButtons({
-      on1v1: renderFreeTrainingButtons,
-      on2v2: renderFreeTwoOnTwo,
-      onEnd: clearChapter1
-    });
   }
 
   function clearChapter1() {
