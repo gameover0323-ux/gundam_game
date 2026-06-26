@@ -8,7 +8,7 @@ export const training_machine = {
   forms: {
     normal: {
       name: "トレーニングマシン",
-      hp: 114514810,
+      hp: 114514,
       displayHp: "？？？",
       evadeMax: 1,
       criticalRate: 0,
