@@ -211,7 +211,7 @@ function setHighlight(selector) {
         }
       },
       { text: "AI「結果が出ましたね！行動は4です！0ダメージですが、これは相手が回避をしたんですね！」" },
-      { highlight: "#storyPlayerB .criticalBoostBtn", text: "AI「画面上部、相手回避を見てください！0/1となってますよね。これは、1回回避を消費したということです！」" },
+      { text: "AI「画面上部、相手回避を見てください！0/1となってますよね。これは、1回回避を消費したということです！」" },
       { text: "AI「このように、攻撃回数分回避を消費すると、攻撃を無効化出来るわけですね！」" },
 
       {
@@ -399,8 +399,8 @@ function setHighlight(selector) {
 },
 
       {
-        highlight: ".teamModeBtn",
-        text: "AI「画面上部、分散型って書いてありますよね。実は戦型がふたつあるんです。ここを押してみましょう！」",
+      highlight: "#storyPlayerA .teamModeBtn",
+        text: "AI「画面上部、分散型って書いてありますよね。実は戦型がふたつあるんです。自分チームのここを押してみましょう！」",
         waitAction: true,
         setup() {
           battleEngine.allow(["style"]);
@@ -412,7 +412,7 @@ function setHighlight(selector) {
       { text: "AI「デメリットとしては、1番機が被弾する扱いになる、援護防御は使えない、[挑発]システムがつかえないというところですね。」" },
 
       {
-        highlight: ".teamModeBtn",
+        highlight: "#storyPlayerA .teamModeBtn",
         text: "AI「統合型は後で試してもらうとして、[挑発]、行きましょう！分散型に戻してください！」",
         waitAction: true,
         setup() {
@@ -422,7 +422,7 @@ function setHighlight(selector) {
       },
 
       {
-        highlight: ".tauntSystemBtn",
+        highlight: "#storyPlayerA .tauntSystemBtn",
         text: "AI「挑発が使えます！早速押してみましょう！」",
         waitAction: true,
         setup() {
@@ -433,7 +433,7 @@ function setHighlight(selector) {
 
       {
         highlight: "#storyTauntTarget2Btn",
-        text: "AI「2機目のトレーニングマシンを指定してみましょう！」",
+        text: "AI「画面下部です！2機目のトレーニングマシンを指定してみましょう！」",
         waitAction: true,
         setup() {
           battleEngine.allow([]);
@@ -442,10 +442,10 @@ function setHighlight(selector) {
       },
 
       { text: "AI「見てください！2番機が青くなりましたね！この状態の時は、分散型にして青くなった機体をフォーカスにしないと、ダメージが1.5倍になります！効果は5ターンです！」" },
-      { text: "AI「統合型の場合も1番機が挑発されていたとしてもダメです！分散型で、相手にその機体にフォーカスさせることを強いる行動ですね！」" },
+      { text: "AI「統合型の場合も1番機が挑発されていたとしても1.5倍ダメージです！つまり分散型で、相手にその機体にフォーカスさせることを強いる行動ですね！」" },
 
       {
-        highlight: ".tauntSystemBtn",
+        highlight: "#storyPlayerA .tauntSystemBtn",
         text: "AI「挑発ボタンが決戦になってますよね。これを押してみましょう！」",
         waitAction: true,
         setup() {
@@ -466,7 +466,7 @@ function setHighlight(selector) {
       { text: "AI「ピンク色になりましたね！自分の選んだ決戦機体と、相手が選んでいるフォーカス機体が決戦状態となり、ピンク色の機体同士で2倍のダメージが入るようになります！効果は5ターン！」" },
 
 {
-        highlight: ".tauntSystemBtn",
+        highlight: "#storyPlayerA .tauntSystemBtn",
         text: "AI「ハイリスクハイリターン！ここで押せるのが「打破」です！打破ボタンを押してみましょう！」",
         waitAction: true,
         setup() {
