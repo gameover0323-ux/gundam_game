@@ -56,13 +56,12 @@ export function createStoryModeController(ctx) {
   }
 
   function persistCustomizeState() {
-    if (labMode === "chapter1") {
-      customizeState = createInitialProtoCreateLabState();
-      return;
-    }
+  if (labMode === "chapter1") {
+    return;
+  }
 
-    updateProtoCreateLabState(() => customizeState);
-    refreshStorySave();
+  updateProtoCreateLabState(() => customizeState);
+  refreshStorySave();
   }
 
   function getMaxCost() {
@@ -309,36 +308,30 @@ export function createStoryModeController(ctx) {
     });
   }
 
-  function adjustHp(delta) {
-  const hpMax = Number(PROTO_CREATE_BASE.hpMax || 1000);
+function adjustHp(delta) {
+  const nextHp = customizeState.hp + (delta > 0 ? PROTO_CREATE_BASE.hpStep : -PROTO_CREATE_BASE.hpStep);
 
   if (delta > 0 && getRemainCost() < PROTO_CREATE_BASE.hpCostStep) return;
-  if (delta > 0 && Number(customizeState.hp || 0) >= hpMax) return;
   if (delta < 0 && customizeState.hpCost <= 0) return;
+  if (nextHp > 1000) return;
+  if (nextHp < PROTO_CREATE_BASE.baseHp) return;
 
-  customizeState.hp += delta > 0 ? PROTO_CREATE_BASE.hpStep : -PROTO_CREATE_BASE.hpStep;
-  customizeState.hp = Math.max(PROTO_CREATE_BASE.baseHp, Math.min(hpMax, customizeState.hp));
-
+  customizeState.hp = nextHp;
   customizeState.hpCost += delta > 0 ? PROTO_CREATE_BASE.hpCostStep : -PROTO_CREATE_BASE.hpCostStep;
-  customizeState.hpCost = Math.max(0, customizeState.hpCost);
-
   persistCustomizeState();
   renderCustomizeValues();
 }
 
 function adjustEvade(delta) {
-  const evadeMax = Number(PROTO_CREATE_BASE.evadeMax || 25);
+  const nextEvade = customizeState.evade + (delta > 0 ? PROTO_CREATE_BASE.evadeStep : -PROTO_CREATE_BASE.evadeStep);
 
   if (delta > 0 && getRemainCost() < PROTO_CREATE_BASE.evadeCostStep) return;
-  if (delta > 0 && Number(customizeState.evade || 0) >= evadeMax) return;
   if (delta < 0 && customizeState.evadeCost <= 0) return;
+  if (nextEvade > 25) return;
+  if (nextEvade < PROTO_CREATE_BASE.baseEvade) return;
 
-  customizeState.evade += delta > 0 ? PROTO_CREATE_BASE.evadeStep : -PROTO_CREATE_BASE.evadeStep;
-  customizeState.evade = Math.max(PROTO_CREATE_BASE.baseEvade, Math.min(evadeMax, customizeState.evade));
-
+  customizeState.evade = nextEvade;
   customizeState.evadeCost += delta > 0 ? PROTO_CREATE_BASE.evadeCostStep : -PROTO_CREATE_BASE.evadeCostStep;
-  customizeState.evadeCost = Math.max(0, customizeState.evadeCost);
-
   persistCustomizeState();
   renderCustomizeValues();
 }
@@ -379,7 +372,7 @@ function adjustEvade(delta) {
     btn.addEventListener("pointercancel", clearHold);
   }
 
-  function renderCustomizeValues() {
+    function renderCustomizeValues() {
     const levelInfo = getProtoCreateLevelInfo(storySave);
     const maxCost = getMaxCost();
 
@@ -411,11 +404,12 @@ function adjustEvade(delta) {
     const energyCost = document.getElementById("storyEnergyCost");
     if (energyText) energyText.textContent = `エネルギー ${customizeState.energy}`;
     if (energyCost) energyCost.textContent = `[コスト${customizeState.energyCost}]`;
+
     const readyBtn = document.getElementById("storyReadyBtn");
-if (readyBtn && readyBtn.textContent !== "戻る") {
-  readyBtn.disabled = getRemainCost() < 0;
-}
-  }
+    if (readyBtn && readyBtn.textContent !== "戻る") {
+      readyBtn.disabled = getRemainCost() < 0;
+    }
+    }
 
   function renderCustomizeTutorial() {
     refreshStorySave();
@@ -592,14 +586,14 @@ if (readyBtn && readyBtn.textContent !== "戻る") {
   }
 
   function bindCustomizeButtons() {
-    document.getElementById("storyHpInject").addEventListener("click", () => adjustHp(1));
-    document.getElementById("storyHpRelease").addEventListener("click", () => adjustHp(-1));
+  bindHoldButton(document.getElementById("storyHpInject"), () => adjustHp(1));
+  bindHoldButton(document.getElementById("storyHpRelease"), () => adjustHp(-1));
 
-    document.getElementById("storyEvadeInject").addEventListener("click", () => adjustEvade(1));
-    document.getElementById("storyEvadeRelease").addEventListener("click", () => adjustEvade(-1));
+  bindHoldButton(document.getElementById("storyEvadeInject"), () => adjustEvade(1));
+  bindHoldButton(document.getElementById("storyEvadeRelease"), () => adjustEvade(-1));
 
-    bindHoldButton(document.getElementById("storyEnergyInject"), () => adjustEnergy(1));
-    bindHoldButton(document.getElementById("storyEnergyRelease"), () => adjustEnergy(-1));
+  bindHoldButton(document.getElementById("storyEnergyInject"), () => adjustEnergy(1));
+  bindHoldButton(document.getElementById("storyEnergyRelease"), () => adjustEnergy(-1));
   }
 
   function renderLabRows() {
@@ -682,20 +676,29 @@ if (readyBtn && readyBtn.textContent !== "戻る") {
     return null;
   }
 
-  function getOptionsFor(kind, key) {
-    if (kind === "slot") return STORY_SLOT_OPTIONS[key] || [];
-    if (kind === "equipment") return STORY_EQUIPMENT_OPTIONS;
-    if (kind === "skill") return STORY_SKILL_OPTIONS;
-    return [];
+function getOptionsFor(kind, key) {
+  if (labMode === "chapter1") {
+    if (kind === "slot") return (STORY_SLOT_OPTIONS[key] || []).slice(0, 1);
+    if (kind === "equipment") return STORY_EQUIPMENT_OPTIONS.slice(0, 1);
+    if (kind === "skill") return STORY_SKILL_OPTIONS.slice(0, 1);
   }
 
-  function setOption(kind, key, optionId) {
-    if (kind === "slot") customizeState.selectedSlots[key] = optionId;
-    if (kind === "equipment") customizeState.equipment[key] = optionId;
-    if (kind === "skill") customizeState.skill = optionId;
+  if (kind === "slot") return STORY_SLOT_OPTIONS[key] || [];
+  if (kind === "equipment") return STORY_EQUIPMENT_OPTIONS;
+  if (kind === "skill") return STORY_SKILL_OPTIONS;
+  return [];
+}
 
-    persistCustomizeState();
-    renderLabRows();
+  function setOption(kind, key, optionId) {
+  const allowed = getOptionsFor(kind, key).some(option => option.id === optionId);
+  if (!allowed) return;
+
+  if (kind === "slot") customizeState.selectedSlots[key] = optionId;
+  if (kind === "equipment") customizeState.equipment[key] = optionId;
+  if (kind === "skill") customizeState.skill = optionId;
+
+  persistCustomizeState();
+  renderLabRows();
   }
 
   function openSwapModal(kind, key) {
@@ -790,14 +793,16 @@ if (readyBtn && readyBtn.textContent !== "戻る") {
 
       document.getElementById("storyTutorialTalk").textContent = step.text;
 
-      if (step.finish) {
+           if (step.finish) {
         document.getElementById("storyTutorialNextBtn").style.display = "none";
         const readyBtn = document.getElementById("storyReadyBtn");
-        readyBtn.disabled = false;
+        readyBtn.dataset.forceEnabled = "false";
+        readyBtn.disabled = getRemainCost() < 0;
         readyBtn.onclick = () => {
+          if (getRemainCost() < 0) return;
           chapter1Controller.startAfterCustomize();
         };
-      }
+           }
     }
 
     document.getElementById("storyTutorialNextBtn").addEventListener("click", () => {
