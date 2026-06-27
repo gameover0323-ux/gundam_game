@@ -307,7 +307,7 @@ function setHighlight(selector) {
 
   function showTutorialStep() {
     battleEngine.clearHandlers();
-    battleEngine.allow([]);
+  battleEngine.allow(["__tutorial_locked__"]);
 
     const step = tutorialSteps[tutorialIndex];
     if (!step) return;
@@ -436,7 +436,7 @@ function setHighlight(selector) {
         text: "AI「画面下部です！2機目のトレーニングマシンを指定してみましょう！」",
         waitAction: true,
         setup() {
-          battleEngine.allow([]);
+        battleEngine.allow(["__tutorial_locked__"]);
           battleEngine.on("tauntTarget", () => advanceTutorial());
         }
       },
@@ -498,7 +498,7 @@ function setHighlight(selector) {
 
   function showTutorialStep() {
     battleEngine.clearHandlers();
-    battleEngine.allow([]);
+  battleEngine.allow(["__tutorial_locked__"]);
 
     const step = tutorialSteps[tutorialIndex];
     if (!step) return;
