@@ -239,8 +239,12 @@ let duelBUnitKey = null;
   }
 
   function isAllowed(action) {
-    if (allowedActions.size === 0) return true;
-    return allowedActions.has(action);
+  if (allowedActions.has("__tutorial_locked__")) {
+    return false;
+  }
+
+  if (allowedActions.size === 0) return true;
+  return allowedActions.has(action);
   }
 
   function refreshButtons() {
@@ -286,6 +290,14 @@ let duelBUnitKey = null;
       btn.disabled = allowedActions.size > 0 && !allowedActions.has("style");
     });
 
+document.querySelectorAll("#storyBattleRoot .switchUnitBtn").forEach(btn => {
+  btn.disabled = allowedActions.size > 0 && !allowedActions.has("switch");
+});
+
+document.querySelectorAll("#storyBattleRoot .focusUnitBtn").forEach(btn => {
+  btn.disabled = allowedActions.size > 0 && !allowedActions.has("focus");
+});
+    
     document.querySelectorAll("#storyBattleRoot .tauntSystemBtn").forEach(btn => {
   btn.disabled = allowedActions.size > 0 && !(
     allowedActions.has("taunt") ||
@@ -458,17 +470,21 @@ if (selector === "__storyPlayerAEnergyLines") {
       },
 
       canExecuteSpecial: () => false,
-      canChangeFocus: pendingAttack === null && !(side === "B" && tauntTargetUnitKey && twoVtwoPhase === "duelReady"),
+    canChangeFocus:
+  isAllowed("focus") &&
+  pendingAttack === null &&
+  !(side === "B" && tauntTargetUnitKey && twoVtwoPhase === "duelReady"),
 
-      onSwitchActiveUnit: unitKey => {
-        if (pendingAttack) return;
-        team.activeUnitKey = unitKey;
-        redraw2v2();
-      },
+  onSwitchActiveUnit: unitKey => {
+  if (!isAllowed("switch")) return;
+  if (pendingAttack) return;
+  team.activeUnitKey = unitKey;
+  redraw2v2();
+},
 
       onSwitchFocusUnit: unitKey => {
-        if (pendingAttack) return;
-
+  if (!isAllowed("focus")) return;
+  if (pendingAttack) return;
         if (side === "B" && tauntTargetUnitKey && twoVtwoPhase === "duelReady") {
   team.focusUnitKey = "unit1";
   redraw2v2();
