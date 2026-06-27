@@ -7,7 +7,8 @@ import {
   findStorySlotOption,
   findStoryEquipmentOption,
   findStorySkillOption,
-  calculateProtoCreateLabCost
+    calculateProtoCreateLabCost,
+  createInitialProtoCreateLabState
 } from "./story_create_lab_data.js";
 
 import {
@@ -15,8 +16,11 @@ import {
   saveStorySave,
   getProtoCreateLevelInfo,
   getProtoCreateMaxCost,
-  updateProtoCreateLabState
+    updateProtoCreateLabState,
+  setStoryFlag
 } from "./story_save.js";
+
+
 
 export function createStoryModeController(ctx) {
   const DEBUG_ROLES = new Set(["debug", "Ciel_debugger"]);
@@ -25,17 +29,38 @@ export function createStoryModeController(ctx) {
   let lineIndex = 0;
   let locked = false;
 
-  let storySave = loadStorySave();
+    let storySave = loadStorySave();
+  let labMode = "normal";
   let customizeState = storySave.createUnits.proto_create_gundam.lab;
 
-  const chapter1Controller = createStoryChapter1Controller(ctx);
+  const chapter1Controller = createStoryChapter1Controller({
+    ...ctx,
+    onChapter1Clear: () => {
+      setStoryFlag("chapter1Cleared", true);
+      setStoryFlag("labUnlocked", true);
+      setStoryFlag("storyMenuUnlocked", true);
+      refreshStorySave();
+    },
+    closeStoryModeToTitle
+  });
 
   function refreshStorySave() {
     storySave = loadStorySave();
+
+    if (labMode === "chapter1") {
+      customizeState = createInitialProtoCreateLabState();
+      return;
+    }
+
     customizeState = storySave.createUnits.proto_create_gundam.lab;
   }
 
   function persistCustomizeState() {
+    if (labMode === "chapter1") {
+      customizeState = createInitialProtoCreateLabState();
+      return;
+    }
+
     updateProtoCreateLabState(() => customizeState);
     refreshStorySave();
   }
@@ -147,6 +172,13 @@ export function createStoryModeController(ctx) {
     createRoot();
 
     setTimeout(() => {
+      refreshStorySave();
+
+      if (storySave.flags?.storyMenuUnlocked) {
+        renderStoryMainMenu();
+        return;
+      }
+
       if (ctx.getPlayerProfile?.()) {
         startNormalRoute();
       } else {
@@ -155,6 +187,54 @@ export function createStoryModeController(ctx) {
     }, 3100);
   }
 
+  function closeStoryModeToTitle() {
+    clearStoryScreen();
+    ctx.showTitle?.();
+  }
+
+  function renderStoryMainMenu() {
+    const root = document.getElementById("storyModeRoot") || createRoot();
+
+    root.innerHTML = `
+      <div style="width:min(720px,96vw);border:1px solid white;background:black;color:white;padding:16px;line-height:1.8;text-align:center;">
+        <h2>ストーリーモード</h2>
+        <button id="storyChapterSelectBtn">チャプターセレクト</button>
+        <button id="storyLabMenuBtn">クリエイトガンダムラボ</button>
+        <button id="storyMenuCloseBtn">閉じる</button>
+      </div>
+    `;
+
+    document.getElementById("storyChapterSelectBtn")?.addEventListener("click", renderChapterSelect);
+    document.getElementById("storyLabMenuBtn")?.addEventListener("click", renderNormalLab);
+    document.getElementById("storyMenuCloseBtn")?.addEventListener("click", closeStoryModeToTitle);
+  }
+
+  function renderChapterSelect() {
+    const root = document.getElementById("storyModeRoot") || createRoot();
+
+    root.innerHTML = `
+      <div style="width:min(720px,96vw);border:1px solid white;background:black;color:white;padding:16px;line-height:1.8;text-align:center;">
+        <h2>チャプターセレクト</h2>
+        <button id="storyChapter1Btn">チャプター1</button>
+        <button id="storyChapterSelectBackBtn">戻る</button>
+      </div>
+    `;
+
+    document.getElementById("storyChapter1Btn")?.addEventListener("click", () => {
+      labMode = "chapter1";
+      customizeState = createInitialProtoCreateLabState();
+      startNormalRoute();
+    });
+
+    document.getElementById("storyChapterSelectBackBtn")?.addEventListener("click", renderStoryMainMenu);
+  }
+
+  function renderNormalLab() {
+    labMode = "normal";
+    refreshStorySave();
+    renderCustomizeTutorial();
+  }
+  
   function startGuestRoute() {
     renderDialogue([
       "AI「…あっ！？新しいプレイヤーさん！？」",
@@ -187,7 +267,10 @@ export function createStoryModeController(ctx) {
     });
   }
 
-  function startNormalRoute() {
+    function startNormalRoute() {
+    labMode = "chapter1";
+    customizeState = createInitialProtoCreateLabState();
+
     renderDialogue([
    "AI「ストーリーモードを選択してくださり、ありがとうございまーす！」",
       "AI「申し遅れました！私はひとり寂しくこのゲームに設置されたナビゲーターAIです！」",
@@ -466,10 +549,28 @@ export function createStoryModeController(ctx) {
       <button id="storyTutorialNextBtn">次へ</button>
     `;
 
-    bindCustomizeButtons();
+        bindCustomizeButtons();
     renderLabRows();
-    startCustomizeGuide();
     renderCustomizeValues();
+
+    if (labMode === "normal") {
+      document.getElementById("storyTutorialTalk").textContent =
+        "AI「ここが通常のクリエイトガンダムラボです！今後ここから本格的なカスタマイズを行えるようになります！」";
+
+      const nextBtn = document.getElementById("storyTutorialNextBtn");
+      if (nextBtn) nextBtn.style.display = "none";
+
+      const readyBtn = document.getElementById("storyReadyBtn");
+      if (readyBtn) {
+        readyBtn.disabled = false;
+        readyBtn.textContent = "戻る";
+        readyBtn.onclick = renderStoryMainMenu;
+      }
+
+      return;
+    }
+
+    startCustomizeGuide();
   }
 
   function bindCustomizeButtons() {
