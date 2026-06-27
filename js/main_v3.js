@@ -1177,6 +1177,15 @@ function initOnline1v1Battle(unitA, unitB) {
 function init2v2(unitsA, unitsB) {
   return battleInitController.init2v2(unitsA, unitsB);
 }
+
+
+function cleanupStoryFreeBattleButtons() {
+  document.getElementById("storyFreeBattleButtons")?.remove();
+  document.getElementById("storyFreeBattleExitBtn")?.remove();
+  document.getElementById("storyFreeBattleSwitch1v1Btn")?.remove();
+  document.getElementById("storyFreeBattleSwitch2v2Btn")?.remove();
+}
+
 function cloneStoryBattleUnit(unit, name = null) {
   const cloned = JSON.parse(JSON.stringify(unit));
   if (name) {
@@ -1191,9 +1200,19 @@ function startStoryFreeBattle(mode = "1v1", options = {}) {
   document.getElementById("storyModeRoot")?.remove();
   document.getElementById("storyTutorialTalkBox")?.remove();
   document.getElementById("storyTutorialSkipBtn")?.remove();
-  document.getElementById("storyFreeBattleExitBtn")?.remove();
+  cleanupStoryFreeBattleButtons();
 
   resetOnlineStateForLocalBattle();
+
+  currentAttack = [];
+  currentAttackContext = null;
+  currentAttackContexts = [];
+  pendingChoice = null;
+  battleNotice = "";
+  currentActionHeader = "";
+  currentActionLabel = "";
+  currentTurn = 1;
+  currentPlayer = "A";
 
   const proto1 = getStoryCreateUnit("proto_create_gundam");
   const proto2 = cloneStoryBattleUnit(proto1, "プロトクリエイトガンダム 2番機");
@@ -1208,35 +1227,49 @@ function startStoryFreeBattle(mode = "1v1", options = {}) {
     battleInitController.init1v1(proto1, training1);
   }
 
-  const exitBtn = document.createElement("button");
-  exitBtn.id = "storyFreeBattleExitBtn";
-  exitBtn.textContent = "チャプター1終了";
-  exitBtn.style.position = "fixed";
-  exitBtn.style.right = "8px";
-  exitBtn.style.top = "8px";
-  exitBtn.style.zIndex = "30000";
- exitBtn.addEventListener("click", () => {
-    exitBtn.remove();
+  const buttonWrap = document.createElement("div");
+  buttonWrap.id = "storyFreeBattleButtons";
+  buttonWrap.style.position = "fixed";
+  buttonWrap.style.right = "8px";
+  buttonWrap.style.top = "8px";
+  buttonWrap.style.zIndex = "30000";
+  buttonWrap.style.display = "flex";
+  buttonWrap.style.flexDirection = "column";
+  buttonWrap.style.gap = "6px";
 
-    let storyRoot = document.getElementById("storyModeRoot");
-    if (!storyRoot) {
-      storyRoot = document.createElement("div");
-      storyRoot.id = "storyModeRoot";
-      storyRoot.style.position = "fixed";
-      storyRoot.style.inset = "0";
-      storyRoot.style.zIndex = "20000";
-      storyRoot.style.background = "black";
-      storyRoot.style.color = "white";
-      storyRoot.style.display = "flex";
-      storyRoot.style.justifyContent = "center";
-      storyRoot.style.alignItems = "center";
-      storyRoot.style.textAlign = "center";
-      document.body.appendChild(storyRoot);
-    }
+  buttonWrap.innerHTML = `
+    <button id="storyFreeBattleSwitch1v1Btn">1on1に切替</button>
+    <button id="storyFreeBattleSwitch2v2Btn">2on2に切替</button>
+    <button id="storyFreeBattleExitBtn">チャプター1終了</button>
+  `;
+
+  document.body.appendChild(buttonWrap);
+
+  document.getElementById("storyFreeBattleSwitch1v1Btn")?.addEventListener("click", () => {
+    startStoryFreeBattle("1v1", options);
+  });
+
+  document.getElementById("storyFreeBattleSwitch2v2Btn")?.addEventListener("click", () => {
+    startStoryFreeBattle("2v2", options);
+  });
+
+  document.getElementById("storyFreeBattleExitBtn")?.addEventListener("click", () => {
+    cleanupStoryFreeBattleButtons();
+
+    currentAttack = [];
+    currentAttackContext = null;
+    currentAttackContexts = [];
+    pendingChoice = null;
+    battleNotice = "";
+    currentActionHeader = "";
+    currentActionLabel = "";
 
     options.onEnd?.();
+
+    document.getElementById("storyModeRoot")?.remove();
+    resetLocalSelectionAndBattleState();
+    showTitle();
   });
-  document.body.appendChild(exitBtn);
 }
 function initChallenge1v1(unitA, bossUnit) {
   return battleInitController.initChallenge1v1(unitA, bossUnit);
