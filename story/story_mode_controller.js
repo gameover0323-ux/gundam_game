@@ -310,24 +310,38 @@ export function createStoryModeController(ctx) {
   }
 
   function adjustHp(delta) {
-    if (delta > 0 && getRemainCost() < PROTO_CREATE_BASE.hpCostStep) return;
-    if (delta < 0 && customizeState.hpCost <= 0) return;
+  const hpMax = Number(PROTO_CREATE_BASE.hpMax || 1000);
 
-    customizeState.hp += delta > 0 ? PROTO_CREATE_BASE.hpStep : -PROTO_CREATE_BASE.hpStep;
-    customizeState.hpCost += delta > 0 ? PROTO_CREATE_BASE.hpCostStep : -PROTO_CREATE_BASE.hpCostStep;
-    persistCustomizeState();
-    renderCustomizeValues();
-  }
+  if (delta > 0 && getRemainCost() < PROTO_CREATE_BASE.hpCostStep) return;
+  if (delta > 0 && Number(customizeState.hp || 0) >= hpMax) return;
+  if (delta < 0 && customizeState.hpCost <= 0) return;
 
-  function adjustEvade(delta) {
-    if (delta > 0 && getRemainCost() < PROTO_CREATE_BASE.evadeCostStep) return;
-    if (delta < 0 && customizeState.evadeCost <= 0) return;
+  customizeState.hp += delta > 0 ? PROTO_CREATE_BASE.hpStep : -PROTO_CREATE_BASE.hpStep;
+  customizeState.hp = Math.max(PROTO_CREATE_BASE.baseHp, Math.min(hpMax, customizeState.hp));
 
-    customizeState.evade += delta > 0 ? PROTO_CREATE_BASE.evadeStep : -PROTO_CREATE_BASE.evadeStep;
-    customizeState.evadeCost += delta > 0 ? PROTO_CREATE_BASE.evadeCostStep : -PROTO_CREATE_BASE.evadeCostStep;
-    persistCustomizeState();
-    renderCustomizeValues();
-  }
+  customizeState.hpCost += delta > 0 ? PROTO_CREATE_BASE.hpCostStep : -PROTO_CREATE_BASE.hpCostStep;
+  customizeState.hpCost = Math.max(0, customizeState.hpCost);
+
+  persistCustomizeState();
+  renderCustomizeValues();
+}
+
+function adjustEvade(delta) {
+  const evadeMax = Number(PROTO_CREATE_BASE.evadeMax || 25);
+
+  if (delta > 0 && getRemainCost() < PROTO_CREATE_BASE.evadeCostStep) return;
+  if (delta > 0 && Number(customizeState.evade || 0) >= evadeMax) return;
+  if (delta < 0 && customizeState.evadeCost <= 0) return;
+
+  customizeState.evade += delta > 0 ? PROTO_CREATE_BASE.evadeStep : -PROTO_CREATE_BASE.evadeStep;
+  customizeState.evade = Math.max(PROTO_CREATE_BASE.baseEvade, Math.min(evadeMax, customizeState.evade));
+
+  customizeState.evadeCost += delta > 0 ? PROTO_CREATE_BASE.evadeCostStep : -PROTO_CREATE_BASE.evadeCostStep;
+  customizeState.evadeCost = Math.max(0, customizeState.evadeCost);
+
+  persistCustomizeState();
+  renderCustomizeValues();
+}
 
   function adjustEnergy(delta) {
     if (delta > 0 && getRemainCost() < PROTO_CREATE_BASE.energyCostStep) return;
@@ -397,6 +411,10 @@ export function createStoryModeController(ctx) {
     const energyCost = document.getElementById("storyEnergyCost");
     if (energyText) energyText.textContent = `エネルギー ${customizeState.energy}`;
     if (energyCost) energyCost.textContent = `[コスト${customizeState.energyCost}]`;
+    const readyBtn = document.getElementById("storyReadyBtn");
+if (readyBtn && readyBtn.textContent !== "戻る") {
+  readyBtn.disabled = getRemainCost() < 0;
+}
   }
 
   function renderCustomizeTutorial() {
@@ -606,7 +624,7 @@ export function createStoryModeController(ctx) {
           <span class="story-cost-text">[コスト${option?.cost || 0}]</span>
           <span class="story-buttons">
             <button class="story-detail-btn" data-kind="slot" data-key="${slotKey}">詳細</button>
-            <button class="story-swap story-swap-btn" data-kind="slot" data-key="${slotKey}">入替</button>
+        ${labMode === "chapter1" ? "" : `<button class="story-swap story-swap-btn" data-kind="slot" data-key="${slotKey}">入替</button>`}
           </span>
         </div>
       `;
@@ -635,7 +653,7 @@ export function createStoryModeController(ctx) {
         <span class="story-cost-text">${costText}</span>
         <span class="story-buttons">
           ${hasDetail ? `<button class="story-detail-btn" data-kind="${kind}" data-key="${key}">詳細</button>` : ""}
-          <button class="story-swap story-swap-btn" data-kind="${kind}" data-key="${key}">入替</button>
+     ${labMode === "chapter1" ? "" : `<button class="story-swap story-swap-btn" data-kind="${kind}" data-key="${key}">入替</button>`}
         </span>
       </div>
     `;
