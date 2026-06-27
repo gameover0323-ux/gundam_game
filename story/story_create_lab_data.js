@@ -7,11 +7,13 @@ export const PROTO_CREATE_BASE = {
   baseEvade: 1,
   baseEnergy: 100,
 
-  hpStep: 50,
-  hpCostStep: 10,
+  hpStep: 20,
+hpCostStep: 10,
+hpMax: 1000,
 
-  evadeStep: 1,
-  evadeCostStep: 10,
+evadeStep: 1,
+evadeCostStep: 20,
+evadeMax: 25,
 
   energyStep: 1,
   energyCostStep: 1,
