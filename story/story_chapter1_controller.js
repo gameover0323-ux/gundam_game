@@ -583,37 +583,18 @@ function renderFreeModeSelect() {
   }
 
   function clearChapter1() {
-    removeTutorialFloatingUi();
+  removeTutorialFloatingUi();
 
-    let root = getRoot();
+  if (typeof ctx.onChapter1Clear === "function") {
+    ctx.onChapter1Clear();
+  }
 
-    if (!root) {
-      root = document.createElement("div");
-      root.id = "storyModeRoot";
-      root.style.position = "fixed";
-      root.style.inset = "0";
-      root.style.zIndex = "20000";
-      root.style.background = "black";
-      root.style.color = "white";
-      root.style.display = "flex";
-      root.style.flexDirection = "column";
-      root.style.alignItems = "center";
-      root.style.justifyContent = "center";
-      root.style.padding = "16px";
-      root.style.boxSizing = "border-box";
-      document.body.appendChild(root);
-    }
+  if (typeof ctx.closeStoryModeToTitle === "function") {
+    ctx.closeStoryModeToTitle();
+    return;
+  }
 
-    root.innerHTML = `
-      <h2>チャプター1 クリア</h2>
-      <p>クリエイトガンダムラボ機能が開設されました。</p>
-      <p>ストーリーメニューとチャプターセレクトは次段階で実装します。</p>
-      <button id="storyCloseBtn">閉じる</button>
-    `;
-
-    document.getElementById("storyCloseBtn").addEventListener("click", () => {
-      document.getElementById("storyModeRoot")?.remove();
-    });
+  document.getElementById("storyModeRoot")?.remove();
   }
 
   return {
