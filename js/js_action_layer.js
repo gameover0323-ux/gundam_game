@@ -807,27 +807,45 @@ function applyCriticalToAttacks(actor, attacks) {
       return;
     }
 
-    if (result.kind === "attack") {
-      const afterResult = runAfterSlotResolvedHook(actor, slotMeta.slotNumber, result, slotMeta);
-      const extra = mergeExtraResult(result);
+if (result.kind === "attack") {
+  const afterResult = runAfterSlotResolvedHook(actor, slotMeta.slotNumber, result, slotMeta);
+  const extra = mergeExtraResult(result);
 
-      const attacks = [
-        ...result.attacks,
-        ...(afterResult?.appendAttacks || []),
-        ...extra.attacks
-      ];
+  const attacks = [
+    ...result.attacks,
+    ...(afterResult?.appendAttacks || []),
+    ...extra.attacks
+  ];
 
-      extra.messages.forEach((message) => {
-        ctx.appendBattleNotice(message);
-      });
+  extra.messages.forEach((message) => {
+    ctx.appendBattleNotice(message);
+  });
 
-      if (extra.redraw || afterResult?.redraw) {
-        ctx.redrawBattleBoards();
-      }
+  if (extra.redraw || afterResult?.redraw) {
+    ctx.redrawBattleBoards();
+  }
 
-      startAttackQte(attacks);
-      return;
-    }
+  if (afterResult?.requestChoice) {
+    ctx.setCurrentAttack(applyCriticalToAttacks(actor, attacks));
+    ctx.setCurrentAttackContext({
+      ownerPlayer: slotMeta.ownerPlayer,
+      enemyPlayer: slotMeta.enemyPlayer,
+      slotKey: slotMeta.slotKey,
+      slotNumber: slotMeta.slotNumber,
+      slotLabel: slot.label,
+      slotDesc: slot.desc,
+      totalCount: attacks.length,
+      hitCount: 0,
+      evadeCount: 0
+    });
+
+    ctx.handleChoiceRequest(afterResult.requestChoice);
+    return;
+  }
+
+  startAttackQte(attacks);
+  return;
+}
 
     ctx.renderAttackLogText("この行動はまだ未対応");
   }
