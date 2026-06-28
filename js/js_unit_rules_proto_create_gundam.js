@@ -55,11 +55,11 @@ function makeNoFireSlot(slot, reason) {
   return {
     ...slot,
     label: `${slot.label} [不発]`,
-    desc: `${slot.desc || ""}\n${reason}`,
+    desc: reason,
     effect: {
       type: "custom",
       customType: "proto_create_no_fire",
-      customEffectId: "proto_create_no_fire"
+      effectId: "proto_create_no_fire"
     }
   };
 }
@@ -98,22 +98,6 @@ function getReloadChoices(state) {
     .filter(Boolean);
 }
 
-function getAttackFromSlot(state, slotKey) {
-  const slot = state.slots?.[slotKey];
-  const effect = slot?.effect;
-  if (!slot || effect?.type !== "attack") return null;
-
-  return createAttack({
-    damage: Number(effect.damage || 0),
-    count: Math.max(1, Number(effect.count || 1)),
-    type: effect.attackType || "shoot",
-    beam: effect.beam === true,
-    ignoreReduction: effect.ignoreReduction === true,
-    cannotEvade: effect.cannotEvade === true,
-    sourceLabel: slot.label
-  });
-}
-
 function canReloadFollowUp(state, slotKey) {
   ensureProtoCreateState(state);
 
@@ -124,7 +108,21 @@ function canReloadFollowUp(state, slotKey) {
   const ammo = Number(state.storyAmmo?.[slotKey] || 0);
   if (ammo <= 0) return false;
 
+  if (state.storyReloadFollowUpUsed?.[slotKey] === true) return false;
+
   return Number(state.evade || 0) > 0;
+}
+
+function makeAttackFromEffect(slot, effect, sourceLabel = slot.label) {
+  return createAttack({
+    damage: Number(effect.damage || 0),
+    count: Math.max(1, Number(effect.count || 1)),
+    type: effect.attackType || "shoot",
+    beam: effect.beam === true,
+    ignoreReduction: effect.ignoreReduction === true,
+    cannotEvade: effect.cannotEvade === true,
+    sourceLabel
+  });
 }
 
 export function getProtoCreateDerivedState(state) {
@@ -142,6 +140,20 @@ export function getProtoCreateDerivedState(state) {
     color: "#66ccff",
     bold: true
   });
+
+  result.status.push({
+    text: `シールド:${state.storyShieldUses}`,
+    color: state.storyShieldActive ? "#66ffcc" : "#cccccc",
+    bold: state.storyShieldActive === true
+  });
+
+  if (state.storyRoundForceCooldown > 0) {
+    result.status.push({
+      text: `ラウンドフォースCT:${state.storyRoundForceCooldown}`,
+      color: "#ff9999",
+      bold: true
+    });
+  }
 
   if (state.storyEnergyAdjustStacks !== 0) {
     result.status.push({
@@ -206,17 +218,28 @@ export function canUseProtoCreateSpecial(state, specialKey) {
     return { allowed: true, message: null };
   }
 
+  if (special.effectType === "story_equipment_1" || special.effectType === "story_equipment_2") {
+    if (!String(special.name || "").includes("シールド")) {
+      return { allowed: false, message: "装備品がありません" };
+    }
+
+    return {
+      allowed: state.storyShieldUses > 0,
+      message: state.storyShieldUses > 0 ? null : "シールド残数がありません"
+    };
+  }
+
   if (special.effectType === "story_create_skill") {
     if (!String(special.name || "").includes("ラウンドフォース")) {
       return { allowed: false, message: "クリエイトスキルがありません" };
     }
 
-    if (state.storyRoundForceCooldown > 0) {
-      return {
-        allowed: false,
-        message: `ラウンドフォース再使用まで${state.storyRoundForceCooldown}ターン`
-      };
-    }
+    return {
+      allowed: state.storyRoundForceCooldown <= 0,
+      message: state.storyRoundForceCooldown <= 0
+        ? null
+        : `ラウンドフォース再使用まで${state.storyRoundForceCooldown}ターン`
+    };
   }
 
   return { allowed: true, message: null };
@@ -231,8 +254,6 @@ export function executeProtoCreateSpecial(state, specialKey, context = {}) {
   }
 
   if (special.effectType === "story_reload") {
-    const choices = getReloadChoices(state);
-
     return {
       handled: true,
       redraw: true,
@@ -244,7 +265,7 @@ export function executeProtoCreateSpecial(state, specialKey, context = {}) {
         enemyPlayer: context.enemyPlayer,
         ownerUnitKey: context.ownerUnitKey || null,
         title: "全弾リロードする武器を選択",
-        choices
+        choices: getReloadChoices(state)
       }
     };
   }
@@ -346,6 +367,7 @@ export function onProtoCreateResolveChoice(state, pendingChoice, selectedValue, 
     const max = Number(effect.storyAmmoMax || 0);
     const before = Number(state.storyAmmo?.[slotKey] || 0);
     state.storyAmmo[slotKey] = max;
+    state.storyReloadCounters[slotKey] = 0;
 
     return {
       handled: true,
@@ -379,8 +401,6 @@ export function onProtoCreateResolveChoice(state, pendingChoice, selectedValue, 
       return { handled: true, redraw: true, message: "追撃できません" };
     }
 
-    reduceEvade(state, 1);
-
     const slot = state.slots?.[slotKey];
     const effect = slot?.effect;
     const ammo = Number(state.storyAmmo?.[slotKey] || 0);
@@ -391,17 +411,18 @@ export function onProtoCreateResolveChoice(state, pendingChoice, selectedValue, 
       return { handled: true, redraw: true, message: `${slot.label} 弾切れ` };
     }
 
+    reduceEvade(state, 1);
+    state.storyReloadFollowUpUsed[slotKey] = true;
     state.storyAmmo[slotKey] = ammo - useCount;
 
-    const attack = createAttack({
-      damage: Number(effect.damage || 0),
-      count: useCount,
-      type: effect.attackType || "shoot",
-      beam: effect.beam === true,
-      ignoreReduction: effect.ignoreReduction === true,
-      cannotEvade: effect.cannotEvade === true,
-      sourceLabel: `${slot.label} 追撃`
-    });
+    const attack = makeAttackFromEffect(
+      slot,
+      {
+        ...effect,
+        count: useCount
+      },
+      `${slot.label} 追撃`
+    );
 
     return {
       handled: true,
@@ -431,12 +452,20 @@ export function onProtoCreateBeforeSlot(state, rolledSlotNumber) {
     const baseCount = Math.max(1, Number(effect.count || 1));
 
     if (ammo <= 0) {
-      state.slots[slotKey] = makeNoFireSlot(slot, `${slot.label} 弾切れ`);
-      return { redraw: true, message: `${slot.label} 弾切れ` };
+      const noFireSlot = makeNoFireSlot(slot, `${slot.label} 弾切れ`);
+      return {
+        redraw: true,
+        message: `${slot.label} 弾切れ`,
+        replaceSlotAction: {
+          slotKey,
+          slotData: noFireSlot
+        }
+      };
     }
 
     const useCount = Math.min(baseCount, ammo);
     state.storyAmmo[slotKey] = ammo - useCount;
+    state.storyReloadFollowUpUsed[slotKey] = false;
 
     nextSlot = cloneSlotWithEffect(nextSlot, { count: useCount });
     messages.push(`${slot.label} 弾数${ammo}→${state.storyAmmo[slotKey]}`);
@@ -448,8 +477,15 @@ export function onProtoCreateBeforeSlot(state, rolledSlotNumber) {
     const have = Number(state.storyEnergy || 0);
 
     if (have <= 0) {
-      state.slots[slotKey] = makeNoFireSlot(slot, `${slot.label} EN切れ`);
-      return { redraw: true, message: `${slot.label} EN切れ` };
+      const noFireSlot = makeNoFireSlot(slot, `${slot.label} EN切れ`);
+      return {
+        redraw: true,
+        message: `${slot.label} EN切れ`,
+        replaceSlotAction: {
+          slotKey,
+          slotData: noFireSlot
+        }
+      };
     }
 
     if (need > 0 && have < need) {
@@ -468,11 +504,13 @@ export function onProtoCreateBeforeSlot(state, rolledSlotNumber) {
     }
   }
 
-  state.slots[slotKey] = nextSlot;
-
   return {
     redraw: true,
-    message: messages.join("\n") || null
+    message: messages.join("\n") || null,
+    replaceSlotAction: {
+      slotKey,
+      slotData: nextSlot
+    }
   };
 }
 
@@ -483,6 +521,10 @@ export function onProtoCreateAfterSlotResolved(state, slotNumber, resolveResult,
   const slot = state.slots?.[slotKey];
 
   if (!slot?.effect?.storyReload) {
+    return { redraw: false, message: null };
+  }
+
+  if (resolveResult?.customEffectId === "proto_create_no_fire") {
     return { redraw: false, message: null };
   }
 
