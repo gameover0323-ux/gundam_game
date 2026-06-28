@@ -89,19 +89,19 @@ function buildSpecials(lab) {
       desc: "行動権を消費して、エネルギーを充填する。"
     },
     {
-      name: `装備品1 ${equipment1?.label || "なし"}`,
-      effectType: "story_equipment_1",
-      timing: "self",
-      actionType: equipment1?.id === "none" ? "auto" : "instant",
-      desc: equipment1?.detail || "装備品1は未装備。"
-    },
-    {
-      name: `装備品2 ${equipment2?.label || "なし"}`,
-      effectType: "story_equipment_2",
-      timing: "self",
-      actionType: equipment2?.id === "none" ? "auto" : "instant",
-      desc: equipment2?.detail || "装備品2は未装備。"
-    },
+  name: `装備品1 ${equipment1?.label || "なし"}`,
+  effectType: "story_equipment_1",
+  timing: equipment1?.label?.includes("シールド") ? "enemy" : "self",
+  actionType: equipment1?.id === "none" ? "auto" : "instant",
+  desc: equipment1?.detail || "装備品1は未装備。"
+},
+{
+  name: `装備品2 ${equipment2?.label || "なし"}`,
+  effectType: "story_equipment_2",
+  timing: equipment2?.label?.includes("シールド") ? "enemy" : "self",
+  actionType: equipment2?.id === "none" ? "auto" : "instant",
+  desc: equipment2?.detail || "装備品2は未装備。"
+},
     {
       name: "エネルギー調整",
       effectType: "story_energy_adjust",
