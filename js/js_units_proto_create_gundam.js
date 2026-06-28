@@ -91,14 +91,14 @@ function buildSpecials(lab) {
     {
   name: `装備品1 ${equipment1?.label || "なし"}`,
   effectType: "story_equipment_1",
-  timing: equipment1?.label?.includes("シールド") ? "enemy" : "self",
+  timing: String(equipment1?.label || "").includes("シールド") ? "reaction" : "self",
   actionType: equipment1?.id === "none" ? "auto" : "instant",
   desc: equipment1?.detail || "装備品1は未装備。"
 },
 {
   name: `装備品2 ${equipment2?.label || "なし"}`,
   effectType: "story_equipment_2",
-  timing: equipment2?.label?.includes("シールド") ? "enemy" : "self",
+  timing: String(equipment2?.label || "").includes("シールド") ? "reaction" : "self",
   actionType: equipment2?.id === "none" ? "auto" : "instant",
   desc: equipment2?.detail || "装備品2は未装備。"
 },
