@@ -439,8 +439,20 @@ import {
 
 } from "./js_unit_rules_daisy_ogre_ciel.js";
 
-import { getProtoCreateDerivedState, canUseProtoCreateSpecial, executeProtoCreateSpecial, onProtoCreateTurnEnd, onProtoCreateBeforeSlot, onProtoCreateEnemyBeforeSlot, onProtoCreateAfterSlotResolved, onProtoCreateActionResolved, onProtoCreateDamaged, modifyProtoCreateTakenDamage, modifyProtoCreateEvadeAttempt, onProtoCreateResolveChoice } from "./js_unit_rules_proto_create_gundam.js";
-
+import {
+  getProtoCreateDerivedState,
+  canUseProtoCreateSpecial,
+  executeProtoCreateSpecial,
+  onProtoCreateTurnEnd,
+  onProtoCreateBeforeSlot,
+  onProtoCreateEnemyBeforeSlot,
+  onProtoCreateAfterSlotResolved,
+  onProtoCreateActionResolved,
+  onProtoCreateDamaged,
+  modifyProtoCreateTakenDamage,
+  modifyProtoCreateEvadeAttempt,
+  onProtoCreateResolveChoice
+} from "./js_unit_rules_proto_create_gundam.js";
 
 export const unitRulesMap = {
 
@@ -458,7 +470,6 @@ export const unitRulesMap = {
   modifyEvadeAttempt: modifyProtoCreateEvadeAttempt,
   onResolveChoice: onProtoCreateResolveChoice
 },
-
  gundam_mc: {
     getDerivedState: getGundamMcDerivedState,
     executeSpecial: executeGundamMcSpecial,
