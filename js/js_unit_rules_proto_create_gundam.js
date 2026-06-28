@@ -311,14 +311,22 @@ export function executeProtoCreateSpecial(state, specialKey, context = {}) {
       return { handled: true, redraw: false, message: "シールド残数がありません" };
     }
 
-    state.storyShieldUses -= 1;
-    state.storyShieldActive = true;
+  if (state.storyShieldActive) {
+  return {
+    handled: true,
+    redraw: false,
+    message: "シールドは既に展開中"
+  };
+}
 
-    return {
-      handled: true,
-      redraw: true,
-      message: `シールド発動 残り${state.storyShieldUses}回`
-    };
+state.storyShieldUses -= 1;
+state.storyShieldActive = true;
+
+return {
+  handled: true,
+  redraw: true,
+  message: `${state.name} シールド展開。このターンの被ダメージ半減`
+};
   }
 
   if (special.effectType === "story_create_skill") {
@@ -337,16 +345,17 @@ export function executeProtoCreateSpecial(state, specialKey, context = {}) {
     state.storyRoundForceCooldown = 5;
 
     return {
-      handled: true,
-      redraw: true,
-      message: "ラウンドフォース発動",
-      attack: createAttack({
-        damage: 100,
-        count: 1,
-        type: "melee",
-        sourceLabel: "ラウンドフォース"
-      })
-    };
+  handled: true,
+  redraw: true,
+  message: "ラウンドフォース発動",
+  appendAttackLabel: "ラウンドフォース",
+  appendAttacks: createAttack({
+    damage: 100,
+    count: 1,
+    type: "melee",
+    sourceLabel: "ラウンドフォース"
+  })
+};
   }
 
   return { handled: false, redraw: false, message: null };
