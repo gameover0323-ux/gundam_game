@@ -19,8 +19,14 @@ import {
   setStoryFlag
 } from "./story_save.js";
 
+import {
+  setStoryCreateUnitLabOverride,
+  clearStoryCreateUnitLabOverride
+} from "./story_units.js";
+
 export function createStoryModeController(ctx) {
   const DEBUG_ROLES = new Set(["debug", "Ciel_debugger"]);
+  const PROTO_UNIT_ID = "proto_create_gundam";
 
   let activeScene = null;
   let lineIndex = 0;
@@ -33,6 +39,7 @@ export function createStoryModeController(ctx) {
   const chapter1Controller = createStoryChapter1Controller({
     ...ctx,
     onChapter1Clear: () => {
+      clearStoryCreateUnitLabOverride(PROTO_UNIT_ID);
       setStoryFlag("chapter1Cleared", true);
       setStoryFlag("labUnlocked", true);
       setStoryFlag("storyMenuUnlocked", true);
@@ -41,23 +48,39 @@ export function createStoryModeController(ctx) {
     closeStoryModeToTitle
   });
 
+  function clone(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function getChapter1InitialLabState() {
+    return createInitialProtoCreateLabState();
+  }
+
+  function applyChapter1Override() {
+    if (labMode !== "chapter1") return;
+    setStoryCreateUnitLabOverride(PROTO_UNIT_ID, customizeState);
+  }
+
   function refreshStorySave() {
     storySave = loadStorySave();
 
     if (labMode === "chapter1") {
-      customizeState = createInitialProtoCreateLabState();
+      customizeState = getChapter1InitialLabState();
+      applyChapter1Override();
       return;
     }
 
+    clearStoryCreateUnitLabOverride(PROTO_UNIT_ID);
     customizeState = storySave.createUnits.proto_create_gundam.lab;
   }
 
   function persistCustomizeState() {
     if (labMode === "chapter1") {
+      applyChapter1Override();
       return;
     }
 
-    updateProtoCreateLabState(() => customizeState);
+    updateProtoCreateLabState(() => clone(customizeState));
     refreshStorySave();
   }
 
@@ -93,7 +116,6 @@ export function createStoryModeController(ctx) {
 
   function createRoot() {
     clearStoryScreen();
-    refreshStorySave();
 
     const root = document.createElement("div");
     root.id = "storyModeRoot";
@@ -168,6 +190,8 @@ export function createStoryModeController(ctx) {
       return;
     }
 
+    labMode = "normal";
+    refreshStorySave();
     createRoot();
 
     setTimeout(() => {
@@ -187,11 +211,15 @@ export function createStoryModeController(ctx) {
   }
 
   function closeStoryModeToTitle() {
+    clearStoryCreateUnitLabOverride(PROTO_UNIT_ID);
     clearStoryScreen();
     ctx.showTitle?.();
   }
 
   function renderStoryMainMenu() {
+    labMode = "normal";
+    refreshStorySave();
+
     const root = document.getElementById("storyModeRoot") || createRoot();
 
     root.innerHTML = `
@@ -219,13 +247,15 @@ export function createStoryModeController(ctx) {
       </div>
     `;
 
-    document.getElementById("storyChapter1Btn")?.addEventListener("click", () => {
-      labMode = "chapter1";
-      customizeState = createInitialProtoCreateLabState();
-      startNormalRoute();
-    });
-
+    document.getElementById("storyChapter1Btn")?.addEventListener("click", startChapter1FromSelect);
     document.getElementById("storyChapterSelectBackBtn")?.addEventListener("click", renderStoryMainMenu);
+  }
+
+  function startChapter1FromSelect() {
+    labMode = "chapter1";
+    customizeState = getChapter1InitialLabState();
+    applyChapter1Override();
+    startNormalRoute();
   }
 
   function renderNormalLab() {
@@ -268,7 +298,8 @@ export function createStoryModeController(ctx) {
 
   function startNormalRoute() {
     labMode = "chapter1";
-    customizeState = createInitialProtoCreateLabState();
+    customizeState = getChapter1InitialLabState();
+    applyChapter1Override();
 
     renderDialogue([
       "AI「ストーリーモードを選択してくださり、ありがとうございまーす！」",
@@ -309,39 +340,50 @@ export function createStoryModeController(ctx) {
   }
 
   function adjustHp(delta) {
-    const nextHp = customizeState.hp + (delta > 0 ? PROTO_CREATE_BASE.hpStep : -PROTO_CREATE_BASE.hpStep);
+    const step = Number(PROTO_CREATE_BASE.hpStep || 20);
+    const costStep = Number(PROTO_CREATE_BASE.hpCostStep || 10);
+    const maxHp = Number(PROTO_CREATE_BASE.hpMax || 1000);
+    const nextHp = Number(customizeState.hp || 0) + (delta > 0 ? step : -step);
 
-    if (delta > 0 && getRemainCost() < PROTO_CREATE_BASE.hpCostStep) return;
-    if (delta < 0 && customizeState.hpCost <= 0) return;
-    if (nextHp > 1000) return;
+    if (delta > 0 && getRemainCost() < costStep) return;
+    if (delta < 0 && Number(customizeState.hpCost || 0) <= 0) return;
+    if (nextHp > maxHp) return;
     if (nextHp < PROTO_CREATE_BASE.baseHp) return;
 
     customizeState.hp = nextHp;
-    customizeState.hpCost += delta > 0 ? PROTO_CREATE_BASE.hpCostStep : -PROTO_CREATE_BASE.hpCostStep;
+    customizeState.hpCost = Number(customizeState.hpCost || 0) + (delta > 0 ? costStep : -costStep);
     persistCustomizeState();
     renderCustomizeValues();
   }
 
   function adjustEvade(delta) {
-    const nextEvade = customizeState.evade + (delta > 0 ? PROTO_CREATE_BASE.evadeStep : -PROTO_CREATE_BASE.evadeStep);
+    const step = Number(PROTO_CREATE_BASE.evadeStep || 1);
+    const costStep = Number(PROTO_CREATE_BASE.evadeCostStep || 20);
+    const maxEvade = Number(PROTO_CREATE_BASE.evadeMax || 25);
+    const nextEvade = Number(customizeState.evade || 0) + (delta > 0 ? step : -step);
 
-    if (delta > 0 && getRemainCost() < PROTO_CREATE_BASE.evadeCostStep) return;
-    if (delta < 0 && customizeState.evadeCost <= 0) return;
-    if (nextEvade > 25) return;
+    if (delta > 0 && getRemainCost() < costStep) return;
+    if (delta < 0 && Number(customizeState.evadeCost || 0) <= 0) return;
+    if (nextEvade > maxEvade) return;
     if (nextEvade < PROTO_CREATE_BASE.baseEvade) return;
 
     customizeState.evade = nextEvade;
-    customizeState.evadeCost += delta > 0 ? PROTO_CREATE_BASE.evadeCostStep : -PROTO_CREATE_BASE.evadeCostStep;
+    customizeState.evadeCost = Number(customizeState.evadeCost || 0) + (delta > 0 ? costStep : -costStep);
     persistCustomizeState();
     renderCustomizeValues();
   }
 
   function adjustEnergy(delta) {
-    if (delta > 0 && getRemainCost() < PROTO_CREATE_BASE.energyCostStep) return;
-    if (delta < 0 && customizeState.energyCost <= 0) return;
+    const step = Number(PROTO_CREATE_BASE.energyStep || 1);
+    const costStep = Number(PROTO_CREATE_BASE.energyCostStep || 1);
+    const nextEnergy = Number(customizeState.energy || 0) + (delta > 0 ? step : -step);
 
-    customizeState.energy += delta > 0 ? PROTO_CREATE_BASE.energyStep : -PROTO_CREATE_BASE.energyStep;
-    customizeState.energyCost += delta > 0 ? PROTO_CREATE_BASE.energyCostStep : -PROTO_CREATE_BASE.energyCostStep;
+    if (delta > 0 && getRemainCost() < costStep) return;
+    if (delta < 0 && Number(customizeState.energyCost || 0) <= 0) return;
+    if (nextEnergy < PROTO_CREATE_BASE.baseEnergy) return;
+
+    customizeState.energy = nextEnergy;
+    customizeState.energyCost = Number(customizeState.energyCost || 0) + (delta > 0 ? costStep : -costStep);
     persistCustomizeState();
     renderCustomizeValues();
   }
@@ -427,7 +469,9 @@ export function createStoryModeController(ctx) {
   }
 
   function renderCustomizeTutorial() {
-    refreshStorySave();
+    if (labMode === "normal") {
+      refreshStorySave();
+    }
 
     const root = document.getElementById("storyModeRoot");
     root.style.justifyContent = "flex-start";
@@ -695,18 +739,18 @@ export function createStoryModeController(ctx) {
     return null;
   }
 
-function getOptionsFor(kind, key) {
-  if (labMode === "chapter1") {
-    if (kind === "slot") return (STORY_SLOT_OPTIONS[key] || []).slice(0, 2);
-    if (kind === "equipment") return STORY_EQUIPMENT_OPTIONS.slice(0, 2);
-    if (kind === "skill") return STORY_SKILL_OPTIONS.slice(0, 2);
-  }
+  function getOptionsFor(kind, key) {
+    if (labMode === "chapter1") {
+      if (kind === "slot") return (STORY_SLOT_OPTIONS[key] || []).slice(0, 2);
+      if (kind === "equipment") return STORY_EQUIPMENT_OPTIONS.slice(0, 2);
+      if (kind === "skill") return STORY_SKILL_OPTIONS.slice(0, 2);
+    }
 
-  if (kind === "slot") return STORY_SLOT_OPTIONS[key] || [];
-  if (kind === "equipment") return STORY_EQUIPMENT_OPTIONS;
-  if (kind === "skill") return STORY_SKILL_OPTIONS;
-  return [];
-}
+    if (kind === "slot") return STORY_SLOT_OPTIONS[key] || [];
+    if (kind === "equipment") return STORY_EQUIPMENT_OPTIONS;
+    if (kind === "skill") return STORY_SKILL_OPTIONS;
+    return [];
+  }
 
   function setOption(kind, key, optionId) {
     const allowed = getOptionsFor(kind, key).some(option => option.id === optionId);
@@ -819,6 +863,7 @@ function getOptionsFor(kind, key) {
         readyBtn.dataset.readyMode = "chapter1Ready";
         readyBtn.onclick = () => {
           if (isCostOver()) return;
+          applyChapter1Override();
           chapter1Controller.startAfterCustomize();
         };
 
