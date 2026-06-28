@@ -695,18 +695,18 @@ export function createStoryModeController(ctx) {
     return null;
   }
 
-  function getOptionsFor(kind, key) {
-    if (labMode === "chapter1") {
-      if (kind === "slot") return (STORY_SLOT_OPTIONS[key] || []).slice(0, 1);
-      if (kind === "equipment") return STORY_EQUIPMENT_OPTIONS.slice(0, 1);
-      if (kind === "skill") return STORY_SKILL_OPTIONS.slice(0, 1);
-    }
-
-    if (kind === "slot") return STORY_SLOT_OPTIONS[key] || [];
-    if (kind === "equipment") return STORY_EQUIPMENT_OPTIONS;
-    if (kind === "skill") return STORY_SKILL_OPTIONS;
-    return [];
+function getOptionsFor(kind, key) {
+  if (labMode === "chapter1") {
+    if (kind === "slot") return (STORY_SLOT_OPTIONS[key] || []).slice(0, 2);
+    if (kind === "equipment") return STORY_EQUIPMENT_OPTIONS.slice(0, 2);
+    if (kind === "skill") return STORY_SKILL_OPTIONS.slice(0, 2);
   }
+
+  if (kind === "slot") return STORY_SLOT_OPTIONS[key] || [];
+  if (kind === "equipment") return STORY_EQUIPMENT_OPTIONS;
+  if (kind === "skill") return STORY_SKILL_OPTIONS;
+  return [];
+}
 
   function setOption(kind, key, optionId) {
     const allowed = getOptionsFor(kind, key).some(option => option.id === optionId);
