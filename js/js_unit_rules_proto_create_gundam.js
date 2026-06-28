@@ -349,12 +349,10 @@ return {
   redraw: true,
   message: "ラウンドフォース発動",
   appendAttackLabel: "ラウンドフォース",
-  appendAttacks: createAttack({
-    damage: 100,
-    count: 1,
-    type: "melee",
-    sourceLabel: "ラウンドフォース"
-  })
+  appendAttacks: createAttack(100, 1, {
+  type: "melee",
+  source: "ラウンドフォース"
+})
 };
   }
 
