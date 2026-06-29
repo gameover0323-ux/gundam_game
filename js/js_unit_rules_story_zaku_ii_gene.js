@@ -1,56 +1,80 @@
-
 export function getStoryZakuIiGeneDerivedState(state) {
-  return null;
+  return {
+    name: null,
+    slots: {},
+    specials: {},
+    status: []
+  };
 }
 
-export function canUseStoryZakuIiGeneSpecial(state, special, context = {}) {
+export function canUseStoryZakuIiGeneSpecial(state, specialKey, context = {}) {
   return true;
 }
 
-export function executeStoryZakuIiGeneSpecial(state, special, context = {}) {
+export function executeStoryZakuIiGeneSpecial(state, specialKey, context = {}) {
   return {
-    handled: false
+    handled: false,
+    message: null
   };
 }
 
 export function onStoryZakuIiGeneTurnEnd(state, context = {}) {
-  return null;
-}
-
-export function onStoryZakuIiGeneBeforeSlot(state, slot, context = {}) {
-  if (slot?.effect?.effectId !== "story_think") return null;
-
   return {
-    handled: true,
-    attacks: [],
-    message: "ザクII(ジーン機)は思考している……。"
+    redraw: false,
+    message: null
   };
 }
 
-export function onStoryZakuIiGeneEnemyBeforeSlot(state, slot, context = {}) {
+export function onStoryZakuIiGeneBeforeSlot(state, rolledSlotNumber, context = {}) {
+  return {
+    redraw: false,
+    message: null
+  };
+}
+
+export function onStoryZakuIiGeneEnemyBeforeSlot(state, rolledSlotNumber, context = {}) {
+  return {
+    redraw: false,
+    message: null
+  };
+}
+
+export function onStoryZakuIiGeneAfterSlotResolved(state, slotNumber, context = {}) {
+  return {
+    redraw: false,
+    message: null
+  };
+}
+
+export function onStoryZakuIiGeneActionResolved(attacker, defender, context = {}) {
+  return {
+    redraw: false,
+    message: null
+  };
+}
+
+export function onStoryZakuIiGeneDamaged(defender, attacker, context = {}) {
+  return {
+    redraw: false,
+    message: null
+  };
+}
+
+export function modifyStoryZakuIiGeneTakenDamage(defender, attacker, attack, damage) {
+  return {
+    damage,
+    message: null
+  };
+}
+
+export function modifyStoryZakuIiGeneEvadeAttempt(defender, attacker, attack, context = {}) {
   return null;
 }
 
-export function onStoryZakuIiGeneAfterSlotResolved(state, slot, context = {}) {
-  return null;
-}
-
-export function onStoryZakuIiGeneActionResolved(state, context = {}) {
-  return null;
-}
-
-export function onStoryZakuIiGeneDamaged(state, context = {}) {
-  return null;
-}
-
-export function modifyStoryZakuIiGeneTakenDamage(state, damage, attack, context = {}) {
-  return damage;
-}
-
-export function modifyStoryZakuIiGeneEvadeAttempt(state, attack, context = {}) {
-  return null;
-}
-
-export function onStoryZakuIiGeneResolveChoice(state, choice, context = {}) {
-  return null;
+export function onStoryZakuIiGeneResolveChoice(state, pendingChoice, selectedValue, context = {}) {
+  return {
+    handled: false,
+    redraw: false,
+    message: null
+  };
 }
