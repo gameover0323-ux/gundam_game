@@ -49,6 +49,8 @@ import { cpu_zudah } from "./js_units_cpu_zudah.js";
 //デバッグ権限//
 import { daisy_ogre_ciel } from "./js_units_daisy_ogre_ciel.js";
 
+import { story_zaku_ii_gene } from "./js_units_story_zaku_ii_gene.js";
+
 export const unitList = [
   gundam_mc,
   z_gundam,
@@ -103,7 +105,8 @@ export const cpuBeginnerList = [
 ];
 
 export const debugUnitList = [
-  daisy_ogre_ciel
+  daisy_ogre_ciel,
+  story_zaku_ii_gene
 ];
 
 
