@@ -454,6 +454,36 @@ import {
   onProtoCreateResolveChoice
 } from "./js_unit_rules_proto_create_gundam.js";
 
+import {
+  getStoryZakuIiGeneDerivedState,
+  canUseStoryZakuIiGeneSpecial,
+  executeStoryZakuIiGeneSpecial,
+  onStoryZakuIiGeneTurnEnd,
+  onStoryZakuIiGeneBeforeSlot,
+  onStoryZakuIiGeneEnemyBeforeSlot,
+  onStoryZakuIiGeneAfterSlotResolved,
+  onStoryZakuIiGeneActionResolved,
+  onStoryZakuIiGeneDamaged,
+  modifyStoryZakuIiGeneTakenDamage,
+  modifyStoryZakuIiGeneEvadeAttempt,
+  onStoryZakuIiGeneResolveChoice
+} from "./js_unit_rules_story_zaku_ii_gene.js";
+
+import {
+  getStoryGundamDerivedState,
+  canUseStoryGundamSpecial,
+  executeStoryGundamSpecial,
+  onStoryGundamTurnEnd,
+  onStoryGundamBeforeSlot,
+  onStoryGundamEnemyBeforeSlot,
+  onStoryGundamAfterSlotResolved,
+  onStoryGundamActionResolved,
+  onStoryGundamDamaged,
+  modifyStoryGundamTakenDamage,
+  modifyStoryGundamEvadeAttempt,
+  onStoryGundamResolveChoice
+} from "./js_unit_rules_story_gundam.js";
+
 export const unitRulesMap = {
 
  proto_create_gundam: {
@@ -470,6 +500,37 @@ export const unitRulesMap = {
   modifyEvadeAttempt: modifyProtoCreateEvadeAttempt,
   onResolveChoice: onProtoCreateResolveChoice
 },
+
+story_zaku_ii_gene: {
+  getDerivedState: getStoryZakuIiGeneDerivedState,
+  canUseSpecial: canUseStoryZakuIiGeneSpecial,
+  executeSpecial: executeStoryZakuIiGeneSpecial,
+  onTurnEnd: onStoryZakuIiGeneTurnEnd,
+  onBeforeSlot: onStoryZakuIiGeneBeforeSlot,
+  onEnemyBeforeSlot: onStoryZakuIiGeneEnemyBeforeSlot,
+  onAfterSlotResolved: onStoryZakuIiGeneAfterSlotResolved,
+  onActionResolved: onStoryZakuIiGeneActionResolved,
+  onDamaged: onStoryZakuIiGeneDamaged,
+  modifyTakenDamage: modifyStoryZakuIiGeneTakenDamage,
+  modifyEvadeAttempt: modifyStoryZakuIiGeneEvadeAttempt,
+  onResolveChoice: onStoryZakuIiGeneResolveChoice
+},
+
+story_gundam: {
+  getDerivedState: getStoryGundamDerivedState,
+  canUseSpecial: canUseStoryGundamSpecial,
+  executeSpecial: executeStoryGundamSpecial,
+  onTurnEnd: onStoryGundamTurnEnd,
+  onBeforeSlot: onStoryGundamBeforeSlot,
+  onEnemyBeforeSlot: onStoryGundamEnemyBeforeSlot,
+  onAfterSlotResolved: onStoryGundamAfterSlotResolved,
+  onActionResolved: onStoryGundamActionResolved,
+  onDamaged: onStoryGundamDamaged,
+  modifyTakenDamage: modifyStoryGundamTakenDamage,
+  modifyEvadeAttempt: modifyStoryGundamEvadeAttempt,
+  onResolveChoice: onStoryGundamResolveChoice
+},
+  
  gundam_mc: {
     getDerivedState: getGundamMcDerivedState,
     executeSpecial: executeGundamMcSpecial,
