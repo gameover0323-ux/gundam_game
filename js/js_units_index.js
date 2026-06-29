@@ -53,7 +53,12 @@ import { daisy_ogre_ciel } from "./js_units_daisy_ogre_ciel.js";
 import { proto_create_gundam } from "./js_units_proto_create_gundam.js";
 import { training_machine } from "./js_units_training_machine.js";
 import { story_zaku_ii_gene } from "./js_units_story_zaku_ii_gene.js";
+import { story_zaku_ii_denim } from "./js_units_story_zaku_ii_denim.js";
 import { story_gundam } from "./js_units_story_gundam.js";
+
+
+
+
 
 export const unitList = [
   gundam_mc,
@@ -113,7 +118,8 @@ export const debugUnitList = [
   proto_create_gundam,
   training_machine,
   story_zaku_ii_gene,
-  story_gundam
+  story_gundam,
+  story_zaku_ii_denim
 ];
 
 
