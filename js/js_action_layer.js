@@ -918,9 +918,13 @@ if (result.kind === "attack") {
     });
 
     if (unitResult.handled) {
-      if (unitResult.consumeAction) {
-  consumeSpecialActionCost(ownerPlayer, actor, unitResult.consumeActionCost || 1);
-      }
+   if (unitResult.consumeAction) {
+  const consumed = consumeSpecialActionCost(ownerPlayer, actor, unitResult.consumeActionCost || 1);
+  if (!consumed) {
+    ctx.showPopup("行動権が足りません");
+    return;
+  }
+   }
       if (unitResult.requestChoice) {
         ctx.handleChoiceRequest({
           ...unitResult.requestChoice,
@@ -1118,7 +1122,11 @@ if (result.kind === "attack") {
     }
 
 if (result.consumeAction) {
-  consumeSpecialActionCost(ownerPlayer, actor, result.consumeActionCost || 1);
+  const consumed = consumeSpecialActionCost(ownerPlayer, actor, result.consumeActionCost || 1);
+  if (!consumed) {
+    ctx.showPopup("行動権が足りません");
+    return;
+  }
 }
     
     if (result.requestChoice) {
