@@ -1,4 +1,4 @@
-import { unitList } from "../js/js_units_index.js";
+import { allUnitList } from "../js/js_units_index.js";
 
 export const PROTO_CREATE_BASE = {
   unitName: "プロトクリエイトガンダム",
@@ -246,59 +246,92 @@ export const STORY_SKILL_OPTIONS = [
   }
 ];
 
+function getStoryUnits() {
+  return (Array.isArray(allUnitList) ? allUnitList : []).filter(unit => unit?.storyOnly === true || unit?.storyDrops || unit?.storyCompanion);
+}
+
+function normalizeDropId(unit, drop) {
+  if (drop?.id) return String(drop.id);
+  const slotPart = drop?.slotKey || "drop";
+  const labelPart = String(drop?.label || "unknown").replace(/\s+/g, "_");
+  return `${unit.id}_${slotPart}_${labelPart}`;
+}
+
+function toDropOption(unit, drop) {
+  const id = normalizeDropId(unit, drop);
+  return {
+    ...drop,
+    id,
+    sourceUnitId: unit.id,
+    sourceUnitName: unit.name,
+    shortLabel: drop?.shortLabel || (drop?.slotKey ? `${drop.slotKey.replace("slot", "")}.${drop.label}` : drop?.label)
+  };
+}
+
 function collectStoryDrops(kind) {
   const result = [];
 
-  unitList.forEach(unit => {
+  getStoryUnits().forEach(unit => {
     const drops = unit?.storyDrops;
     if (!drops) return;
 
-    const groups = [
+    const dropGroups = [
       ...(Array.isArray(drops.initial) ? drops.initial : []),
       ...(Array.isArray(drops.random) ? drops.random : []),
       ...(Array.isArray(drops.conditional) ? drops.conditional : [])
     ];
 
-    groups.forEach(drop => {
+    dropGroups.forEach(drop => {
       if (!drop?.data) return;
+
       if (kind === "slot" && drop.slotKey) {
-        result.push({
-          ...drop,
-          id: `${unit.id}_${drop.slotKey}_${drop.label}`,
-          sourceUnitId: unit.id,
-          sourceUnitName: unit.name,
-          shortLabel: `${drop.slotKey.replace("slot", "")}.${drop.label}`
-        });
+        result.push(toDropOption(unit, drop));
+        return;
       }
+
       if (kind === "equipment" && drop.data.kind === "equipment_attack") {
-        result.push({
-          ...drop,
-          sourceUnitId: unit.id,
-          sourceUnitName: unit.name
-        });
+        result.push(toDropOption(unit, drop));
+        return;
       }
+
       if (kind === "skill" && drop.data.kind === "create_skill") {
-        result.push({
-          ...drop,
-          sourceUnitId: unit.id,
-          sourceUnitName: unit.name
-        });
+        result.push(toDropOption(unit, drop));
       }
     });
 
     if (kind === "equipment" && Array.isArray(drops.equipment)) {
       drops.equipment.forEach(drop => {
-        result.push({
-          ...drop,
-          sourceUnitId: unit.id,
-          sourceUnitName: unit.name
-        });
+        if (!drop?.data) return;
+        result.push(toDropOption(unit, drop));
       });
     }
   });
 
   return result;
 }
+
+function buildStoryCompanionOptions() {
+  return [
+    {
+      id: "none",
+      label: "なし",
+      cost: 0,
+      detail: ""
+    },
+    ...getStoryUnits()
+      .filter(unit => unit?.storyCompanion)
+      .map(unit => ({
+        id: unit.id,
+        label: unit.name,
+        cost: Number(unit.storyCompanion.cost || 0),
+        unlockCondition: unit.storyCompanion.unlockCondition || "",
+        detail: unit.storyCompanion.unlockCondition || "",
+        sourceUnitId: unit.id
+      }))
+  ];
+}
+
+export const STORY_COMPANION_OPTIONS = buildStoryCompanionOptions();
 
 export function getStoryDropSlotOptions(slotKey) {
   return collectStoryDrops("slot").filter(option => option.slotKey === slotKey);
@@ -313,24 +346,7 @@ export function getStoryDropSkillOptions() {
 }
 
 export function getStoryCompanionOptions() {
-  return [
-    {
-      id: "none",
-      label: "なし",
-      cost: 0,
-      detail: ""
-    },
-    ...unitList
-      .filter(unit => unit?.storyCompanion)
-      .map(unit => ({
-        id: unit.id,
-        label: unit.name,
-        cost: Number(unit.storyCompanion.cost || 0),
-        unlockCondition: unit.storyCompanion.unlockCondition || "",
-        detail: unit.storyCompanion.unlockCondition || "",
-        sourceUnitId: unit.id
-      }))
-  ];
+  return buildStoryCompanionOptions();
 }
 
 export function createInitialProtoCreateLabState() {
