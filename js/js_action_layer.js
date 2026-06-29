@@ -136,6 +136,22 @@ function applyCriticalToAttacks(actor, attacks) {
       };
     });
   }
+
+function consumeSpecialActionCost(ownerPlayer, actor, cost = 1) {
+  const amount = Math.max(1, Number(cost || 1));
+
+  if (ctx.twoVtwoAdapter) {
+    return ctx.twoVtwoAdapter.consumeAction(ownerPlayer, actor, amount);
+  }
+
+  if (typeof ctx.consumeActionCount === "function") {
+    ctx.consumeActionCount(actor, amount);
+    return true;
+  }
+
+  actor.actionCount = Math.max(0, Number(actor.actionCount || 0) - amount);
+  return true;
+}
   
   function startReservedAction(action) {
     if (!action) return false;
@@ -902,6 +918,9 @@ if (result.kind === "attack") {
     });
 
     if (unitResult.handled) {
+      if (unitResult.consumeAction) {
+  consumeSpecialActionCost(ownerPlayer, actor, unitResult.consumeActionCost || 1);
+      }
       if (unitResult.requestChoice) {
         ctx.handleChoiceRequest({
           ...unitResult.requestChoice,
@@ -1098,6 +1117,10 @@ if (result.kind === "attack") {
       return;
     }
 
+if (result.consumeAction) {
+  consumeSpecialActionCost(ownerPlayer, actor, result.consumeActionCost || 1);
+}
+    
     if (result.requestChoice) {
       ctx.handleChoiceRequest({
         ...result.requestChoice,
