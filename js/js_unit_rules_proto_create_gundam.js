@@ -602,7 +602,7 @@ export function onProtoCreateActionResolved(attacker, defender, context = {}) {
 
   return {
     redraw: true,
-    message: `${slot.label} は弾数が残っています`,
+    message: `${slot.label} は弾数が残っています。追撃は続けてスロット行動`,
     requestChoice: {
       choiceType: "buttons",
       effectType: "proto_create_reload_followup",
