@@ -272,13 +272,14 @@ export function executeProtoCreateSpecial(state, specialKey, context = {}) {
 
   if (special.effectType === "story_energy_charge") {
     const before = state.storyEnergy;
-    state.storyEnergy = Math.min(state.storyEnergyMax, state.storyEnergy + 30);
+    state.storyEnergy = state.storyEnergyMax;
 
-    return {
-      handled: true,
-      redraw: true,
-      message: `エネルギーチャージ：EN${before}→${state.storyEnergy}`
-    };
+return {
+  handled: true,
+  redraw: true,
+  consumeAction: true,
+  message: `エネルギーチャージ：EN${before}→${state.storyEnergy}`
+};
   }
 
   if (special.effectType === "story_energy_adjust") {
@@ -377,10 +378,11 @@ export function onProtoCreateResolveChoice(state, pendingChoice, selectedValue, 
     state.storyReloadCounters[slotKey] = 0;
 
     return {
-      handled: true,
-      redraw: true,
-      message: `${slot.label} 全弾リロード：${before}→${max}`
-    };
+  handled: true,
+  redraw: true,
+  consumeAction: true,
+  message: `${slot.label} 全弾リロード：${before}→${max}`
+};
   }
 
   if (pendingChoice?.effectType === "proto_create_energy_adjust_choice") {
