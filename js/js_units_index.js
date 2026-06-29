@@ -49,6 +49,12 @@ import { cpu_zudah } from "./js_units_cpu_zudah.js";
 //デバッグ権限//
 import { daisy_ogre_ciel } from "./js_units_daisy_ogre_ciel.js";
 
+//ストーリー解禁//
+import { proto_create_gundam } from "./js_units_proto_create_gundam.js";
+import { training_machine } from "./js_units_training_machine.js";
+import { story_zaku_ii_gene } from "./js_units_story_zaku_ii_gene.js";
+import { story_gundam } from "./js_units_story_gundam.js";
+
 export const unitList = [
   gundam_mc,
   z_gundam,
@@ -103,7 +109,11 @@ export const cpuBeginnerList = [
 ];
 
 export const debugUnitList = [
-  daisy_ogre_ciel
+  daisy_ogre_ciel,
+  proto_create_gundam,
+  training_machine,
+  story_zaku_ii_gene,
+  story_gundam
 ];
 
 
