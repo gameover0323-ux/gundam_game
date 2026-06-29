@@ -454,6 +454,22 @@ import {
   onProtoCreateResolveChoice
 } from "./js_unit_rules_proto_create_gundam.js";
 
+
+import {
+  getStoryGundamDerivedState,
+  canUseStoryGundamSpecial,
+  executeStoryGundamSpecial,
+  onStoryGundamTurnEnd,
+  onStoryGundamBeforeSlot,
+  onStoryGundamEnemyBeforeSlot,
+  onStoryGundamAfterSlotResolved,
+  onStoryGundamActionResolved,
+  onStoryGundamDamaged,
+  modifyStoryGundamTakenDamage,
+  modifyStoryGundamEvadeAttempt,
+  onStoryGundamResolveChoice
+} from "./js_unit_rules_story_gundam.js";
+
 export const unitRulesMap = {
 
  proto_create_gundam: {
@@ -470,6 +486,22 @@ export const unitRulesMap = {
   modifyEvadeAttempt: modifyProtoCreateEvadeAttempt,
   onResolveChoice: onProtoCreateResolveChoice
 },
+
+story_gundam: {
+  getDerivedState: getStoryGundamDerivedState,
+  canUseSpecial: canUseStoryGundamSpecial,
+  executeSpecial: executeStoryGundamSpecial,
+  onTurnEnd: onStoryGundamTurnEnd,
+  onBeforeSlot: onStoryGundamBeforeSlot,
+  onEnemyBeforeSlot: onStoryGundamEnemyBeforeSlot,
+  onAfterSlotResolved: onStoryGundamAfterSlotResolved,
+  onActionResolved: onStoryGundamActionResolved,
+  onDamaged: onStoryGundamDamaged,
+  modifyTakenDamage: modifyStoryGundamTakenDamage,
+  modifyEvadeAttempt: modifyStoryGundamEvadeAttempt,
+  onResolveChoice: onStoryGundamResolveChoice
+},
+  
  gundam_mc: {
     getDerivedState: getGundamMcDerivedState,
     executeSpecial: executeGundamMcSpecial,
