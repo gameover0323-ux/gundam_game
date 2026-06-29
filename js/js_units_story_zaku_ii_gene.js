@@ -2,7 +2,7 @@ export const story_zaku_ii_gene = {
   id: "story_zaku_ii_gene",
   name: "ザクII(ジーン機)",
   defaultFormId: "base",
-  storyOnly: true,
+  
   exp: 2,
 
   storyCompanion: {
