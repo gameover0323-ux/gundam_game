@@ -825,23 +825,7 @@ if (result.kind === "attack") {
     ctx.redrawBattleBoards();
   }
 
-  if (afterResult?.requestChoice) {
-    ctx.setCurrentAttack(applyCriticalToAttacks(actor, attacks));
-    ctx.setCurrentAttackContext({
-      ownerPlayer: slotMeta.ownerPlayer,
-      enemyPlayer: slotMeta.enemyPlayer,
-      slotKey: slotMeta.slotKey,
-      slotNumber: slotMeta.slotNumber,
-      slotLabel: slot.label,
-      slotDesc: slot.desc,
-      totalCount: attacks.length,
-      hitCount: 0,
-      evadeCount: 0
-    });
-
-    ctx.handleChoiceRequest(afterResult.requestChoice);
-    return;
-  }
+ 
 
   startAttackQte(attacks);
   return;
@@ -1145,31 +1129,48 @@ if (result.kind === "attack") {
       return;
     }
 
-    if (Array.isArray(result.appendAttacks) && result.appendAttacks.length > 0) {
-      const currentAttack = ctx.getCurrentAttack();
-      const currentAttackContext = ctx.getCurrentAttackContext();
-      const targetContext = choiceContext.currentAttackContext;
+   if (Array.isArray(result.appendAttacks) && result.appendAttacks.length > 0) {
+  const currentAttack = ctx.getCurrentAttack();
+  const currentAttackContext = ctx.getCurrentAttackContext();
+  const targetContext = choiceContext.currentAttackContext;
 
-      const appendAttacks = result.appendAttacks.map((attack) => ({
-        ...attack,
-        groupId: targetContext?.groupId || attack.groupId,
-        sourceLabel: targetContext?.actionLabel || attack.sourceLabel
-      }));
+  const appendAttacks = result.appendAttacks.map((attack) => ({
+    ...attack,
+    groupId: targetContext?.groupId || attack.groupId,
+    sourceLabel: targetContext?.actionLabel || attack.sourceLabel
+  }));
 
-      currentAttack.push(...appendAttacks);
+  if (currentAttackContext) {
+    currentAttack.push(...appendAttacks);
+    currentAttackContext.totalCount += appendAttacks.length;
 
-      if (currentAttackContext) {
-        currentAttackContext.totalCount += appendAttacks.length;
-      }
-
-      if (targetContext && targetContext !== currentAttackContext) {
-        targetContext.totalCount = Number(targetContext.totalCount || 0) + appendAttacks.length;
-      }
-
-      ctx.setCurrentAttack(currentAttack);
-      ctx.setCurrentAttackContext(currentAttackContext);
+    if (targetContext && targetContext !== currentAttackContext) {
+      targetContext.totalCount = Number(targetContext.totalCount || 0) + appendAttacks.length;
     }
 
+    ctx.setCurrentAttack(currentAttack);
+    ctx.setCurrentAttackContext(currentAttackContext);
+  } else {
+    ctx.setCurrentAction(
+      `${actor.name} の追撃`,
+      result.appendAttackLabel || result.message || "追撃"
+    );
+
+    ctx.setCurrentAttack(appendAttacks);
+    ctx.setCurrentAttackContext({
+      ownerPlayer,
+      enemyPlayer,
+      slotKey: null,
+      slotNumber: null,
+      slotLabel: result.appendAttackLabel || "追撃",
+      slotDesc: result.appendSlotDesc || "",
+      totalCount: appendAttacks.length,
+      hitCount: 0,
+      evadeCount: 0,
+      appendedFromChoice: choice.effectType || null
+    });
+  }
+   }
     ctx.redrawBattleBoards();
 
     if (result.message) {
