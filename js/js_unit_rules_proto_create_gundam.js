@@ -422,21 +422,24 @@ export function onProtoCreateResolveChoice(state, pendingChoice, selectedValue, 
     state.storyReloadFollowUpUsed[slotKey] = true;
     state.storyAmmo[slotKey] = ammo - useCount;
 
-    const attack = makeAttackFromEffect(
-      slot,
-      {
-        ...effect,
-        count: useCount
-      },
-      `${slot.label} 追撃`
-    );
+  const appendAttacks = createAttack(
+  Number(effect.damage || 0),
+  useCount,
+  {
+    type: effect.attackType || "shoot",
+    beam: effect.beam === true,
+    ignoreReduction: effect.ignoreReduction === true,
+    cannotEvade: effect.cannotEvade === true,
+    source: `${slot.label} 追撃`
+  }
+);
 
-    return {
-      handled: true,
-      redraw: true,
-      message: `${slot.label} 追撃：弾数${ammo}→${state.storyAmmo[slotKey]}`,
-      attack
-    };
+return {
+  handled: true,
+  redraw: true,
+  message: `${slot.label} 追撃：弾数${ammo}→${state.storyAmmo[slotKey]}`,
+  appendAttacks
+};
   }
 
   return { handled: false, redraw: false, message: null };
@@ -522,41 +525,8 @@ export function onProtoCreateBeforeSlot(state, rolledSlotNumber) {
 }
 
 export function onProtoCreateAfterSlotResolved(state, slotNumber, resolveResult, context = {}) {
-  ensureProtoCreateState(state);
-
-  const slotKey = `slot${slotNumber}`;
-  const slot = state.slots?.[slotKey];
-
-  if (!slot?.effect?.storyReload) {
-    return { redraw: false, message: null };
-  }
-
-  if (resolveResult?.customEffectId === "proto_create_no_fire") {
-    return { redraw: false, message: null };
-  }
-
-  if (!canReloadFollowUp(state, slotKey)) {
-    return { redraw: false, message: null };
-  }
-
-  return {
-    redraw: true,
-    message: `${slot.label} は弾数が残っています`,
-    requestChoice: {
-      choiceType: "buttons",
-      effectType: "proto_create_reload_followup",
-      ownerPlayer: context.ownerPlayer,
-      enemyPlayer: context.enemyPlayer,
-      ownerUnitKey: context.ownerUnitKey || null,
-      title: `${slot.label}で追撃しますか？`,
-      choices: [
-        { label: "回避1消費で追撃", value: slotKey },
-        { label: "追撃しない", value: "cancel" }
-      ]
-    }
-  };
+  return { redraw: false, message: null };
 }
-
 export function onProtoCreateTurnEnd(state) {
   ensureProtoCreateState(state);
 
@@ -615,10 +585,38 @@ export function modifyProtoCreateTakenDamage(defender, attacker, attack, damage)
   return { damage, message: null };
 }
 
-export function onProtoCreateActionResolved() {
-  return { redraw: false, message: null };
-}
+export function onProtoCreateActionResolved(attacker, defender, context = {}) {
+  ensureProtoCreateState(attacker);
 
+  const slotNumber = context.slotNumber;
+  const slotKey = slotNumber ? `slot${slotNumber}` : null;
+  const slot = slotKey ? attacker.slots?.[slotKey] : null;
+
+  if (!slot?.effect?.storyReload) {
+    return { redraw: false, message: null };
+  }
+
+  if (!canReloadFollowUp(attacker, slotKey)) {
+    return { redraw: false, message: null };
+  }
+
+  return {
+    redraw: true,
+    message: `${slot.label} は弾数が残っています`,
+    requestChoice: {
+      choiceType: "buttons",
+      effectType: "proto_create_reload_followup",
+      ownerPlayer: context.ownerPlayer,
+      enemyPlayer: context.enemyPlayer,
+      ownerUnitKey: context.ownerUnitKey || null,
+      title: `${slot.label}で追撃しますか？`,
+      choices: [
+        { label: "回避1消費で追撃", value: slotKey },
+        { label: "追撃しない", value: "cancel" }
+      ]
+    }
+  };
+}
 export function onProtoCreateDamaged() {
   return { redraw: false, message: null };
 }
