@@ -1,5 +1,3 @@
-import { allUnitList } from "../js/js_units_index.js";
-
 export const PROTO_CREATE_BASE = {
   unitName: "プロトクリエイトガンダム",
   level: 0,
@@ -10,12 +8,12 @@ export const PROTO_CREATE_BASE = {
   baseEnergy: 100,
 
   hpStep: 20,
-  hpCostStep: 10,
-  hpMax: 1000,
+hpCostStep: 10,
+hpMax: 1000,
 
-  evadeStep: 1,
-  evadeCostStep: 20,
-  evadeMax: 25,
+evadeStep: 1,
+evadeCostStep: 20,
+evadeMax: 25,
 
   energyStep: 1,
   energyCostStep: 1,
@@ -75,7 +73,10 @@ export const STORY_SLOT_OPTIONS = {
       shortLabel: "2.回復 30",
       cost: 5,
       detail: "HPを30回復する。",
-      data: { kind: "heal", value: 30 }
+      data: {
+        kind: "heal",
+        value: 30
+      }
     },
     {
       id: "heal_60",
@@ -83,7 +84,10 @@ export const STORY_SLOT_OPTIONS = {
       shortLabel: "2.回復 60",
       cost: 10,
       detail: "HPを60回復する。",
-      data: { kind: "heal", value: 60 }
+      data: {
+        kind: "heal",
+        value: 60
+      }
     }
   ],
 
@@ -94,7 +98,10 @@ export const STORY_SLOT_OPTIONS = {
       shortLabel: "3.回避 1",
       cost: 5,
       detail: "回避を1回獲得する。",
-      data: { kind: "evade", value: 1 }
+      data: {
+        kind: "evade",
+        value: 1
+      }
     },
     {
       id: "evade_2",
@@ -102,7 +109,10 @@ export const STORY_SLOT_OPTIONS = {
       shortLabel: "3.回避 2",
       cost: 15,
       detail: "回避を2回獲得する。",
-      data: { kind: "evade", value: 2 }
+      data: {
+        kind: "evade",
+        value: 2
+      }
     }
   ],
 
@@ -112,7 +122,7 @@ export const STORY_SLOT_OPTIONS = {
       label: "ビームガン",
       shortLabel: "4.ビームガン",
       cost: 5,
-      detail: "20ダメージ / 射撃 / ビーム / エネルギー / EN消費10 / 増加値20",
+      detail: "20ダメージ / 射撃 / ビーム / エネルギー / EN消費10",
       data: {
         kind: "attack",
         damage: 20,
@@ -120,8 +130,7 @@ export const STORY_SLOT_OPTIONS = {
         attackType: "shoot",
         beam: true,
         energy: true,
-        energyCost: 10,
-        energyIncrease: 20
+        energyCost: 10
       }
     },
     {
@@ -129,7 +138,7 @@ export const STORY_SLOT_OPTIONS = {
       label: "エネルギーソード",
       shortLabel: "4.エネルギーソード",
       cost: 20,
-      detail: "60ダメージ / 格闘 / ビーム / エネルギー / EN消費20 / 増加値30",
+      detail: "60ダメージ / 格闘 / ビーム / エネルギー / EN消費20",
       data: {
         kind: "attack",
         damage: 60,
@@ -137,8 +146,7 @@ export const STORY_SLOT_OPTIONS = {
         attackType: "melee",
         beam: true,
         energy: true,
-        energyCost: 20,
-        energyIncrease: 30
+        energyCost: 20
       }
     }
   ],
@@ -246,109 +254,6 @@ export const STORY_SKILL_OPTIONS = [
   }
 ];
 
-function getStoryUnits() {
-  return (Array.isArray(allUnitList) ? allUnitList : []).filter(unit => unit?.storyOnly === true || unit?.storyDrops || unit?.storyCompanion);
-}
-
-function normalizeDropId(unit, drop) {
-  if (drop?.id) return String(drop.id);
-  const slotPart = drop?.slotKey || "drop";
-  const labelPart = String(drop?.label || "unknown").replace(/\s+/g, "_");
-  return `${unit.id}_${slotPart}_${labelPart}`;
-}
-
-function toDropOption(unit, drop) {
-  const id = normalizeDropId(unit, drop);
-  return {
-    ...drop,
-    id,
-    sourceUnitId: unit.id,
-    sourceUnitName: unit.name,
-    shortLabel: drop?.shortLabel || (drop?.slotKey ? `${drop.slotKey.replace("slot", "")}.${drop.label}` : drop?.label)
-  };
-}
-
-function collectStoryDrops(kind) {
-  const result = [];
-
-  getStoryUnits().forEach(unit => {
-    const drops = unit?.storyDrops;
-    if (!drops) return;
-
-    const dropGroups = [
-      ...(Array.isArray(drops.initial) ? drops.initial : []),
-      ...(Array.isArray(drops.random) ? drops.random : []),
-      ...(Array.isArray(drops.conditional) ? drops.conditional : [])
-    ];
-
-    dropGroups.forEach(drop => {
-      if (!drop?.data) return;
-
-      if (kind === "slot" && drop.slotKey) {
-        result.push(toDropOption(unit, drop));
-        return;
-      }
-
-      if (kind === "equipment" && drop.data.kind === "equipment_attack") {
-        result.push(toDropOption(unit, drop));
-        return;
-      }
-
-      if (kind === "skill" && drop.data.kind === "create_skill") {
-        result.push(toDropOption(unit, drop));
-      }
-    });
-
-    if (kind === "equipment" && Array.isArray(drops.equipment)) {
-      drops.equipment.forEach(drop => {
-        if (!drop?.data) return;
-        result.push(toDropOption(unit, drop));
-      });
-    }
-  });
-
-  return result;
-}
-
-function buildStoryCompanionOptions() {
-  return [
-    {
-      id: "none",
-      label: "なし",
-      cost: 0,
-      detail: ""
-    },
-    ...getStoryUnits()
-      .filter(unit => unit?.storyCompanion)
-      .map(unit => ({
-        id: unit.id,
-        label: unit.name,
-        cost: Number(unit.storyCompanion.cost || 0),
-        unlockCondition: unit.storyCompanion.unlockCondition || "",
-        detail: unit.storyCompanion.unlockCondition || "",
-        sourceUnitId: unit.id
-      }))
-  ];
-}
-
-export const STORY_COMPANION_OPTIONS = buildStoryCompanionOptions();
-
-export function getStoryDropSlotOptions(slotKey) {
-  return collectStoryDrops("slot").filter(option => option.slotKey === slotKey);
-}
-
-export function getStoryDropEquipmentOptions() {
-  return collectStoryDrops("equipment");
-}
-
-export function getStoryDropSkillOptions() {
-  return collectStoryDrops("skill");
-}
-
-export function getStoryCompanionOptions() {
-  return buildStoryCompanionOptions();
-}
-
 export function createInitialProtoCreateLabState() {
   return {
     hp: PROTO_CREATE_BASE.baseHp,
@@ -374,46 +279,20 @@ export function createInitialProtoCreateLabState() {
       equipment2: "none"
     },
 
-    skill: "none",
-    companion: "none"
+    skill: "none"
   };
 }
 
 export function findStorySlotOption(slotKey, optionId) {
-  return [
-    ...(STORY_SLOT_OPTIONS[slotKey] || []),
-    ...getStoryDropSlotOptions(slotKey)
-  ].find(option => option.id === optionId) || null;
+  return (STORY_SLOT_OPTIONS[slotKey] || []).find(option => option.id === optionId) || null;
 }
 
 export function findStoryEquipmentOption(optionId) {
-  return [
-    ...STORY_EQUIPMENT_OPTIONS,
-    ...getStoryDropEquipmentOptions()
-  ].find(option => option.id === optionId) || STORY_EQUIPMENT_OPTIONS[0];
+  return STORY_EQUIPMENT_OPTIONS.find(option => option.id === optionId) || STORY_EQUIPMENT_OPTIONS[0];
 }
 
 export function findStorySkillOption(optionId) {
-  return [
-    ...STORY_SKILL_OPTIONS,
-    ...getStoryDropSkillOptions()
-  ].find(option => option.id === optionId) || STORY_SKILL_OPTIONS[0];
-}
-
-export function findStoryCompanionOption(optionId) {
-  return getStoryCompanionOptions().find(option => option.id === optionId) || getStoryCompanionOptions()[0];
-}
-
-export function isStoryDropUnlocked(save, option) {
-  if (!option?.sourceUnitId) return true;
-
-  const unlocked = save?.inventory?.storyDrops || {};
-  return unlocked[option.id] === true;
-}
-
-export function isStoryCompanionUnlocked(save, option) {
-  if (!option || option.id === "none") return true;
-  return save?.companionUnits?.[option.id]?.unlocked === true;
+  return STORY_SKILL_OPTIONS.find(option => option.id === optionId) || STORY_SKILL_OPTIONS[0];
 }
 
 export function calculateProtoCreateLabCost(state) {
@@ -425,7 +304,6 @@ export function calculateProtoCreateLabCost(state) {
   const equipment1 = findStoryEquipmentOption(state.equipment?.equipment1 || "none");
   const equipment2 = findStoryEquipmentOption(state.equipment?.equipment2 || "none");
   const skill = findStorySkillOption(state.skill || "none");
-  const companion = findStoryCompanionOption(state.companion || "none");
 
   return Number(state.hpCost || 0)
     + Number(state.evadeCost || 0)
@@ -433,6 +311,5 @@ export function calculateProtoCreateLabCost(state) {
     + slotCost
     + Number(equipment1?.cost || 0)
     + Number(equipment2?.cost || 0)
-    + Number(skill?.cost || 0)
-    + Number(companion?.cost || 0);
+    + Number(skill?.cost || 0);
 }
