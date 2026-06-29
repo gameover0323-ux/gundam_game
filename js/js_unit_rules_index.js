@@ -470,6 +470,22 @@ import {
   onStoryGundamResolveChoice
 } from "./js_unit_rules_story_gundam.js";
 
+import {
+  getStoryZakuIiDenimDerivedState,
+  canUseStoryZakuIiDenimSpecial,
+  executeStoryZakuIiDenimSpecial,
+  onStoryZakuIiDenimTurnEnd,
+  onStoryZakuIiDenimBeforeSlot,
+  onStoryZakuIiDenimEnemyBeforeSlot,
+  onStoryZakuIiDenimAfterSlotResolved,
+  onStoryZakuIiDenimActionResolved,
+  onStoryZakuIiDenimDamaged,
+  modifyStoryZakuIiDenimTakenDamage,
+  modifyStoryZakuIiDenimEvadeAttempt,
+  onStoryZakuIiDenimResolveChoice
+} from "./js_unit_rules_story_zaku_ii_denim.js";
+
+
 export const unitRulesMap = {
 
  proto_create_gundam: {
@@ -501,6 +517,22 @@ story_gundam: {
   modifyEvadeAttempt: modifyStoryGundamEvadeAttempt,
   onResolveChoice: onStoryGundamResolveChoice
 },
+
+story_zaku_ii_denim: {
+  getDerivedState: getStoryZakuIiDenimDerivedState,
+  canUseSpecial: canUseStoryZakuIiDenimSpecial,
+  executeSpecial: executeStoryZakuIiDenimSpecial,
+  onTurnEnd: onStoryZakuIiDenimTurnEnd,
+  onBeforeSlot: onStoryZakuIiDenimBeforeSlot,
+  onEnemyBeforeSlot: onStoryZakuIiDenimEnemyBeforeSlot,
+  onAfterSlotResolved: onStoryZakuIiDenimAfterSlotResolved,
+  onActionResolved: onStoryZakuIiDenimActionResolved,
+  onDamaged: onStoryZakuIiDenimDamaged,
+  modifyTakenDamage: modifyStoryZakuIiDenimTakenDamage,
+  modifyEvadeAttempt: modifyStoryZakuIiDenimEvadeAttempt,
+  onResolveChoice: onStoryZakuIiDenimResolveChoice
+},
+
   
  gundam_mc: {
     getDerivedState: getGundamMcDerivedState,
