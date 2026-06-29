@@ -129,9 +129,9 @@ export const story_zaku_ii_denim = {
           effect: { type: "attack", attackType: "shoot", damage: 60, count: 1 }
         },
         slot6: {
-          label: "激昂",
-          desc: "次のターンのみスロット効果2倍",
-          effect: { type: "none" }
+  label: "激昂",
+  desc: "次のターンのみスロット効果2倍",
+  effect: { type: "custom", effectId: "denim_rage" }
         }
       },
       specials: []
