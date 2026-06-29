@@ -55,7 +55,7 @@ export const training_machine = {
           effectType: "training_machine_trait",
           timing: "passive",
           actionType: "auto",
-          desc: "ストーリー用トレーニングマシン。この機体のみ会心率0%。"
+          desc: "ストーリー用トレーニングマシン。チュートリアル。"
         }
       ]
     }
