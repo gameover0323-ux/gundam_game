@@ -25,7 +25,7 @@ import {
 } from "./story_units.js";
 
 import { createStoryChapter2Controller } from "./story_chapter2_controller.js";
-
+import { createStoryLearningBattleController } from "./story_learning_battle_controller.js";
 export function createStoryModeController(ctx) {
   const DEBUG_ROLES = new Set(["debug", "Ciel_debugger"]);
   const PROTO_UNIT_ID = "proto_create_gundam";
@@ -54,6 +54,11 @@ const chapter2Controller = createStoryChapter2Controller({
   ...ctx,
   renderStoryMainMenu,
   showTitle: closeStoryModeToTitle
+});
+
+const storyLearningBattleController = createStoryLearningBattleController({
+  ...ctx,
+  renderStoryMainMenu
 });
   
   function clone(value) {
@@ -245,8 +250,8 @@ function renderStoryMainMenu() {
   document.getElementById("storyMenuCloseBtn")?.addEventListener("click", closeStoryModeToTitle);
 
   document.getElementById("storyLearningBattleBtn")?.addEventListener("click", () => {
-    ctx.showPopup?.("学習戦闘は後ほど実装します");
-  });
+  storyLearningBattleController.renderLearningMenu();
+});
 
   document.getElementById("storyChapterBossBtn")?.addEventListener("click", () => {
     ctx.showPopup?.("チャプターボス：ガンダム ☆☆ は後ほど実装します");
