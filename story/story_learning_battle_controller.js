@@ -4,61 +4,38 @@ import { loadStorySave } from "./story_save.js";
 import { story_zaku_ii_gene } from "../js/js_units_story_zaku_ii_gene.js";
 import { story_zaku_ii_denim } from "../js/js_units_story_zaku_ii_denim.js";
 
-const STORY_COMPANION_UNIT_MAP = {
-  story_zaku_ii_gene
-};
-
-const STORY_CPU_UNIT_MAP = {
+const STORY_UNIT_MAP = {
+  proto_create_gundam: null,
   story_zaku_ii_gene,
   story_zaku_ii_denim
 };
 
 export function createStoryLearningBattleController(ctx) {
-  let selectedSinglePlayerUnitId = "proto_create_gundam";
-  let selectedSingleEnemyUnitId = "story_zaku_ii_gene";
-
-  let selectedCompanionAlly1Id = "proto_create_gundam";
-  let selectedCompanionAlly2Id = "story_zaku_ii_gene";
-  let selectedCompanionEnemy1Id = "story_zaku_ii_gene";
-  let selectedCompanionEnemy2Id = "story_zaku_ii_denim";
+  let learningMode = "single";
+  let selectingSide = "A";
+  let pendingUnit = null;
+  let selectedA = [];
+  let selectedB = [];
 
   function getRoot() {
     return document.getElementById("storyModeRoot");
   }
 
-  function renderBackButtonHtml() {
-    return `<button id="storyLearningBackBtn">戻る</button>`;
-  }
-
-  function bindBackToMenu() {
-    document.getElementById("storyLearningBackBtn")?.addEventListener("click", () => {
-      ctx.renderStoryMainMenu?.();
-    });
-  }
-
-  function buildUnitButton(unit, selectedId, buttonClass, disabled = false) {
-    const selected = unit.id === selectedId;
-    return `
-      <button
-        class="${buttonClass}"
-        data-unit-id="${unit.id}"
-        ${selected || disabled ? "disabled" : ""}
-      >
-        ${disabled ? "？？？" : unit.name}${selected ? "【選択中】" : ""}
-      </button>
-    `;
+  function getUnitById(unitId) {
+    if (unitId === "proto_create_gundam") return getStoryCreateUnit("proto_create_gundam");
+    return STORY_UNIT_MAP[unitId] || null;
   }
 
   function buildAvailablePlayerUnits() {
     const save = loadStorySave();
-    const units = [
-      getStoryCreateUnit("proto_create_gundam")
-    ];
+    const units = [getStoryCreateUnit("proto_create_gundam")];
 
     Object.entries(save.companionUnits || {}).forEach(([unitId, info]) => {
       if (info?.unlocked !== true) return;
-      const unit = STORY_COMPANION_UNIT_MAP[unitId];
-      if (unit) units.push(unit);
+      const unit = getUnitById(unitId);
+      if (unit && !units.some(existing => existing.id === unit.id)) {
+        units.push(unit);
+      }
     });
 
     return units;
@@ -66,10 +43,7 @@ export function createStoryLearningBattleController(ctx) {
 
   function buildAvailableEnemyUnits() {
     const save = loadStorySave();
-
-    if (save.flags?.chapter2Cleared !== true) {
-      return [];
-    }
+    if (save.flags?.chapter2Cleared !== true) return [];
 
     return [
       story_zaku_ii_gene,
@@ -77,195 +51,248 @@ export function createStoryLearningBattleController(ctx) {
     ];
   }
 
-  function getUnitById(unitId, list) {
-    return list.find(unit => unit.id === unitId) || list[0] || null;
+  function getCurrentList() {
+    return selectingSide === "A"
+      ? buildAvailablePlayerUnits()
+      : buildAvailableEnemyUnits();
+  }
+
+  function getRequiredCount() {
+    return learningMode === "companion" ? 2 : 1;
+  }
+
+  function getCurrentSelectedList() {
+    return selectingSide === "A" ? selectedA : selectedB;
+  }
+
+  function setCurrentSelectedList(list) {
+    if (selectingSide === "A") {
+      selectedA = list;
+    } else {
+      selectedB = list;
+    }
+  }
+
+  function getSideLabel(side = selectingSide) {
+    if (side === "A") return learningMode === "companion" ? "PLAYER A チーム" : "PLAYER A";
+    return learningMode === "companion" ? "CPUチーム" : "CPU";
   }
 
   function renderLearningMenu() {
     const root = getRoot();
     if (!root) return;
 
+    root.style.justifyContent = "center";
+    root.style.overflowY = "auto";
+
     root.innerHTML = `
       <h2>学習戦闘</h2>
       <button id="storySingleLearningBtn">単体学習</button>
       <button id="storyCompanionLearningBtn">同行学習</button>
-      ${renderBackButtonHtml()}
+      <button id="storyLearningBackBtn">戻る</button>
     `;
 
     document.getElementById("storySingleLearningBtn")?.addEventListener("click", renderSingleLearningSelect);
     document.getElementById("storyCompanionLearningBtn")?.addEventListener("click", renderCompanionLearningSelect);
-    bindBackToMenu();
+    document.getElementById("storyLearningBackBtn")?.addEventListener("click", () => ctx.renderStoryMainMenu?.());
   }
 
   function renderSingleLearningSelect() {
-    const root = getRoot();
-    if (!root) return;
-
-    const playerUnits = buildAvailablePlayerUnits();
-    const enemyUnits = buildAvailableEnemyUnits();
-
-    if (!playerUnits.some(unit => unit.id === selectedSinglePlayerUnitId)) {
-      selectedSinglePlayerUnitId = playerUnits[0]?.id || "proto_create_gundam";
-    }
-
-    if (!enemyUnits.some(unit => unit.id === selectedSingleEnemyUnitId)) {
-      selectedSingleEnemyUnitId = enemyUnits[0]?.id || "";
-    }
-
-    root.innerHTML = `
-      <h2>単体学習</h2>
-
-      <h3>プレイヤー機体</h3>
-      <div style="display:flex; flex-direction:column; gap:6px;">
-        ${playerUnits.map(unit =>
-          buildUnitButton(unit, selectedSinglePlayerUnitId, "story-single-player-unit-btn")
-        ).join("")}
-        <button disabled>？？？ クリエイトガンダムリベラル</button>
-      </div>
-
-      <h3>CPU機体</h3>
-      <div style="display:flex; flex-direction:column; gap:6px;">
-        ${enemyUnits.map(unit =>
-          buildUnitButton(unit, selectedSingleEnemyUnitId, "story-single-enemy-unit-btn")
-        ).join("")}
-      </div>
-
-      <div style="margin-top:16px; display:flex; gap:8px;">
-        <button id="storySingleLearningStartBtn">開始</button>
-        <button id="storySingleLearningBackBtn">戻る</button>
-      </div>
-    `;
-
-    document.querySelectorAll(".story-single-player-unit-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        selectedSinglePlayerUnitId = btn.dataset.unitId;
-        renderSingleLearningSelect();
-      });
-    });
-
-    document.querySelectorAll(".story-single-enemy-unit-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        selectedSingleEnemyUnitId = btn.dataset.unitId;
-        renderSingleLearningSelect();
-      });
-    });
-
-    document.getElementById("storySingleLearningStartBtn")?.addEventListener("click", startSingleLearning);
-    document.getElementById("storySingleLearningBackBtn")?.addEventListener("click", renderLearningMenu);
+    learningMode = "single";
+    selectingSide = "A";
+    pendingUnit = null;
+    selectedA = [];
+    selectedB = [];
+    renderLearningSelect();
   }
 
   function renderCompanionLearningSelect() {
+    learningMode = "companion";
+    selectingSide = "A";
+    pendingUnit = null;
+    selectedA = [];
+    selectedB = [];
+    renderLearningSelect();
+  }
+
+  function renderLearningSelect() {
     const root = getRoot();
     if (!root) return;
 
-    const playerUnits = buildAvailablePlayerUnits();
-    const enemyUnits = buildAvailableEnemyUnits();
+    root.style.justifyContent = "flex-start";
+    root.style.overflowY = "auto";
 
-    if (!playerUnits.some(unit => unit.id === selectedCompanionAlly1Id)) {
-      selectedCompanionAlly1Id = playerUnits[0]?.id || "proto_create_gundam";
-    }
-
-    if (!playerUnits.some(unit => unit.id === selectedCompanionAlly2Id)) {
-      selectedCompanionAlly2Id = playerUnits[1]?.id || playerUnits[0]?.id || "proto_create_gundam";
-    }
-
-    if (!enemyUnits.some(unit => unit.id === selectedCompanionEnemy1Id)) {
-      selectedCompanionEnemy1Id = enemyUnits[0]?.id || "";
-    }
-
-    if (!enemyUnits.some(unit => unit.id === selectedCompanionEnemy2Id)) {
-      selectedCompanionEnemy2Id = enemyUnits[1]?.id || enemyUnits[0]?.id || "";
-    }
+    const currentList = getCurrentList();
+    const requiredCount = getRequiredCount();
+    const selectedList = getCurrentSelectedList();
+    const canConfirm = !!pendingUnit;
+    const canStart = selectedA.length >= requiredCount && selectedB.length >= requiredCount;
 
     root.innerHTML = `
-      <h2>同行学習</h2>
+      <h2>${learningMode === "companion" ? "同行学習" : "単体学習"}</h2>
 
-      <h3>味方1</h3>
-      <div style="display:flex; flex-direction:column; gap:6px;">
-        ${playerUnits.map(unit =>
-          buildUnitButton(unit, selectedCompanionAlly1Id, "story-companion-ally1-btn")
-        ).join("")}
-        <button disabled>？？？ クリエイトガンダムリベラル</button>
-      </div>
+      <div id="storyLearningSelectPanel" style="width:min(760px,96vw); margin:0 auto;">
+        <div id="storyLearningGuide" style="margin-bottom:10px; text-align:center;">
+          ${getSideLabel()} の機体を${requiredCount}機選択
+        </div>
 
-      <h3>味方2</h3>
-      <div style="display:flex; flex-direction:column; gap:6px;">
-        ${playerUnits.map(unit =>
-          buildUnitButton(unit, selectedCompanionAlly2Id, "story-companion-ally2-btn")
-        ).join("")}
-        <button disabled>？？？ クリエイトガンダムリベラル</button>
-      </div>
+        <div id="storyLearningPreview" style="
+          white-space:pre-line;
+          border:1px solid #777;
+          border-radius:8px;
+          padding:10px;
+          margin-bottom:12px;
+          background:#111;
+        ">${buildPreviewText()}</div>
 
-      <h3>CPU1</h3>
-      <div style="display:flex; flex-direction:column; gap:6px;">
-        ${enemyUnits.map(unit =>
-          buildUnitButton(unit, selectedCompanionEnemy1Id, "story-companion-enemy1-btn")
-        ).join("")}
-      </div>
+        <div id="storyLearningButtons" style="display:flex; flex-direction:column; gap:10px;">
+          ${renderUnitSection(selectingSide === "A" ? "プレイヤー側候補" : "CPU側候補", currentList)}
+          ${selectingSide === "A" ? renderLockedLiberalButton() : ""}
+        </div>
 
-      <h3>CPU2</h3>
-      <div style="display:flex; flex-direction:column; gap:6px;">
-        ${enemyUnits.map(unit =>
-          buildUnitButton(unit, selectedCompanionEnemy2Id, "story-companion-enemy2-btn")
-        ).join("")}
-      </div>
+        <div id="storyLearningDescription" style="
+          display:${pendingUnit ? "" : "none"};
+          white-space:pre-line;
+          border:1px solid #777;
+          border-radius:8px;
+          padding:10px;
+          margin-top:12px;
+          background:#111;
+        ">${pendingUnit ? pendingUnit.name : ""}</div>
 
-      <div style="margin-top:16px; display:flex; gap:8px;">
-        <button id="storyCompanionLearningStartBtn">開始</button>
-        <button id="storyCompanionLearningBackBtn">戻る</button>
+        <div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:14px;">
+          <button id="storyLearningConfirmBtn" ${canConfirm ? "" : "disabled"}>
+            ${pendingUnit ? `${pendingUnit.name} に決定` : "決定"}
+          </button>
+          ${selectingSide === "B" && canStart ? `<button id="storyLearningStartBtn">この編成で開始</button>` : ""}
+          <button id="storyLearningCancelBtn">戻る</button>
+        </div>
       </div>
     `;
 
-    document.querySelectorAll(".story-companion-ally1-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        selectedCompanionAlly1Id = btn.dataset.unitId;
-        renderCompanionLearningSelect();
-      });
+    bindUnitButtons();
+
+    document.getElementById("storyLearningConfirmBtn")?.addEventListener("click", confirmPendingUnit);
+
+    document.getElementById("storyLearningStartBtn")?.addEventListener("click", () => {
+      if (learningMode === "companion") {
+        startCompanionLearning();
+      } else {
+        startSingleLearning();
+      }
     });
 
-    document.querySelectorAll(".story-companion-ally2-btn").forEach(btn => {
+    document.getElementById("storyLearningCancelBtn")?.addEventListener("click", () => {
+      if (selectingSide === "B") {
+        selectingSide = "A";
+        pendingUnit = null;
+        renderLearningSelect();
+        return;
+      }
+
+      renderLearningMenu();
+    });
+  }
+
+  function renderUnitSection(title, units) {
+    if (!units.length) {
+      return `
+        <div class="story-learning-section">
+          <div class="selectSectionTitle">${title}</div>
+          <div>選択可能な機体がありません</div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="story-learning-section">
+        <div class="selectSectionTitle" style="margin-bottom:6px;">${title}</div>
+        <div class="selectSectionButtons" style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center;">
+          ${units.map(unit => `
+            <button class="story-learning-unit-btn" data-unit-id="${unit.id}">
+              ${unit.name}
+            </button>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderLockedLiberalButton() {
+    return `
+      <div class="story-learning-section">
+        <div class="selectSectionTitle" style="margin-bottom:6px;">未実装</div>
+        <div class="selectSectionButtons" style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center;">
+          <button disabled>？？？ クリエイトガンダムリベラル</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function bindUnitButtons() {
+    document.querySelectorAll(".story-learning-unit-btn").forEach(btn => {
       btn.addEventListener("click", () => {
-        selectedCompanionAlly2Id = btn.dataset.unitId;
-        renderCompanionLearningSelect();
+        const unit = getUnitById(btn.dataset.unitId);
+        if (!unit) return;
+        pendingUnit = unit;
+        renderLearningSelect();
       });
     });
+  }
 
-    document.querySelectorAll(".story-companion-enemy1-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        selectedCompanionEnemy1Id = btn.dataset.unitId;
-        renderCompanionLearningSelect();
-      });
-    });
+  function buildPreviewText() {
+    const requiredCount = getRequiredCount();
 
-    document.querySelectorAll(".story-companion-enemy2-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        selectedCompanionEnemy2Id = btn.dataset.unitId;
-        renderCompanionLearningSelect();
-      });
-    });
+    const aText = selectedA.length
+      ? `${getSideLabel("A")}: ${selectedA.map(unit => unit.name).join(" / ")}`
+      : `${getSideLabel("A")}: 未選択`;
 
-    document.getElementById("storyCompanionLearningStartBtn")?.addEventListener("click", startCompanionLearning);
-    document.getElementById("storyCompanionLearningBackBtn")?.addEventListener("click", renderLearningMenu);
+    const bText = selectedB.length
+      ? `${getSideLabel("B")}: ${selectedB.map(unit => unit.name).join(" / ")}`
+      : `${getSideLabel("B")}: 未選択`;
+
+    const pendingText = pendingUnit ? `\n選択中: ${pendingUnit.name}` : "";
+    const progressText = `\n現在: ${getSideLabel()} ${getCurrentSelectedList().length}/${requiredCount}`;
+
+    return `${aText}\n${bText}${pendingText}${progressText}`;
+  }
+
+  function confirmPendingUnit() {
+    if (!pendingUnit) return;
+
+    const requiredCount = getRequiredCount();
+    const current = getCurrentSelectedList().slice();
+
+    if (current.length >= requiredCount) return;
+
+    current.push(pendingUnit);
+    setCurrentSelectedList(current);
+    pendingUnit = null;
+
+    if (current.length >= requiredCount) {
+      if (selectingSide === "A") {
+        selectingSide = "B";
+      }
+    }
+
+    renderLearningSelect();
   }
 
   function startSingleLearning() {
-    const playerUnits = buildAvailablePlayerUnits();
-    const enemyUnits = buildAvailableEnemyUnits();
+    const ally = selectedA[0];
+    const enemy = selectedB[0];
 
-    const playerUnit = getUnitById(selectedSinglePlayerUnitId, playerUnits);
-    const enemyUnit = getUnitById(selectedSingleEnemyUnitId, enemyUnits);
-
-    if (!playerUnit || !enemyUnit) {
-      ctx.showPopup?.("学習戦闘に必要な機体がありません");
+    if (!ally || !enemy) {
+      ctx.showPopup?.("単体学習に必要な機体が選択されていません");
       return;
     }
 
     ctx.startStoryFreeBattle?.({
       mode: "1v1",
       allowModeSwitch: false,
-      exitLabel: "学習戦闘を中断",
-      allyUnits: [playerUnit],
-      enemyUnits: [enemyUnit],
+      exitLabel: "単体学習を中断",
+      allyUnits: [ally],
+      enemyUnits: [enemy],
       onWin: () => ctx.renderStoryMainMenu?.(),
       onLose: () => ctx.renderStoryMainMenu?.(),
       onCancel: () => ctx.renderStoryMainMenu?.()
@@ -273,16 +300,8 @@ export function createStoryLearningBattleController(ctx) {
   }
 
   function startCompanionLearning() {
-    const playerUnits = buildAvailablePlayerUnits();
-    const enemyUnits = buildAvailableEnemyUnits();
-
-    const ally1 = getUnitById(selectedCompanionAlly1Id, playerUnits);
-    const ally2 = getUnitById(selectedCompanionAlly2Id, playerUnits);
-    const enemy1 = getUnitById(selectedCompanionEnemy1Id, enemyUnits);
-    const enemy2 = getUnitById(selectedCompanionEnemy2Id, enemyUnits);
-
-    if (!ally1 || !ally2 || !enemy1 || !enemy2) {
-      ctx.showPopup?.("同行学習に必要な機体がありません");
+    if (selectedA.length < 2 || selectedB.length < 2) {
+      ctx.showPopup?.("同行学習に必要な機体が選択されていません");
       return;
     }
 
@@ -290,8 +309,8 @@ export function createStoryLearningBattleController(ctx) {
       mode: "2v2",
       allowModeSwitch: false,
       exitLabel: "同行学習を中断",
-      allyUnits: [ally1, ally2],
-      enemyUnits: [enemy1, enemy2],
+      allyUnits: selectedA.slice(0, 2),
+      enemyUnits: selectedB.slice(0, 2),
       onWin: () => ctx.renderStoryMainMenu?.(),
       onLose: () => ctx.renderStoryMainMenu?.(),
       onCancel: () => ctx.renderStoryMainMenu?.()
