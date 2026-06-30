@@ -24,6 +24,8 @@ import {
   clearStoryCreateUnitLabOverride
 } from "./story_units.js";
 
+import { createStoryChapter2Controller } from "./story_chapter2_controller.js";
+
 export function createStoryModeController(ctx) {
   const DEBUG_ROLES = new Set(["debug", "Ciel_debugger"]);
   const PROTO_UNIT_ID = "proto_create_gundam";
@@ -48,6 +50,12 @@ export function createStoryModeController(ctx) {
     closeStoryModeToTitle
   });
 
+const chapter2Controller = createStoryChapter2Controller({
+  ...ctx,
+  renderStoryMainMenu,
+  showTitle: closeStoryModeToTitle
+});
+  
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
   }
@@ -216,40 +224,49 @@ export function createStoryModeController(ctx) {
     ctx.showTitle?.();
   }
 
-  function renderStoryMainMenu() {
-    labMode = "normal";
-    refreshStorySave();
+function renderStoryMainMenu() {
+  labMode = "normal";
+  refreshStorySave();
 
-    const root = document.getElementById("storyModeRoot") || createRoot();
+  const root = document.getElementById("storyModeRoot") || createRoot();
+  const chapter2Cleared = storySave.flags?.chapter2Cleared === true;
 
-    root.innerHTML = `
-      <div style="width:min(720px,96vw);border:1px solid white;background:black;color:white;padding:16px;line-height:1.8;text-align:center;">
-        <h2>ストーリーモード</h2>
-        <button id="storyChapterSelectBtn">チャプターセレクト</button>
-        <button id="storyLabMenuBtn">クリエイトガンダムラボ</button>
-        <button id="storyMenuCloseBtn">閉じる</button>
-      </div>
-    `;
+  root.innerHTML = `
+    <h2>ストーリーモード</h2>
+    <button id="storyChapterSelectBtn">チャプターセレクト</button>
+    <button id="storyLabMenuBtn">クリエイトガンダムラボ</button>
+    ${chapter2Cleared ? `<button id="storyLearningBattleBtn">学習戦闘</button>` : ""}
+    ${chapter2Cleared ? `<button id="storyChapterBossBtn">チャプターボス</button>` : ""}
+    <button id="storyMenuCloseBtn">閉じる</button>
+  `;
 
-    document.getElementById("storyChapterSelectBtn")?.addEventListener("click", renderChapterSelect);
-    document.getElementById("storyLabMenuBtn")?.addEventListener("click", renderNormalLab);
-    document.getElementById("storyMenuCloseBtn")?.addEventListener("click", closeStoryModeToTitle);
-  }
+  document.getElementById("storyChapterSelectBtn")?.addEventListener("click", renderChapterSelect);
+  document.getElementById("storyLabMenuBtn")?.addEventListener("click", renderNormalLab);
+  document.getElementById("storyMenuCloseBtn")?.addEventListener("click", closeStoryModeToTitle);
 
-  function renderChapterSelect() {
-    const root = document.getElementById("storyModeRoot") || createRoot();
+  document.getElementById("storyLearningBattleBtn")?.addEventListener("click", () => {
+    ctx.showPopup?.("学習戦闘は後ほど実装します");
+  });
 
-    root.innerHTML = `
-      <div style="width:min(720px,96vw);border:1px solid white;background:black;color:white;padding:16px;line-height:1.8;text-align:center;">
-        <h2>チャプターセレクト</h2>
-        <button id="storyChapter1Btn">チャプター1</button>
-        <button id="storyChapterSelectBackBtn">戻る</button>
-      </div>
-    `;
+  document.getElementById("storyChapterBossBtn")?.addEventListener("click", () => {
+    ctx.showPopup?.("チャプターボス：ガンダム ☆☆ は後ほど実装します");
+  });
+}
 
-    document.getElementById("storyChapter1Btn")?.addEventListener("click", startChapter1FromSelect);
-    document.getElementById("storyChapterSelectBackBtn")?.addEventListener("click", renderStoryMainMenu);
-  }
+function renderChapterSelect() {
+  const root = document.getElementById("storyModeRoot") || createRoot();
+
+  root.innerHTML = `
+    <h2>チャプターセレクト</h2>
+    <button id="storyChapter1Btn">チャプター1</button>
+    <button id="storyChapter2Btn">チャプター2</button>
+    <button id="storyChapterSelectBackBtn">戻る</button>
+  `;
+
+  document.getElementById("storyChapter1Btn")?.addEventListener("click", startChapter1FromSelect);
+  document.getElementById("storyChapter2Btn")?.addEventListener("click", () => chapter2Controller.start());
+  document.getElementById("storyChapterSelectBackBtn")?.addEventListener("click", renderStoryMainMenu);
+}
 
   function startChapter1FromSelect() {
     labMode = "chapter1";
