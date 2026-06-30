@@ -214,6 +214,7 @@ let unitLookupController = null;
 let resetController = null;
 let battleInitController = null;
 let battleRuntimeAccessors = null;
+let activeStoryFreeBattleOptions = null;
 /*
   battleMode:
   - 1v1
@@ -975,6 +976,31 @@ function get2v2StatsModeKey() {
   return battleRecordController.get2v2StatsModeKey();
 }
 function finishBattle(winnerPlayer) {
+  if (activeStoryFreeBattleOptions) {
+    const options = activeStoryFreeBattleOptions;
+    activeStoryFreeBattleOptions = null;
+
+    cleanupStoryFreeBattleButtons();
+
+    currentAttack = [];
+    currentAttackContext = null;
+    currentAttackContexts = [];
+    pendingChoice = null;
+    battleNotice = "";
+    currentActionHeader = "";
+    currentActionLabel = "";
+
+    resetLocalSelectionAndBattleState();
+
+    if (winnerPlayer === "A") {
+      options.onWin?.(winnerPlayer);
+    } else {
+      options.onLose?.(winnerPlayer);
+    }
+
+    return;
+  }
+
   return battleOutcomeController.finishBattle(winnerPlayer);
 }
 
@@ -1196,7 +1222,14 @@ function cloneStoryBattleUnit(unit, name = null) {
   return cloned;
 }
 
-function startStoryFreeBattle(mode = "1v1", options = {}) {
+function startStoryFreeBattle(modeOrConfig = "1v1", maybeOptions = {}) {
+  const config =
+    typeof modeOrConfig === "object" && modeOrConfig !== null
+      ? { ...modeOrConfig }
+      : { ...maybeOptions, mode: modeOrConfig };
+
+  const mode = config.mode || "1v1";
+
   document.getElementById("storyModeRoot")?.remove();
   document.getElementById("storyTutorialTalkBox")?.remove();
   document.getElementById("storyTutorialSkipBtn")?.remove();
@@ -1214,17 +1247,27 @@ function startStoryFreeBattle(mode = "1v1", options = {}) {
   currentTurn = 1;
   currentPlayer = "A";
 
-  const proto1 = getStoryCreateUnit("proto_create_gundam");
-  const proto2 = cloneStoryBattleUnit(proto1, "プロトクリエイトガンダム 2番機");
-  const training1 = cloneStoryBattleUnit(training_machine);
-  const training2 = cloneStoryBattleUnit(training_machine, "トレーニングマシン 2番機");
+  activeStoryFreeBattleOptions = config;
+
+  const defaultProto = getStoryCreateUnit("proto_create_gundam");
+  const defaultProto2 = cloneStoryBattleUnit(defaultProto, "プロトクリエイトガンダム 2番機");
+  const defaultTraining1 = cloneStoryBattleUnit(training_machine);
+  const defaultTraining2 = cloneStoryBattleUnit(training_machine, "トレーニングマシン 2番機");
+
+  const allyUnits = Array.isArray(config.allyUnits) && config.allyUnits.length > 0
+    ? config.allyUnits
+    : [defaultProto, defaultProto2];
+
+  const enemyUnits = Array.isArray(config.enemyUnits) && config.enemyUnits.length > 0
+    ? config.enemyUnits
+    : [defaultTraining1, defaultTraining2];
 
   if (mode === "2v2") {
     battleMode = "vscpu2v2";
-    init2v2([proto1, proto2], [training1, training2]);
+    init2v2(allyUnits, enemyUnits);
   } else {
     battleMode = "vscpu1v1";
-    battleInitController.init1v1(proto1, training1);
+    battleInitController.init1v1(allyUnits[0], enemyUnits[0]);
   }
 
   const buttonWrap = document.createElement("div");
@@ -1237,23 +1280,28 @@ function startStoryFreeBattle(mode = "1v1", options = {}) {
   buttonWrap.style.flexDirection = "column";
   buttonWrap.style.gap = "6px";
 
+  const allowModeSwitch = config.allowModeSwitch !== false;
+
   buttonWrap.innerHTML = `
-    <button id="storyFreeBattleSwitch1v1Btn">1on1に切替</button>
-    <button id="storyFreeBattleSwitch2v2Btn">2on2に切替</button>
-    <button id="storyFreeBattleExitBtn">チャプター1終了</button>
+    ${allowModeSwitch ? `<button id="storyFreeBattleSwitch1v1Btn">1on1に切替</button>` : ""}
+    ${allowModeSwitch ? `<button id="storyFreeBattleSwitch2v2Btn">2on2に切替</button>` : ""}
+    <button id="storyFreeBattleExitBtn">${config.exitLabel || "ストーリー戦闘を中断"}</button>
   `;
 
   document.body.appendChild(buttonWrap);
 
   document.getElementById("storyFreeBattleSwitch1v1Btn")?.addEventListener("click", () => {
-    startStoryFreeBattle("1v1", options);
+    startStoryFreeBattle({ ...config, mode: "1v1" });
   });
 
   document.getElementById("storyFreeBattleSwitch2v2Btn")?.addEventListener("click", () => {
-    startStoryFreeBattle("2v2", options);
+    startStoryFreeBattle({ ...config, mode: "2v2" });
   });
 
   document.getElementById("storyFreeBattleExitBtn")?.addEventListener("click", () => {
+    const options = activeStoryFreeBattleOptions;
+    activeStoryFreeBattleOptions = null;
+
     cleanupStoryFreeBattleButtons();
 
     currentAttack = [];
@@ -1264,10 +1312,14 @@ function startStoryFreeBattle(mode = "1v1", options = {}) {
     currentActionHeader = "";
     currentActionLabel = "";
 
-    options.onEnd?.();
-
-    document.getElementById("storyModeRoot")?.remove();
     resetLocalSelectionAndBattleState();
+
+    if (typeof options?.onCancel === "function") {
+      options.onCancel();
+      return;
+    }
+
+    options?.onEnd?.();
     showTitle();
   });
 }
