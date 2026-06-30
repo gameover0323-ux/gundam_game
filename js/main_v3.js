@@ -1368,7 +1368,32 @@ onlineState.isSpectator = false;
     onlineSelectEntered = false;
     onlineActionSeq = 0;
   },
+handleBattleFinishOverride: (winnerPlayer) => {
+  if (!activeStoryFreeBattleOptions) return false;
 
+  const options = activeStoryFreeBattleOptions;
+  activeStoryFreeBattleOptions = null;
+
+  cleanupStoryFreeBattleButtons();
+
+  currentAttack = [];
+  currentAttackContext = null;
+  currentAttackContexts = [];
+  pendingChoice = null;
+  battleNotice = "";
+  currentActionHeader = "";
+  currentActionLabel = "";
+
+  resetLocalSelectionAndBattleState();
+
+  if (winnerPlayer === "A") {
+    options.onWin?.(winnerPlayer);
+  } else {
+    options.onLose?.(winnerPlayer);
+  }
+
+  return true;
+},
   showTitle
 });
 unitLookupController = createUnitLookupController({
