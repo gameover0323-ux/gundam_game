@@ -485,6 +485,36 @@ import {
   onStoryZakuIiDenimResolveChoice
 } from "./js_unit_rules_story_zaku_ii_denim.js";
 
+import {
+  getStoryBallDerivedState,
+  canUseStoryBallSpecial,
+  executeStoryBallSpecial,
+  onStoryBallTurnEnd,
+  onStoryBallBeforeSlot,
+  onStoryBallEnemyBeforeSlot,
+  onStoryBallAfterSlotResolved,
+  onStoryBallActionResolved,
+  onStoryBallDamaged,
+  modifyStoryBallTakenDamage,
+  modifyStoryBallEvadeAttempt,
+  onStoryBallResolveChoice
+} from "./js_unit_rules_story_ball.js";
+
+import {
+  getStoryGmDerivedState,
+  canUseStoryGmSpecial,
+  executeStoryGmSpecial,
+  onStoryGmTurnEnd,
+  onStoryGmBeforeSlot,
+  onStoryGmEnemyBeforeSlot,
+  onStoryGmAfterSlotResolved,
+  onStoryGmActionResolved,
+  onStoryGmDamaged,
+  modifyStoryGmTakenDamage,
+  modifyStoryGmEvadeAttempt,
+  onStoryGmResolveChoice
+} from "./js_unit_rules_story_gm.js";
+
 
 export const unitRulesMap = {
 
@@ -531,6 +561,36 @@ story_zaku_ii_denim: {
   modifyTakenDamage: modifyStoryZakuIiDenimTakenDamage,
   modifyEvadeAttempt: modifyStoryZakuIiDenimEvadeAttempt,
   onResolveChoice: onStoryZakuIiDenimResolveChoice
+},
+
+story_ball: {
+  getDerivedState: getStoryBallDerivedState,
+  canUseSpecial: canUseStoryBallSpecial,
+  executeSpecial: executeStoryBallSpecial,
+  onTurnEnd: onStoryBallTurnEnd,
+  onBeforeSlot: onStoryBallBeforeSlot,
+  onEnemyBeforeSlot: onStoryBallEnemyBeforeSlot,
+  onAfterSlotResolved: onStoryBallAfterSlotResolved,
+  onActionResolved: onStoryBallActionResolved,
+  onDamaged: onStoryBallDamaged,
+  modifyTakenDamage: modifyStoryBallTakenDamage,
+  modifyEvadeAttempt: modifyStoryBallEvadeAttempt,
+  onResolveChoice: onStoryBallResolveChoice
+},
+
+story_gm: {
+  getDerivedState: getStoryGmDerivedState,
+  canUseSpecial: canUseStoryGmSpecial,
+  executeSpecial: executeStoryGmSpecial,
+  onTurnEnd: onStoryGmTurnEnd,
+  onBeforeSlot: onStoryGmBeforeSlot,
+  onEnemyBeforeSlot: onStoryGmEnemyBeforeSlot,
+  onAfterSlotResolved: onStoryGmAfterSlotResolved,
+  onActionResolved: onStoryGmActionResolved,
+  onDamaged: onStoryGmDamaged,
+  modifyTakenDamage: modifyStoryGmTakenDamage,
+  modifyEvadeAttempt: modifyStoryGmEvadeAttempt,
+  onResolveChoice: onStoryGmResolveChoice
 },
 
   
