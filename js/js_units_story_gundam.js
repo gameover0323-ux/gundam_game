@@ -7,7 +7,7 @@ export const story_gundam = {
 
   storyCompanion: {
     unlockCondition: "ドロップ品を全て入手した状態でプロトクリエイトガンダムで撃破",
-    cost: 60
+    cost: 80
   },
 
   forms: {
