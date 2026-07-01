@@ -349,17 +349,43 @@ export function create2v2Adapter(ctx) {
   }
 
   function applyToUnifiedPartners(ownerPlayer, callback) {
-    const team = getOwnerTeam(ownerPlayer);
+  const team = getOwnerTeam(ownerPlayer);
 
-    if (!team || team.mode !== "unified") return false;
+  if (!team || team.mode !== "unified") return false;
 
-    if (team.unit1) callback(team.unit1, "unit1");
-    if (team.unit2) callback(team.unit2, "unit2");
+  if (team.unit1) callback(team.unit1, "unit1");
+  if (team.unit2) callback(team.unit2, "unit2");
 
-    return true;
-  }
+  return true;
+}
 
-  return {
+function getPartnerUnit(ownerPlayer, actor) {
+  const team = getOwnerTeam(ownerPlayer);
+  if (!team || !actor) return null;
+
+  if (team.unit1 === actor) return team.unit2 || null;
+  if (team.unit2 === actor) return team.unit1 || null;
+
+  return null;
+}
+
+function applyToPartner(ownerPlayer, actor, callback) {
+  const partner = getPartnerUnit(ownerPlayer, actor);
+  if (!partner || typeof callback !== "function") return false;
+
+  callback(partner);
+  return true;
+}
+
+function setPartnerStateEffect(ownerPlayer, actor, key, value) {
+  if (!key) return false;
+
+  return applyToPartner(ownerPlayer, actor, partner => {
+    partner[key] = value;
+  });
+}
+
+return {
     ensureUnifiedActionState,
     resetUnifiedActionCount,
     getActionCount,
@@ -377,6 +403,10 @@ export function create2v2Adapter(ctx) {
     consumeEvade,
     zeroEvade,
     getEvade,
-    applyToUnifiedPartners
+
+applyToUnifiedPartners,
+getPartnerUnit,
+applyToPartner,
+setPartnerStateEffect
   };
 }
