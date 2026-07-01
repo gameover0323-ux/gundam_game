@@ -1,3 +1,5 @@
+import { buildStoryCompanionOptions } from "./story_companion_registry.js";
+
 export const PROTO_CREATE_BASE = {
   unitName: "プロトクリエイトガンダム",
   level: 0,
@@ -256,20 +258,8 @@ export const STORY_SKILL_OPTIONS = [
   }
 ];
 
-export const STORY_COMPANION_OPTIONS = [
-  {
-    id: "none",
-    label: "なし",
-    cost: 0,
-    detail: ""
-  },
-  {
-    id: "story_zaku_ii_gene",
-    label: "ザクII(ジーン機)",
-    cost: 5,
-    detail: "初回チャプター2クリア後に同行可能。"
-  }
-];
+export const STORY_COMPANION_OPTIONS = buildStoryCompanionOptions();
+
 
 export function createInitialProtoCreateLabState() {
   return {
