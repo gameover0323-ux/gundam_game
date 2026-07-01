@@ -47,6 +47,11 @@ export function calculateDamage(attack, defender) {
     if (defender.shieldActive) {
       dmg = Math.floor(dmg / 2);
     }
+
+    const storyReduction = Math.max(0, Number(defender.storyDamageReductionRate || 0));
+    if (storyReduction > 0) {
+      dmg = Math.floor(dmg * Math.max(0, 100 - storyReduction) / 100);
+    }
   }
 
   return dmg;
