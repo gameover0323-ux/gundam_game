@@ -1,5 +1,10 @@
 import { getStoryCreateUnit } from "./story_units.js";
-import { loadStorySave } from "./story_save.js";
+import {
+  loadStorySave,
+  getStoryUnitLevelInfo,
+  getStoryLevelBattleBonus
+} from "./story_save.js";
+import { createStoryResultController } from "./story_result_controller.js";
 
 import { story_zaku_ii_gene } from "../js/js_units_story_zaku_ii_gene.js";
 import { story_zaku_ii_denim } from "../js/js_units_story_zaku_ii_denim.js";
@@ -15,6 +20,8 @@ const STORY_UNIT_MAP = {
 };
 
 export function createStoryLearningBattleController(ctx) {
+  const resultController = createStoryResultController(ctx);
+
   let learningMode = "single";
   let selectingSide = "A";
   let pendingUnit = null;
@@ -25,9 +32,28 @@ export function createStoryLearningBattleController(ctx) {
     return document.getElementById("storyModeRoot");
   }
 
+  function cloneUnit(unit) {
+    return JSON.parse(JSON.stringify(unit));
+  }
+
+  function decorateStoryBattleUnit(unit) {
+    const cloned = cloneUnit(unit);
+    const bonus = getStoryLevelBattleBonus(cloned.id);
+    cloned.storyLevel = bonus.level;
+    cloned.storyCriticalBonusRate = bonus.criticalRateBonus;
+    cloned.storyDamageReductionRate = bonus.damageReductionRate;
+    return cloned;
+  }
+
   function getUnitById(unitId) {
     if (unitId === "proto_create_gundam") return getStoryCreateUnit("proto_create_gundam");
     return STORY_UNIT_MAP[unitId] || null;
+  }
+
+  function getUnitLabel(unit) {
+    if (!unit) return "";
+    const info = getStoryUnitLevelInfo(unit.id);
+    return `${unit.name} Lv${info.level}`;
   }
 
   function buildAvailablePlayerUnits() {
@@ -50,17 +76,15 @@ export function createStoryLearningBattleController(ctx) {
     if (save.flags?.chapter2Cleared !== true) return [];
 
     return [
-  story_zaku_ii_gene,
-  story_zaku_ii_denim,
-  story_ball,
-  story_gm
-];
+      story_zaku_ii_gene,
+      story_zaku_ii_denim,
+      story_ball,
+      story_gm
+    ];
   }
 
   function getCurrentList() {
-    return selectingSide === "A"
-      ? buildAvailablePlayerUnits()
-      : buildAvailableEnemyUnits();
+    return selectingSide === "A" ? buildAvailablePlayerUnits() : buildAvailableEnemyUnits();
   }
 
   function getRequiredCount() {
@@ -72,11 +96,8 @@ export function createStoryLearningBattleController(ctx) {
   }
 
   function setCurrentSelectedList(list) {
-    if (selectingSide === "A") {
-      selectedA = list;
-    } else {
-      selectedB = list;
-    }
+    if (selectingSide === "A") selectedA = list;
+    else selectedB = list;
   }
 
   function getSideLabel(side = selectingSide) {
@@ -130,45 +151,31 @@ export function createStoryLearningBattleController(ctx) {
 
     const currentList = getCurrentList();
     const requiredCount = getRequiredCount();
-    const selectedList = getCurrentSelectedList();
     const canConfirm = !!pendingUnit;
     const canStart = selectedA.length >= requiredCount && selectedB.length >= requiredCount;
 
     root.innerHTML = `
       <h2>${learningMode === "companion" ? "同行学習" : "単体学習"}</h2>
 
-      <div id="storyLearningSelectPanel" style="width:min(760px,96vw); margin:0 auto;">
-        <div id="storyLearningGuide" style="margin-bottom:10px; text-align:center;">
+      <div style="width:min(760px,96vw); margin:0 auto;">
+        <div style="margin-bottom:10px; text-align:center;">
           ${getSideLabel()} の機体を${requiredCount}機選択
         </div>
 
-        <div id="storyLearningPreview" style="
-          white-space:pre-line;
-          border:1px solid #777;
-          border-radius:8px;
-          padding:10px;
-          margin-bottom:12px;
-          background:#111;
-        ">${buildPreviewText()}</div>
-
-        <div id="storyLearningButtons" style="display:flex; flex-direction:column; gap:10px;">
-          ${renderUnitSection(selectingSide === "A" ? "プレイヤー側候補" : "CPU側候補", currentList)}
-          ${selectingSide === "A" ? renderLockedLiberalButton() : ""}
+        <div style="white-space:pre-line; border:1px solid #777; border-radius:8px; padding:10px; margin-bottom:12px; background:#111;">
+          ${buildPreviewText()}
         </div>
 
-        <div id="storyLearningDescription" style="
-          display:${pendingUnit ? "" : "none"};
-          white-space:pre-line;
-          border:1px solid #777;
-          border-radius:8px;
-          padding:10px;
-          margin-top:12px;
-          background:#111;
-        ">${pendingUnit ? pendingUnit.name : ""}</div>
+        ${renderUnitSection(selectingSide === "A" ? "プレイヤー側候補" : "CPU側候補", currentList)}
+        ${selectingSide === "A" ? renderLockedLiberalButton() : ""}
+
+        <div style="display:${pendingUnit ? "" : "none"}; white-space:pre-line; border:1px solid #777; border-radius:8px; padding:10px; margin-top:12px; background:#111;">
+          ${pendingUnit ? getUnitLabel(pendingUnit) : ""}
+        </div>
 
         <div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:14px;">
           <button id="storyLearningConfirmBtn" ${canConfirm ? "" : "disabled"}>
-            ${pendingUnit ? `${pendingUnit.name} に決定` : "決定"}
+            ${pendingUnit ? `${getUnitLabel(pendingUnit)} に決定` : "決定"}
           </button>
           ${selectingSide === "B" && canStart ? `<button id="storyLearningStartBtn">この編成で開始</button>` : ""}
           <button id="storyLearningCancelBtn">戻る</button>
@@ -181,11 +188,8 @@ export function createStoryLearningBattleController(ctx) {
     document.getElementById("storyLearningConfirmBtn")?.addEventListener("click", confirmPendingUnit);
 
     document.getElementById("storyLearningStartBtn")?.addEventListener("click", () => {
-      if (learningMode === "companion") {
-        startCompanionLearning();
-      } else {
-        startSingleLearning();
-      }
+      if (learningMode === "companion") startCompanionLearning();
+      else startSingleLearning();
     });
 
     document.getElementById("storyLearningCancelBtn")?.addEventListener("click", () => {
@@ -195,7 +199,6 @@ export function createStoryLearningBattleController(ctx) {
         renderLearningSelect();
         return;
       }
-
       renderLearningMenu();
     });
   }
@@ -203,20 +206,20 @@ export function createStoryLearningBattleController(ctx) {
   function renderUnitSection(title, units) {
     if (!units.length) {
       return `
-        <div class="story-learning-section">
-          <div class="selectSectionTitle">${title}</div>
+        <div>
+          <div style="margin-bottom:6px;">${title}</div>
           <div>選択可能な機体がありません</div>
         </div>
       `;
     }
 
     return `
-      <div class="story-learning-section">
-        <div class="selectSectionTitle" style="margin-bottom:6px;">${title}</div>
-        <div class="selectSectionButtons" style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center;">
+      <div>
+        <div style="margin-bottom:6px;">${title}</div>
+        <div style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center;">
           ${units.map(unit => `
             <button class="story-learning-unit-btn" data-unit-id="${unit.id}">
-              ${unit.name}
+              ${selectingSide === "A" ? getUnitLabel(unit) : unit.name}
             </button>
           `).join("")}
         </div>
@@ -226,11 +229,9 @@ export function createStoryLearningBattleController(ctx) {
 
   function renderLockedLiberalButton() {
     return `
-      <div class="story-learning-section">
-        <div class="selectSectionTitle" style="margin-bottom:6px;">未実装</div>
-        <div class="selectSectionButtons" style="display:flex; flex-wrap:wrap; gap:6px; justify-content:center;">
-          <button disabled>？？？ クリエイトガンダムリベラル</button>
-        </div>
+      <div style="margin-top:12px;">
+        <div style="margin-bottom:6px;">未実装</div>
+        <button disabled>？？？ クリエイトガンダムリベラル</button>
       </div>
     `;
   }
@@ -250,14 +251,14 @@ export function createStoryLearningBattleController(ctx) {
     const requiredCount = getRequiredCount();
 
     const aText = selectedA.length
-      ? `${getSideLabel("A")}: ${selectedA.map(unit => unit.name).join(" / ")}`
+      ? `${getSideLabel("A")}: ${selectedA.map(getUnitLabel).join(" / ")}`
       : `${getSideLabel("A")}: 未選択`;
 
     const bText = selectedB.length
       ? `${getSideLabel("B")}: ${selectedB.map(unit => unit.name).join(" / ")}`
       : `${getSideLabel("B")}: 未選択`;
 
-    const pendingText = pendingUnit ? `\n選択中: ${pendingUnit.name}` : "";
+    const pendingText = pendingUnit ? `\n選択中: ${selectingSide === "A" ? getUnitLabel(pendingUnit) : pendingUnit.name}` : "";
     const progressText = `\n現在: ${getSideLabel()} ${getCurrentSelectedList().length}/${requiredCount}`;
 
     return `${aText}\n${bText}${pendingText}${progressText}`;
@@ -275,57 +276,55 @@ export function createStoryLearningBattleController(ctx) {
     setCurrentSelectedList(current);
     pendingUnit = null;
 
-    if (current.length >= requiredCount) {
-      if (selectingSide === "A") {
-        selectingSide = "B";
-      }
+    if (current.length >= requiredCount && selectingSide === "A") {
+      selectingSide = "B";
     }
 
     renderLearningSelect();
   }
 
-  function startSingleLearning() {
-  const ally = selectedA[0];
-  const enemy = selectedB[0];
-
-  if (!ally || !enemy) {
-    ctx.showPopup?.("単体学習に必要な機体が選択されていません");
-    return;
+  function renderLearningResult(winnerPlayer, playerUnits, enemyUnits) {
+    resultController.renderResult({
+      winnerPlayer,
+      playerUnits,
+      enemyUnits,
+      learningMode,
+      onDone: () => ctx.renderStoryMainMenu?.()
+    });
   }
 
-  const save = loadStorySave();
-  const companionId = save.createUnits?.proto_create_gundam?.lab?.companion || "none";
-  const companionUnit =
-    ally.id === "proto_create_gundam" &&
-    companionId !== "none" &&
-    save.companionUnits?.[companionId]?.unlocked === true
-      ? getUnitById(companionId)
-      : null;
+  function startSingleLearning() {
+    const ally = selectedA[0];
+    const enemy = selectedB[0];
 
-  if (companionUnit) {
+    if (!ally || !enemy) {
+      ctx.showPopup?.("単体学習に必要な機体が選択されていません");
+      return;
+    }
+
+    const save = loadStorySave();
+    const companionId = save.createUnits?.proto_create_gundam?.lab?.companion || "none";
+    const companionUnit =
+      ally.id === "proto_create_gundam" &&
+      companionId !== "none" &&
+      save.companionUnits?.[companionId]?.unlocked === true
+        ? getUnitById(companionId)
+        : null;
+
+    const playerUnits = companionUnit ? [ally, companionUnit] : [ally];
+    const battlePlayerUnits = playerUnits.map(decorateStoryBattleUnit);
+    const battleEnemyUnits = [enemy];
+
     ctx.startStoryFreeBattle?.({
-      mode: "2v2",
+      mode: companionUnit ? "2v2" : "1v1",
       allowModeSwitch: false,
       exitLabel: "単体学習を中断",
-      allyUnits: [ally, companionUnit],
-      enemyUnits: [enemy],
-      onWin: () => ctx.renderStoryMainMenu?.(),
-      onLose: () => ctx.renderStoryMainMenu?.(),
+      allyUnits: battlePlayerUnits,
+      enemyUnits: battleEnemyUnits,
+      onWin: winner => renderLearningResult(winner, playerUnits, battleEnemyUnits),
+      onLose: winner => renderLearningResult(winner, playerUnits, battleEnemyUnits),
       onCancel: () => ctx.renderStoryMainMenu?.()
     });
-    return;
-  }
-
-  ctx.startStoryFreeBattle?.({
-    mode: "1v1",
-    allowModeSwitch: false,
-    exitLabel: "単体学習を中断",
-    allyUnits: [ally],
-    enemyUnits: [enemy],
-    onWin: () => ctx.renderStoryMainMenu?.(),
-    onLose: () => ctx.renderStoryMainMenu?.(),
-    onCancel: () => ctx.renderStoryMainMenu?.()
-  });
   }
 
   function startCompanionLearning() {
@@ -334,14 +333,17 @@ export function createStoryLearningBattleController(ctx) {
       return;
     }
 
+    const playerUnits = selectedA.slice(0, 2);
+    const enemyUnits = selectedB.slice(0, 2);
+
     ctx.startStoryFreeBattle?.({
       mode: "2v2",
       allowModeSwitch: false,
       exitLabel: "同行学習を中断",
-      allyUnits: selectedA.slice(0, 2),
-      enemyUnits: selectedB.slice(0, 2),
-      onWin: () => ctx.renderStoryMainMenu?.(),
-      onLose: () => ctx.renderStoryMainMenu?.(),
+      allyUnits: playerUnits.map(decorateStoryBattleUnit),
+      enemyUnits,
+      onWin: winner => renderLearningResult(winner, playerUnits, enemyUnits),
+      onLose: winner => renderLearningResult(winner, playerUnits, enemyUnits),
       onCancel: () => ctx.renderStoryMainMenu?.()
     });
   }
