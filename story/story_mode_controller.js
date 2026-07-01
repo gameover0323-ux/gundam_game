@@ -3,9 +3,12 @@ import {
   PROTO_CREATE_BASE,
   STORY_SLOT_OPTIONS,
   STORY_EQUIPMENT_OPTIONS,
-  STORY_SKILL_OPTIONS,
+  S  STORY_SKILL_OPTIONS,
+  STORY_COMPANION_OPTIONS,
   findStorySlotOption,
   findStoryEquipmentOption,
+  findStorySkillOption,
+  findStoryCompanionOption,
   findStorySkillOption,
   calculateProtoCreateLabCost,
   createInitialProtoCreateLabState
@@ -710,17 +713,19 @@ function renderChapterSelect() {
     }).join("");
   }
 
-  function renderOptionalRows() {
+    function renderOptionalRows() {
     const equipment1 = findStoryEquipmentOption(customizeState.equipment.equipment1);
     const equipment2 = findStoryEquipmentOption(customizeState.equipment.equipment2);
     const skill = findStorySkillOption(customizeState.skill);
+    const companion = findStoryCompanionOption(customizeState.companion || "none");
 
     return `
       ${renderOptionalRow("equipment", "equipment1", "装備品1", equipment1, "story-equipment")}
       ${renderOptionalRow("equipment", "equipment2", "装備品2", equipment2, "story-equipment")}
       ${renderOptionalRow("skill", "skill", "スキル", skill, "story-skill")}
+      ${storySave.flags?.chapterBossUnlocked ? renderOptionalRow("companion", "companion", "同行機体", companion, "story-companion") : ""}
     `;
-  }
+    }
 
   function renderOptionalRow(kind, key, prefix, option, cls) {
     const hasDetail = option && option.id !== "none";
@@ -754,13 +759,14 @@ function renderChapterSelect() {
     });
   }
 
-  function getCurrentOption(kind, key) {
+    function getCurrentOption(kind, key) {
     if (kind === "slot") return findStorySlotOption(key, customizeState.selectedSlots[key]);
     if (kind === "equipment") return findStoryEquipmentOption(customizeState.equipment[key]);
     if (kind === "skill") return findStorySkillOption(customizeState.skill);
+    if (kind === "companion") return findStoryCompanionOption(customizeState.companion || "none");
     return null;
-  }
-
+    }
+  
   function getOptionsFor(kind, key) {
     if (labMode === "chapter1") {
       if (kind === "slot") return (STORY_SLOT_OPTIONS[key] || []).slice(0, 2);
@@ -768,9 +774,17 @@ function renderChapterSelect() {
       if (kind === "skill") return STORY_SKILL_OPTIONS.slice(0, 2);
     }
 
-    if (kind === "slot") return STORY_SLOT_OPTIONS[key] || [];
+      if (kind === "slot") return STORY_SLOT_OPTIONS[key] || [];
     if (kind === "equipment") return STORY_EQUIPMENT_OPTIONS;
     if (kind === "skill") return STORY_SKILL_OPTIONS;
+
+    if (kind === "companion") {
+      return STORY_COMPANION_OPTIONS.filter(option => {
+        if (option.id === "none") return true;
+        return storySave.companionUnits?.[option.id]?.unlocked === true;
+      });
+    }
+
     return [];
   }
 
@@ -778,9 +792,10 @@ function renderChapterSelect() {
     const allowed = getOptionsFor(kind, key).some(option => option.id === optionId);
     if (!allowed) return;
 
-    if (kind === "slot") customizeState.selectedSlots[key] = optionId;
+     if (kind === "slot") customizeState.selectedSlots[key] = optionId;
     if (kind === "equipment") customizeState.equipment[key] = optionId;
     if (kind === "skill") customizeState.skill = optionId;
+    if (kind === "companion") customizeState.companion = optionId;
 
     persistCustomizeState();
     renderLabRows();
