@@ -24,6 +24,21 @@ export function create2v2BreakthroughController(ctx) {
     return getMyPlayer() === player;
   }
 
+function shouldAutoMirrorCpuBet() {
+  if (isOnline2v2()) return false;
+
+  const mode =
+    typeof ctx.getBattleMode === "function"
+      ? ctx.getBattleMode()
+      : "";
+
+  return mode === "vscpu2v2" || mode === "challenge2v2";
+}
+
+function getOpponentPlayer(player) {
+  return player === "A" ? "B" : "A";
+}
+  
   function resetOnlineBets() {
     onlineBetA = null;
     onlineBetB = null;
@@ -130,9 +145,16 @@ export function create2v2BreakthroughController(ctx) {
               return;
             }
 
-            setBetValue(player, i);
+           setBetValue(player, i);
 
-            if (isOnline2v2() && typeof ctx.onOnline2v2BreakthroughBet === "function") {
+if (shouldAutoMirrorCpuBet()) {
+  const opponent = getOpponentPlayer(player);
+  if (getBetValue(opponent) === null) {
+    setBetValue(opponent, i);
+  }
+}
+
+if (isOnline2v2() && typeof ctx.onOnline2v2BreakthroughBet === "function") {
               ctx.onOnline2v2BreakthroughBet(player, i);
             }
 
