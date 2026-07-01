@@ -285,24 +285,47 @@ export function createStoryLearningBattleController(ctx) {
   }
 
   function startSingleLearning() {
-    const ally = selectedA[0];
-    const enemy = selectedB[0];
+  const ally = selectedA[0];
+  const enemy = selectedB[0];
 
-    if (!ally || !enemy) {
-      ctx.showPopup?.("単体学習に必要な機体が選択されていません");
-      return;
-    }
+  if (!ally || !enemy) {
+    ctx.showPopup?.("単体学習に必要な機体が選択されていません");
+    return;
+  }
 
+  const save = loadStorySave();
+  const companionId = save.createUnits?.proto_create_gundam?.lab?.companion || "none";
+  const companionUnit =
+    ally.id === "proto_create_gundam" &&
+    companionId !== "none" &&
+    save.companionUnits?.[companionId]?.unlocked === true
+      ? getUnitById(companionId)
+      : null;
+
+  if (companionUnit) {
     ctx.startStoryFreeBattle?.({
-      mode: "1v1",
+      mode: "2v2",
       allowModeSwitch: false,
       exitLabel: "単体学習を中断",
-      allyUnits: [ally],
+      allyUnits: [ally, companionUnit],
       enemyUnits: [enemy],
       onWin: () => ctx.renderStoryMainMenu?.(),
       onLose: () => ctx.renderStoryMainMenu?.(),
       onCancel: () => ctx.renderStoryMainMenu?.()
     });
+    return;
+  }
+
+  ctx.startStoryFreeBattle?.({
+    mode: "1v1",
+    allowModeSwitch: false,
+    exitLabel: "単体学習を中断",
+    allyUnits: [ally],
+    enemyUnits: [enemy],
+    onWin: () => ctx.renderStoryMainMenu?.(),
+    onLose: () => ctx.renderStoryMainMenu?.(),
+    onCancel: () => ctx.renderStoryMainMenu?.()
+  });
   }
 
   function startCompanionLearning() {
