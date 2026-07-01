@@ -8,12 +8,12 @@ export const PROTO_CREATE_BASE = {
   baseEnergy: 100,
 
   hpStep: 20,
-hpCostStep: 10,
-hpMax: 1000,
+  hpCostStep: 10,
+  hpMax: 1000,
 
-evadeStep: 1,
-evadeCostStep: 20,
-evadeMax: 25,
+  evadeStep: 1,
+  evadeCostStep: 20,
+  evadeMax: 25,
 
   energyStep: 1,
   energyCostStep: 1,
@@ -122,7 +122,7 @@ export const STORY_SLOT_OPTIONS = {
       label: "ビームガン",
       shortLabel: "4.ビームガン",
       cost: 5,
-      detail: "20ダメージ / 射撃 / ビーム / エネルギー / EN消費10",
+      detail: "20ダメージ / 射撃 / ビーム / エネルギー / EN消費10 / 増加値20",
       data: {
         kind: "attack",
         damage: 20,
@@ -130,7 +130,8 @@ export const STORY_SLOT_OPTIONS = {
         attackType: "shoot",
         beam: true,
         energy: true,
-        energyCost: 10
+        energyCost: 10,
+        energyIncrease: 20
       }
     },
     {
@@ -138,7 +139,7 @@ export const STORY_SLOT_OPTIONS = {
       label: "エネルギーソード",
       shortLabel: "4.エネルギーソード",
       cost: 20,
-      detail: "60ダメージ / 格闘 / ビーム / エネルギー / EN消費20",
+      detail: "60ダメージ / 格闘 / ビーム / エネルギー / EN消費20 / 増加値30",
       data: {
         kind: "attack",
         damage: 60,
@@ -146,7 +147,8 @@ export const STORY_SLOT_OPTIONS = {
         attackType: "melee",
         beam: true,
         energy: true,
-        energyCost: 20
+        energyCost: 20,
+        energyIncrease: 30
       }
     }
   ],
@@ -254,6 +256,21 @@ export const STORY_SKILL_OPTIONS = [
   }
 ];
 
+export const STORY_COMPANION_OPTIONS = [
+  {
+    id: "none",
+    label: "なし",
+    cost: 0,
+    detail: ""
+  },
+  {
+    id: "story_zaku_ii_gene",
+    label: "ザクII(ジーン機)",
+    cost: 5,
+    detail: "初回チャプター2クリア後に同行可能。"
+  }
+];
+
 export function createInitialProtoCreateLabState() {
   return {
     hp: PROTO_CREATE_BASE.baseHp,
@@ -279,7 +296,8 @@ export function createInitialProtoCreateLabState() {
       equipment2: "none"
     },
 
-    skill: "none"
+    skill: "none",
+    companion: "none"
   };
 }
 
@@ -295,6 +313,10 @@ export function findStorySkillOption(optionId) {
   return STORY_SKILL_OPTIONS.find(option => option.id === optionId) || STORY_SKILL_OPTIONS[0];
 }
 
+export function findStoryCompanionOption(optionId) {
+  return STORY_COMPANION_OPTIONS.find(option => option.id === optionId) || STORY_COMPANION_OPTIONS[0];
+}
+
 export function calculateProtoCreateLabCost(state) {
   const slotCost = Object.entries(state.selectedSlots || {}).reduce((total, [slotKey, optionId]) => {
     const option = findStorySlotOption(slotKey, optionId);
@@ -304,6 +326,7 @@ export function calculateProtoCreateLabCost(state) {
   const equipment1 = findStoryEquipmentOption(state.equipment?.equipment1 || "none");
   const equipment2 = findStoryEquipmentOption(state.equipment?.equipment2 || "none");
   const skill = findStorySkillOption(state.skill || "none");
+  const companion = findStoryCompanionOption(state.companion || "none");
 
   return Number(state.hpCost || 0)
     + Number(state.evadeCost || 0)
@@ -311,5 +334,6 @@ export function calculateProtoCreateLabCost(state) {
     + slotCost
     + Number(equipment1?.cost || 0)
     + Number(equipment2?.cost || 0)
-    + Number(skill?.cost || 0);
+    + Number(skill?.cost || 0)
+    + Number(companion?.cost || 0);
 }
