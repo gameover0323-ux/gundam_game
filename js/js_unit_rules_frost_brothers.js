@@ -28,17 +28,30 @@ function getTeamFromContext(context = {}) {
 }
 
 function getPartner(state, context = {}) {
-  const team = getTeamFromContext(context);
+  const partner = context.twoVtwoAdapter?.getPartnerUnit?.(context.ownerPlayer, state);
+  if (partner) return partner;
+
+  const team = context.twoVtwoAdapter?.getOwnerTeam?.(context.ownerPlayer) || null;
+
   if (!team) return null;
 
-  const id = getStateUnitId(state);
-
-  if (id === "frost_brothers_vasago_cb") return team.unit2;
-  if (id === "frost_brothers_ashtaron_hc") return team.unit1;
+  if (state?.id === "frost_brothers_vasago_cb") return team.unit2;
+  if (state?.id === "frost_brothers_ashtaron_hc") return team.unit1;
 
   return null;
 }
 
+function setPartnerFrostState(state, context = {}, key, value) {
+  if (context.twoVtwoAdapter?.setPartnerStateEffect?.(context.ownerPlayer, state, key, value)) {
+    return true;
+  }
+
+  const partner = getPartner(state, context);
+  if (!partner) return false;
+
+  partner[key] = value;
+  return true;
+}
 function isUnifiedContext(context = {}) {
   const team = getTeamFromContext(context);
   if (team?.mode === "unified") return true;
@@ -268,19 +281,17 @@ export function onFrostBrothersAfterSlotResolved(state, slotNumber, payload = {}
     };
   }
 
-  if (
-    effectId === "frost_ashtaron_bind" &&
-    Number(resolveResult.hitCount || context.hitCount || 0) > 0
-  ) {
-    const partner = getPartner(state, context);
+if (
+  effectId === "frost_ashtaron_bind" &&
+  Number(resolveResult.hitCount || context.hitCount || 0) > 0
+) {
+  setPartnerFrostState(state, context, "frostNextAttackCannotEvade", true);
 
-    if (partner) {
-      ensureFrostState(partner);
-      partner.frostNextAttackCannotEvade = true;
-    }
-
-    return { redraw: true, message: "シザース捕縛：ヴァサーゴの次攻撃に必中付与" };
-  }
+  return {
+    redraw: true,
+    message: "シザース捕縛：ヴァサーゴの次攻撃に必中付与"
+  };
+}
 
   if (
     effectId === "frost_unified_bind" &&
