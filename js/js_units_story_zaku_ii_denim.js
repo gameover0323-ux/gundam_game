@@ -7,7 +7,7 @@ export const story_zaku_ii_denim = {
 
   storyCompanion: {
     unlockCondition: "チャプター2終了後、チャプター1on1モードでプロトクリエイトガンダムのみで倒す。",
-    cost: 5
+    cost: 40
   },
 
   storyDrops: {
