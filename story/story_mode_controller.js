@@ -3,8 +3,11 @@ import {
   PROTO_CREATE_BASE,
   STORY_SLOT_OPTIONS,
   STORY_EQUIPMENT_OPTIONS,
-  STORY_SKILL_OPTIONS,
+   STORY_SKILL_OPTIONS,
   STORY_COMPANION_OPTIONS,
+  getStoryDropSlotOptions,
+  getStoryDropEquipmentOptions,
+  getStoryDropSkillOptions,
   findStorySlotOption,
   findStoryEquipmentOption,
   findStoryCompanionOption,
@@ -773,9 +776,30 @@ function renderChapterSelect() {
       if (kind === "skill") return STORY_SKILL_OPTIONS.slice(0, 2);
     }
 
-      if (kind === "slot") return STORY_SLOT_OPTIONS[key] || [];
-    if (kind === "equipment") return STORY_EQUIPMENT_OPTIONS;
-    if (kind === "skill") return STORY_SKILL_OPTIONS;
+    const ownedSlots = storySave.inventory?.slots || [];
+const ownedEquipments = storySave.inventory?.equipments || [];
+const ownedSkills = storySave.inventory?.skills || [];
+
+if (kind === "slot") {
+  return [
+    ...(STORY_SLOT_OPTIONS[key] || []),
+    ...getStoryDropSlotOptions(key).filter(option => ownedSlots.includes(option.id))
+  ];
+}
+
+if (kind === "equipment") {
+  return [
+    ...STORY_EQUIPMENT_OPTIONS,
+    ...getStoryDropEquipmentOptions().filter(option => ownedEquipments.includes(option.id))
+  ];
+}
+
+if (kind === "skill") {
+  return [
+    ...STORY_SKILL_OPTIONS,
+    ...getStoryDropSkillOptions().filter(option => ownedSkills.includes(option.id))
+  ];
+}
 
     if (kind === "companion") {
       return STORY_COMPANION_OPTIONS.filter(option => {
