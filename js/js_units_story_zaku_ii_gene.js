@@ -7,7 +7,7 @@ export const story_zaku_ii_gene = {
 
   storyCompanion: {
     unlockCondition: "初回チャプター2をクリア",
-    cost: 5
+    cost: 30
   },
 
   forms: {
