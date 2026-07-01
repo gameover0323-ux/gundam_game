@@ -32,11 +32,13 @@ function getPartner(state, context = {}) {
   if (partner) return partner;
 
   const team = context.twoVtwoAdapter?.getOwnerTeam?.(context.ownerPlayer) || null;
-
   if (!team) return null;
 
-  if (state?.id === "frost_brothers_vasago_cb") return team.unit2;
-  if (state?.id === "frost_brothers_ashtaron_hc") return team.unit1;
+  if (team.unit1 === state) return team.unit2 || null;
+  if (team.unit2 === state) return team.unit1 || null;
+
+  if (getStateUnitId(state) === "frost_brothers_vasago_cb") return team.unit2 || null;
+  if (getStateUnitId(state) === "frost_brothers_ashtaron_hc") return team.unit1 || null;
 
   return null;
 }
@@ -49,9 +51,11 @@ function setPartnerFrostState(state, context = {}, key, value) {
   const partner = getPartner(state, context);
   if (!partner) return false;
 
+  ensureFrostState(partner);
   partner[key] = value;
   return true;
 }
+
 function isUnifiedContext(context = {}) {
   const team = getTeamFromContext(context);
   if (team?.mode === "unified") return true;
@@ -106,6 +110,41 @@ function enterUnifiedSafely(team, context = {}) {
   }
 
   return false;
+}
+
+function getResolveHitCount(context = {}) {
+  return Math.max(
+    0,
+    Number(
+      context.hitCount ??
+      context.currentAttackContext?.hitCount ??
+      context.resolveResult?.hitCount ??
+      0
+    )
+  );
+}
+
+function getEffectIdFromActionContext(state, context = {}) {
+  if (context.effectId) return context.effectId;
+  if (context.customEffectId) return context.customEffectId;
+  if (context.currentAttackContext?.effectId) return context.currentAttackContext.effectId;
+  if (context.currentAttackContext?.customEffectId) return context.currentAttackContext.customEffectId;
+
+  const slotKey =
+    context.slotKey ||
+    context.currentAttackContext?.slotKey ||
+    state?.lastSlotKey ||
+    null;
+
+  const slotNumber =
+    context.slotNumber ||
+    context.currentAttackContext?.slotNumber ||
+    null;
+
+  const finalSlotKey = slotKey || (slotNumber ? `slot${slotNumber}` : null);
+  const slot = finalSlotKey ? state?.slots?.[finalSlotKey] : null;
+
+  return slot?.effect?.effectId || null;
 }
 
 function getUnifiedSlots() {
@@ -281,22 +320,29 @@ export function onFrostBrothersAfterSlotResolved(state, slotNumber, payload = {}
     };
   }
 
-if (
-  effectId === "frost_ashtaron_bind" &&
-  Number(resolveResult.hitCount || context.hitCount || 0) > 0
-) {
-  setPartnerFrostState(state, context, "frostNextAttackCannotEvade", true);
-
-  return {
-    redraw: true,
-    message: "シザース捕縛：ヴァサーゴの次攻撃に必中付与"
-  };
+  return { redraw: false, message: null };
 }
 
-  if (
-    effectId === "frost_unified_bind" &&
-    Number(resolveResult.hitCount || context.hitCount || 0) > 0
-  ) {
+export function onFrostBrothersActionResolved(attacker, defender, context = {}) {
+  ensureFrostState(attacker);
+
+  const effectId = getEffectIdFromActionContext(attacker, context);
+  const hitCount = getResolveHitCount(context);
+
+  if (hitCount <= 0) {
+    return { redraw: false, message: null };
+  }
+
+  if (effectId === "frost_ashtaron_bind") {
+    setPartnerFrostState(attacker, context, "frostNextAttackCannotEvade", true);
+
+    return {
+      redraw: true,
+      message: "シザース捕縛：ヴァサーゴの次攻撃に必中付与"
+    };
+  }
+
+  if (effectId === "frost_unified_bind") {
     const team = getTeamFromContext(context);
 
     if (team?.unit1) {
@@ -313,12 +359,15 @@ if (
       context.twoVtwoAdapter &&
       typeof context.twoVtwoAdapter.addActionCount === "function"
     ) {
-      context.twoVtwoAdapter.addActionCount(context.ownerPlayer, state, 1);
+      context.twoVtwoAdapter.addActionCount(context.ownerPlayer, attacker, 1);
     } else {
-      state.actionCount = Number(state.actionCount || 0) + 1;
+      attacker.actionCount = Number(attacker.actionCount || 0) + 1;
     }
 
-    return { redraw: true, message: "捕縛格闘命中：次攻撃に必中付与 / 行動権+1" };
+    return {
+      redraw: true,
+      message: "捕縛格闘命中：次攻撃に必中付与 / 行動権+1"
+    };
   }
 
   return { redraw: false, message: null };
