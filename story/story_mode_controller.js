@@ -7,7 +7,6 @@ import {
   STORY_COMPANION_OPTIONS,
   findStorySlotOption,
   findStoryEquipmentOption,
-  findStorySkillOption,
   findStoryCompanionOption,
   findStorySkillOption,
   calculateProtoCreateLabCost,
