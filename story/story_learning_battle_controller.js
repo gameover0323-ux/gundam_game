@@ -3,11 +3,15 @@ import { loadStorySave } from "./story_save.js";
 
 import { story_zaku_ii_gene } from "../js/js_units_story_zaku_ii_gene.js";
 import { story_zaku_ii_denim } from "../js/js_units_story_zaku_ii_denim.js";
+import { story_ball } from "../js/js_units_story_ball.js";
+import { story_gm } from "../js/js_units_story_gm.js";
 
 const STORY_UNIT_MAP = {
   proto_create_gundam: null,
   story_zaku_ii_gene,
-  story_zaku_ii_denim
+  story_zaku_ii_denim,
+  story_ball,
+  story_gm
 };
 
 export function createStoryLearningBattleController(ctx) {
@@ -46,9 +50,11 @@ export function createStoryLearningBattleController(ctx) {
     if (save.flags?.chapter2Cleared !== true) return [];
 
     return [
-      story_zaku_ii_gene,
-      story_zaku_ii_denim
-    ];
+  story_zaku_ii_gene,
+  story_zaku_ii_denim,
+  story_ball,
+  story_gm
+];
   }
 
   function getCurrentList() {
