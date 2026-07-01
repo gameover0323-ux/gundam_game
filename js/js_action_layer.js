@@ -388,13 +388,23 @@ function consumeSpecialActionCost(ownerPlayer, actor, cost = 1) {
       return false;
     }
 
-    if (beforeResult.replaceSlotAction) {
-      slotKey = beforeResult.replaceSlotAction.slotKey || slotKey;
-      slot = beforeResult.replaceSlotAction.slotData || slot;
-      slotNumber = getSlotNumberFromKey(slotKey);
-    }
+  if (beforeResult.replaceSlotAction) {
+  slotKey = beforeResult.replaceSlotAction.slotKey || slotKey;
 
-    if (defender) {
+  slot = beforeResult.replaceSlotAction.slotData || slot;
+
+  slotNumber = getSlotNumberFromKey(slotKey);
+}
+
+if (typeof beforeResult.modifySlot === "function") {
+  const modifiedSlot = beforeResult.modifySlot(slot);
+
+  if (modifiedSlot) {
+    slot = modifiedSlot;
+  }
+}
+
+if (defender) {
       const enemyBeforeResult = executeUnitEnemyBeforeSlot(defender, slotNumber, {
         ownerPlayer: enemyPlayer,
         enemyPlayer: ownerPlayer,
@@ -481,12 +491,21 @@ function consumeSpecialActionCost(ownerPlayer, actor, cost = 1) {
     }
 
     if (beforeResult.replaceSlotAction) {
-      slotKey = beforeResult.replaceSlotAction.slotKey || slotKey;
-      slot = beforeResult.replaceSlotAction.slotData || slot;
-      slotNumber = getSlotNumberFromKey(slotKey);
-    }
+  slotKey = beforeResult.replaceSlotAction.slotKey || slotKey;
+  slot = beforeResult.replaceSlotAction.slotData || slot;
 
-    if (defender) {
+  slotNumber = getSlotNumberFromKey(slotKey);
+}
+
+if (typeof beforeResult.modifySlot === "function") {
+  const modifiedSlot = beforeResult.modifySlot(slot);
+
+  if (modifiedSlot) {
+    slot = modifiedSlot;
+  }
+}
+
+if (defender) {
       const enemyBeforeResult = executeUnitEnemyBeforeSlot(defender, slotNumber, {
         ownerPlayer: enemyPlayer,
         enemyPlayer: ownerPlayer,
