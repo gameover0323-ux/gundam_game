@@ -1,5 +1,7 @@
 import { buildStoryCompanionOptions } from "./story_companion_registry.js";
 
+import { collectStoryDropOptions } from "./story_drop_registry.js";
+
 export const PROTO_CREATE_BASE = {
   unitName: "プロトクリエイトガンダム",
   level: 0,
@@ -291,16 +293,37 @@ export function createInitialProtoCreateLabState() {
   };
 }
 
+export function getStoryDropSlotOptions(slotKey) {
+  return collectStoryDropOptions("slot").filter(option => option.slotKey === slotKey);
+}
+
+export function getStoryDropEquipmentOptions() {
+  return collectStoryDropOptions("equipment");
+}
+
+export function getStoryDropSkillOptions() {
+  return collectStoryDropOptions("skill");
+}
+
 export function findStorySlotOption(slotKey, optionId) {
-  return (STORY_SLOT_OPTIONS[slotKey] || []).find(option => option.id === optionId) || null;
+  return [
+    ...(STORY_SLOT_OPTIONS[slotKey] || []),
+    ...getStoryDropSlotOptions(slotKey)
+  ].find(option => option.id === optionId) || null;
 }
 
 export function findStoryEquipmentOption(optionId) {
-  return STORY_EQUIPMENT_OPTIONS.find(option => option.id === optionId) || STORY_EQUIPMENT_OPTIONS[0];
+  return [
+    ...STORY_EQUIPMENT_OPTIONS,
+    ...getStoryDropEquipmentOptions()
+  ].find(option => option.id === optionId) || STORY_EQUIPMENT_OPTIONS[0];
 }
 
 export function findStorySkillOption(optionId) {
-  return STORY_SKILL_OPTIONS.find(option => option.id === optionId) || STORY_SKILL_OPTIONS[0];
+  return [
+    ...STORY_SKILL_OPTIONS,
+    ...getStoryDropSkillOptions()
+  ].find(option => option.id === optionId) || STORY_SKILL_OPTIONS[0];
 }
 
 export function findStoryCompanionOption(optionId) {
