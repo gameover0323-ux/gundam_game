@@ -675,18 +675,17 @@ export function createBattleState(unit) {
     z_bioSlot3Ex: false,
     z_usedBio3ExThisAction: false,
     stateEffects: {},
+    storyLevel: Number(unit.storyLevel || 0),
+storyCriticalBonusRate: Number(unit.storyCriticalBonusRate || 0),
+storyDamageReductionRate: Number(unit.storyDamageReductionRate || 0),
     statusList: []
   };
 }
 
 export function getCriticalRate(state) {
   if (!state) return 5;
-
-  const boosts = Array.isArray(state.criticalBoosts)
-    ? state.criticalBoosts
-    : [];
-
-  return 5 + boosts.length * 4;
+  const boosts = Array.isArray(state.criticalBoosts) ? state.criticalBoosts : [];
+  return 5 + boosts.length * 4 + Number(state.storyCriticalBonusRate || 0);
 }
 
 export function spendEvadeForCritical(state) {
