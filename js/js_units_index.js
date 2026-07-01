@@ -55,7 +55,8 @@ import { training_machine } from "./js_units_training_machine.js";
 import { story_zaku_ii_gene } from "./js_units_story_zaku_ii_gene.js";
 import { story_zaku_ii_denim } from "./js_units_story_zaku_ii_denim.js";
 import { story_gundam } from "./js_units_story_gundam.js";
-
+import { story_ball } from "./js_units_story_ball.js";
+import { story_gm } from "./js_units_story_gm.js";
 
 
 
@@ -119,7 +120,9 @@ export const debugUnitList = [
   training_machine,
   story_zaku_ii_gene,
   story_gundam,
-  story_zaku_ii_denim
+  story_zaku_ii_denim,
+  story_ball,
+story_gm
 ];
 
 
