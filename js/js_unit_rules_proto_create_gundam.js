@@ -6,6 +6,8 @@ const SLOT_KEYS = ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"];
 function ensureProtoCreateState(state) {
   if (!state) return;
 
+  if (typeof state.storyDestroyerUses !== "number") state.storyDestroyerUses = 3;
+  
   if (typeof state.storyEnergyMax !== "number") {
     state.storyEnergyMax = Number(state.storyEnergyMax || 100);
   }
@@ -155,6 +157,14 @@ export function getProtoCreateDerivedState(state) {
     });
   }
 
+  if (String(Object.values(state.specials || {}).map(s => s?.name || "").join(" ")).includes("破壊者")) {
+    result.status.push({
+      text: `破壊者:${state.storyDestroyerUses}`,
+      color: state.storyDestroyerUses > 0 ? "#ff6666" : "#777777",
+      bold: true
+    });
+  }
+  
   if (state.storyEnergyAdjustStacks !== 0) {
     result.status.push({
       text: `EN調整:${state.storyEnergyAdjustStacks}`,
@@ -230,16 +240,23 @@ export function canUseProtoCreateSpecial(state, specialKey) {
   }
 
   if (special.effectType === "story_create_skill") {
-    if (!String(special.name || "").includes("ラウンドフォース")) {
-      return { allowed: false, message: "クリエイトスキルがありません" };
+    const name = String(special.name || "");
+
+    if (name.includes("ラウンドフォース")) {
+      return {
+        allowed: state.storyRoundForceCooldown <= 0,
+        message: state.storyRoundForceCooldown <= 0 ? null : `ラウンドフォース再使用まで${state.storyRoundForceCooldown}ターン`
+      };
     }
 
-    return {
-      allowed: state.storyRoundForceCooldown <= 0,
-      message: state.storyRoundForceCooldown <= 0
-        ? null
-        : `ラウンドフォース再使用まで${state.storyRoundForceCooldown}ターン`
-    };
+    if (name.includes("破壊者")) {
+      return {
+        allowed: state.storyDestroyerUses > 0,
+        message: state.storyDestroyerUses > 0 ? null : "破壊者の使用回数がありません"
+      };
+    }
+
+    return { allowed: false, message: "クリエイトスキルがありません" };
   }
 
   return { allowed: true, message: null };
@@ -331,32 +348,49 @@ return {
   }
 
   if (special.effectType === "story_create_skill") {
-    if (!String(special.name || "").includes("ラウンドフォース")) {
-      return { handled: true, redraw: false, message: "クリエイトスキルがありません" };
-    }
+    const name = String(special.name || "");
 
-    if (state.storyRoundForceCooldown > 0) {
+    if (name.includes("ラウンドフォース")) {
+      if (state.storyRoundForceCooldown > 0) {
+        return { handled: true, redraw: false, message: `ラウンドフォース再使用まで${state.storyRoundForceCooldown}ターン` };
+      }
+
+      state.storyRoundForceCooldown = 5;
       return {
         handled: true,
-        redraw: false,
-        message: `ラウンドフォース再使用まで${state.storyRoundForceCooldown}ターン`
+        redraw: true,
+        message: "ラウンドフォース発動",
+        appendAttackLabel: "ラウンドフォース",
+        appendAttacks: createAttack(100, 1, { type: "melee", source: "ラウンドフォース" })
       };
     }
 
-    state.storyRoundForceCooldown = 5;
+    if (name.includes("破壊者")) {
+      if (state.storyDestroyerUses <= 0) {
+        return { handled: true, redraw: false, message: "破壊者の使用回数がありません" };
+      }
 
-    return {
-  handled: true,
-  redraw: true,
-  message: "ラウンドフォース発動",
-  appendAttackLabel: "ラウンドフォース",
-  appendAttacks: createAttack(100, 1, {
-  type: "melee",
-  source: "ラウンドフォース"
-})
-};
+      return {
+        handled: true,
+        redraw: true,
+        message: null,
+        requestChoice: {
+          choiceType: "buttons",
+          effectType: "proto_create_destroyer_choice",
+          ownerPlayer: context.ownerPlayer,
+          enemyPlayer: context.enemyPlayer,
+          ownerUnitKey: context.ownerUnitKey || null,
+          title: "破壊者：追加行動するスロットを選択",
+          choices: SLOT_KEYS.map(slotKey => ({
+            label: `${slotKey.replace("slot", "")}.${state.slots?.[slotKey]?.label || slotKey}`,
+            value: slotKey
+          }))
+        }
+      };
+    }
+
+    return { handled: true, redraw: false, message: "クリエイトスキルがありません" };
   }
-
   return { handled: false, redraw: false, message: null };
 }
 
@@ -399,6 +433,29 @@ export function onProtoCreateResolveChoice(state, pendingChoice, selectedValue, 
     };
   }
 
+  if (pendingChoice?.effectType === "proto_create_destroyer_choice") {
+    const slotKey = String(selectedValue || "");
+
+    if (!SLOT_KEYS.includes(slotKey) || !state.slots?.[slotKey]) {
+      return { handled: true, redraw: false, message: "破壊者の対象スロットが不正です" };
+    }
+
+    if (state.storyDestroyerUses <= 0) {
+      return { handled: true, redraw: false, message: "破壊者の使用回数がありません" };
+    }
+
+    state.storyDestroyerUses -= 1;
+
+    return {
+      handled: true,
+      redraw: true,
+      message: `破壊者：${state.slots[slotKey].label}を追加行動`,
+      startSlotAction: {
+        slotKey
+      }
+    };
+  }
+  
   if (pendingChoice?.effectType === "proto_create_reload_followup") {
     const slotKey = String(selectedValue || "");
 
