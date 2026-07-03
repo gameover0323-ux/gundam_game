@@ -21,7 +21,8 @@ import {
   getProtoCreateLevelInfo,
   getProtoCreateMaxCost,
   updateProtoCreateLabState,
-  setStoryFlag,
+    setStoryFlag,
+  resetStorySave,
   setActiveStoryCreateUnit,
   setLiberalGaUnit,
   setLiberalCustomName,
@@ -269,13 +270,25 @@ function renderStoryMainMenu() {
       <button id="storyChapterSelectBtn">チャプターセレクト</button>
       <button id="storyLabMenuBtn">クリエイトガンダムラボ</button>
       ${learningBattleUnlocked ? `<button id="storyLearningBattleBtn">学習戦闘</button>` : ""}
-      ${chapterBossUnlocked ? `<button id="storyChapterBossBtn">チャプターボス</button>` : ""}
+           ${chapterBossUnlocked ? `<button id="storyChapterBossBtn">チャプターボス</button>` : ""}
+      <button id="storyResetSaveBtn">進行データ削除</button>
       <button id="storyMenuCloseBtn">閉じる</button>
     `;
 
     document.getElementById("storyChapterSelectBtn")?.addEventListener("click", renderChapterSelect);
     document.getElementById("storyLabMenuBtn")?.addEventListener("click", renderNormalLab);
-    document.getElementById("storyMenuCloseBtn")?.addEventListener("click", closeStoryModeToTitle);
+        document.getElementById("storyMenuCloseBtn")?.addEventListener("click", closeStoryModeToTitle);
+
+    document.getElementById("storyResetSaveBtn")?.addEventListener("click", () => {
+      const ok = window.confirm("ストーリーモードの進行データを削除します。よろしいですか？");
+      if (!ok) return;
+
+      resetStorySave();
+      clearStoryCreateUnitLabOverride(PROTO_UNIT_ID);
+      labMode = "normal";
+      refreshStorySave();
+      renderStoryMainMenu();
+    });
 
     document.getElementById("storyLearningBattleBtn")?.addEventListener("click", () => {
       storyLearningBattleController.renderLearningMenu();
