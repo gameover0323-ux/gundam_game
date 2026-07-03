@@ -6,6 +6,8 @@ import {
 
 import { createStoryBattleEngine } from "./story_battle_engine.js";
 
+import { buildChapter1TrainingMachineEnemy } from "./story_hidden_drops.js";
+
 export function createStoryChapter1Controller(ctx) {
   const battleEngine = createStoryBattleEngine(ctx);
 
@@ -562,10 +564,11 @@ function renderFreeModeSelect() {
     removeTutorialFloatingUi();
 
     if (typeof ctx.startStoryFreeBattle === "function") {
-      ctx.startStoryFreeBattle({
+         ctx.startStoryFreeBattle({
         mode: "1v1",
         allowModeSwitch: false,
         exitLabel: "フリー演習を中断",
+        enemyUnits: [buildChapter1TrainingMachineEnemy()],
         onWin: renderFreeModeSelect,
         onLose: renderFreeModeSelect,
         onCancel: renderFreeModeSelect
@@ -581,10 +584,14 @@ function renderFreeModeSelect() {
     removeTutorialFloatingUi();
 
     if (typeof ctx.startStoryFreeBattle === "function") {
-      ctx.startStoryFreeBattle({
+            ctx.startStoryFreeBattle({
         mode: "2v2",
         allowModeSwitch: false,
         exitLabel: "2on2フリー演習を中断",
+        enemyUnits: [
+          buildChapter1TrainingMachineEnemy(),
+          buildChapter1TrainingMachineEnemy("トレーニングマシン 2番機")
+        ],
         onWin: renderFreeModeSelect,
         onLose: renderFreeModeSelect,
         onCancel: renderFreeModeSelect
