@@ -1,3 +1,6 @@
+// story/story_learning_battle_controller.js
+// 全置換
+
 import { getStoryCreateUnit } from "./story_units.js";
 import {
   loadStorySave,
@@ -21,7 +24,6 @@ function clone(value) {
 
 function createCpuGundamUnit() {
   const unit = clone(gundam_mc);
-
   unit.id = "cpu_gundam_mc";
   unit.name = "ガンダム";
   unit.exp = 30;
@@ -64,7 +66,12 @@ export function createStoryLearningBattleController(ctx) {
 
   function decorateStoryBattleUnit(unit) {
     const cloned = cloneUnit(unit);
-    const bonus = getStoryLevelBattleBonus(cloned.id);
+    const levelUnitId =
+      cloned.id === "create_gundam_liberal"
+        ? "create_gundam_liberal"
+        : cloned.id;
+
+    const bonus = getStoryLevelBattleBonus(levelUnitId);
 
     cloned.storyLevel = bonus.level;
     cloned.storyCriticalBonusRate = bonus.criticalRateBonus;
@@ -85,7 +92,12 @@ export function createStoryLearningBattleController(ctx) {
 
   function getUnitLabel(unit) {
     if (!unit) return "";
-    const info = getStoryUnitLevelInfo(unit.id);
+    const levelUnitId =
+      unit.id === "create_gundam_liberal"
+        ? "create_gundam_liberal"
+        : unit.id;
+
+    const info = getStoryUnitLevelInfo(levelUnitId);
     return `${unit.name} Lv${info.level}`;
   }
 
@@ -97,21 +109,27 @@ export function createStoryLearningBattleController(ctx) {
     const save = loadStorySave();
     const units = [getStoryCreateUnit("proto_create_gundam")];
 
-    Object.entries(save.companionUnits || {}).forEach(([unitId, info]) => {
-      if (info?.unlocked !== true) return;
+    if (learningMode === "single" && canUseLiberal(save)) {
+      const liberalUnit = getStoryCreateUnit("create_gundam_liberal");
+      if (liberalUnit) units.push(liberalUnit);
+    }
 
-      const unit = getUnitById(unitId);
-      if (unit && !units.some(existing => existing.id === unit.id)) {
-        units.push(unit);
-      }
-    });
+    if (learningMode === "companion") {
+      Object.entries(save.companionUnits || {}).forEach(([unitId, info]) => {
+        if (info?.unlocked !== true) return;
 
-    return units;
+        const unit = getUnitById(unitId);
+        if (unit && !units.some(existing => existing.id === unit.id)) {
+          units.push(unit);
+        }
+      });
+    }
+
+    return units.filter(Boolean);
   }
 
   function buildAvailableEnemyUnits() {
     const save = loadStorySave();
-
     if (save.flags?.chapter2Cleared !== true) return [];
 
     const units = [
@@ -238,7 +256,7 @@ ${buildPreviewText()}
       </div>
 
       ${renderUnitSection(selectingSide === "A" ? "プレイヤー側候補" : "CPU側候補", currentList)}
-      ${selectingSide === "A" && learningMode !== "ga" ? renderLiberalButton() : ""}
+      ${selectingSide === "A" && learningMode !== "ga" ? renderLiberalNotice() : ""}
       ${learningMode === "ga" ? renderGaNotice() : ""}
 
       <div style="margin:12px 0;">
@@ -330,7 +348,7 @@ GA戦闘はクリエイトガンダムリベラル単騎専用です。
     `;
   }
 
-  function renderLiberalButton() {
+  function renderLiberalNotice() {
     const save = loadStorySave();
 
     if (!canUseLiberal(save)) {
@@ -343,12 +361,10 @@ GA戦闘はクリエイトガンダムリベラル単騎専用です。
     }
 
     return `
-      <div style="margin-top:12px;">
-        <div>解禁済</div>
-        <button disabled>クリエイトガンダムリベラル</button>
-        <div style="font-size:12px;opacity:0.8;">
-          クリエイトガンダムリベラルはGA戦闘専用です。同行学習・通常学習の同行機体には選択できません。
-        </div>
+      <div style="margin-top:12px;font-size:12px;opacity:0.8;white-space:pre-wrap;">
+クリエイトガンダムリベラルはストーリーモード全般で使用できます。
+ただし同行機体は選択できません。
+GA戦闘はクリエイトガンダムリベラル専用です。
       </div>
     `;
   }
@@ -369,17 +385,14 @@ GA戦闘はクリエイトガンダムリベラル単騎専用です。
     const requiredCount = getRequiredCount();
 
     const aText = selectedA.length
-      ? `${getSideLabel("A")}: ${selectedA.map(unit => learningMode === "ga" ? unit.name : getUnitLabel(unit)).join(" / ")}`
+      ? `${getSideLabel("A")}: ${selectedA.map(unit => getUnitLabel(unit)).join(" / ")}`
       : `${getSideLabel("A")}: 未選択`;
 
     const bText = selectedB.length
       ? `${getSideLabel("B")}: ${selectedB.map(unit => unit.name).join(" / ")}`
       : `${getSideLabel("B")}: 未選択`;
 
-    const pendingText = pendingUnit
-      ? `\n選択中: ${getPendingLabel()}`
-      : "";
-
+    const pendingText = pendingUnit ? `\n選択中: ${getPendingLabel()}` : "";
     const progressText = `\n現在: ${getSideLabel()} ${getCurrentSelectedList().length}/${requiredCount}`;
 
     return `${aText}\n${bText}${pendingText}${progressText}`;
@@ -426,12 +439,12 @@ GA戦闘はクリエイトガンダムリベラル単騎専用です。
 
     const save = loadStorySave();
     const companionId = save.createUnits?.proto_create_gundam?.lab?.companion || "none";
-    const companionUnit =
+    const canUseCompanion =
       ally.id === "proto_create_gundam" &&
       companionId !== "none" &&
-      save.companionUnits?.[companionId]?.unlocked === true
-        ? getUnitById(companionId)
-        : null;
+      save.companionUnits?.[companionId]?.unlocked === true;
+
+    const companionUnit = canUseCompanion ? getUnitById(companionId) : null;
 
     const playerUnits = companionUnit ? [ally, companionUnit] : [ally];
     const battlePlayerUnits = playerUnits.map(decorateStoryBattleUnit);
@@ -452,6 +465,11 @@ GA戦闘はクリエイトガンダムリベラル単騎専用です。
   function startCompanionLearning() {
     if (selectedA.length < 2 || selectedB.length < 2) {
       ctx.showPopup?.("同行学習に必要な機体が選択されていません");
+      return;
+    }
+
+    if (selectedA.some(unit => unit?.id === "create_gundam_liberal")) {
+      ctx.showPopup?.("クリエイトガンダムリベラルは同行学習では使用できません");
       return;
     }
 
