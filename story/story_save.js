@@ -3,8 +3,23 @@ import { calculateStoryLevel, getCreateUnitMaxCostByLevel } from "./story_exp.js
 
 const STORY_SAVE_KEY = "gbs_story_save_v1";
 
+let storySavePersistenceEnabled = true;
+let guestStorySave = null;
+
 function deepClone(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+export function setStorySavePersistenceEnabled(enabled) {
+  storySavePersistenceEnabled = enabled === true;
+
+  if (!storySavePersistenceEnabled && !guestStorySave) {
+    guestStorySave = createDefaultStorySave();
+  }
+}
+
+export function isStorySavePersistent() {
+  return storySavePersistenceEnabled;
 }
 
 export function createDefaultStorySave() {
@@ -49,7 +64,7 @@ export function createDefaultStorySave() {
       }
     },
     activeCreateUnitId: "proto_create_gundam",
-      liberal: {
+    liberal: {
       unlocked: false,
       activeGaUnitId: "none",
       customName: "クリエイトガンダムリベラル",
@@ -65,6 +80,12 @@ export function createDefaultStorySave() {
 }
 
 export function loadStorySave() {
+  if (!storySavePersistenceEnabled) {
+    if (!guestStorySave) guestStorySave = createDefaultStorySave();
+    guestStorySave = normalizeStorySave(guestStorySave);
+    return deepClone(guestStorySave);
+  }
+
   const raw = localStorage.getItem(STORY_SAVE_KEY);
   if (!raw) {
     const save = createDefaultStorySave();
@@ -82,11 +103,24 @@ export function loadStorySave() {
 }
 
 export function saveStorySave(save) {
-  localStorage.setItem(STORY_SAVE_KEY, JSON.stringify(normalizeStorySave(save)));
+  const normalized = normalizeStorySave(save);
+
+  if (!storySavePersistenceEnabled) {
+    guestStorySave = deepClone(normalized);
+    return;
+  }
+
+  localStorage.setItem(STORY_SAVE_KEY, JSON.stringify(normalized));
 }
 
 export function resetStorySave() {
   const save = createDefaultStorySave();
+
+  if (!storySavePersistenceEnabled) {
+    guestStorySave = deepClone(save);
+    return save;
+  }
+
   saveStorySave(save);
   return save;
 }
@@ -133,7 +167,7 @@ export function normalizeStorySave(input) {
     liberal: {
       ...base.liberal,
       ...(src.liberal || {}),
-       customLabels: {
+      customLabels: {
         slot: src.liberal?.customLabels?.slot && typeof src.liberal.customLabels.slot === "object"
           ? src.liberal.customLabels.slot
           : {},
