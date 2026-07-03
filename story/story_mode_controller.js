@@ -21,7 +21,11 @@ import {
   getProtoCreateLevelInfo,
   getProtoCreateMaxCost,
   updateProtoCreateLabState,
-  setStoryFlag
+  setStoryFlag,
+  setActiveStoryCreateUnit,
+  setLiberalGaUnit,
+  setLiberalCustomName,
+  setLiberalCustomLabel
 } from "./story_save.js";
 
 import {
@@ -513,7 +517,11 @@ function renderChapterSelect() {
     root.style.overflowY = "auto";
 
     root.innerHTML = `
-      <h2 style="text-align:center;">${PROTO_CREATE_BASE.unitName}</h2>
+      <h2 style="text-align:center;">${getLabUnitTitle()}
+        ${isLiberalLab() ? `<button id="storyUnitNameBtn">名前</button>` : ""}
+      </h2>
+      ${renderCreateUnitSwitchButtons()}
+      ${isLiberalLab() ? renderLiberalGaSelector() : ""}
 
       <div id="storyCustomizePanel">
         <div id="storyLevelText" class="story-level"></div>
@@ -701,27 +709,28 @@ function renderChapterSelect() {
     if (slotRoot) slotRoot.innerHTML = renderSlotRows();
     if (optionalRoot) optionalRoot.innerHTML = renderOptionalRows();
 
-    bindSwapButtons();
+        bindSwapButtons();
     bindDetailButtons();
+    bindNameButtons();
+    bindLiberalButtons();
     renderCustomizeValues();
   }
 
-  function renderSlotRows() {
+    function renderSlotRows() {
     return ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"].map(slotKey => {
       const option = findStorySlotOption(slotKey, customizeState.selectedSlots[slotKey]);
+      const label = getCustomDisplayLabel("slot", slotKey, option?.shortLabel || "未設定");
 
       return `
-        <div class="story-row story-slot">
-          <span class="story-label">${option?.shortLabel || "未設定"}</span>
-          <span class="story-cost-text">[コスト${option?.cost || 0}]</span>
-          <span class="story-buttons">
-            <button class="story-detail-btn" data-kind="slot" data-key="${slotKey}">詳細</button>
-            <button class="story-swap story-swap-btn" data-kind="slot" data-key="${slotKey}">入替</button>
-          </span>
+        <div class="story-slot">
+          ${slotKey} ${label} [コスト${option?.cost || 0}]
+          <button class="story-detail-btn" data-kind="slot" data-key="${slotKey}">詳細</button>
+          <button class="story-swap-btn" data-kind="slot" data-key="${slotKey}">入替</button>
+          ${isLiberalLab() ? `<button class="story-name-btn" data-kind="slot" data-key="${slotKey}">名前</button>` : ""}
         </div>
       `;
     }).join("");
-  }
+    }
 
     function renderOptionalRows() {
     const equipment1 = findStoryEquipmentOption(customizeState.equipment.equipment1);
@@ -733,26 +742,25 @@ function renderChapterSelect() {
       ${renderOptionalRow("equipment", "equipment1", "装備品1", equipment1, "story-equipment")}
       ${renderOptionalRow("equipment", "equipment2", "装備品2", equipment2, "story-equipment")}
       ${renderOptionalRow("skill", "skill", "スキル", skill, "story-skill")}
-      ${storySave.flags?.chapterBossUnlocked ? renderOptionalRow("companion", "companion", "同行機体", companion, "story-companion") : ""}
+            ${!isLiberalLab() && storySave.flags?.companionSystemUnlocked === true ? renderOptionalRow("companion", "companion", "同行機体", companion, "story-companion") : ""}
     `;
     }
 
-  function renderOptionalRow(kind, key, prefix, option, cls) {
+    function renderOptionalRow(kind, key, prefix, option, cls) {
     const hasDetail = option && option.id !== "none";
     const costText = option?.cost ? `[コスト${option.cost}]` : "";
+    const label = getCustomDisplayLabel(kind, key, option?.label || "なし");
 
     return `
-      <div class="story-row ${cls}">
-        <span class="story-label">${prefix} ${option?.label || "なし"}</span>
-        <span class="story-cost-text">${costText}</span>
-        <span class="story-buttons">
-          ${hasDetail ? `<button class="story-detail-btn" data-kind="${kind}" data-key="${key}">詳細</button>` : ""}
-          <button class="story-swap story-swap-btn" data-kind="${kind}" data-key="${key}">入替</button>
-        </span>
+      <div class="${cls}">
+        ${prefix} ${label} ${costText}
+        ${hasDetail ? `<button class="story-detail-btn" data-kind="${kind}" data-key="${key}">詳細</button>` : ""}
+        <button class="story-swap-btn" data-kind="${kind}" data-key="${key}">入替</button>
+        ${isLiberalLab() && kind !== "companion" ? `<button class="story-name-btn" data-kind="${kind}" data-key="${key}">名前</button>` : ""}
       </div>
     `;
-  }
-
+    }
+  
   function bindSwapButtons() {
     document.querySelectorAll(".story-swap-btn").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -769,6 +777,136 @@ function renderChapterSelect() {
     });
   }
 
+  function isLiberalLab() {
+    return storySave.activeCreateUnitId === "create_gundam_liberal";
+  }
+
+  function getLabUnitTitle() {
+    if (isLiberalLab()) {
+      return storySave.liberal?.customName || "クリエイトガンダムリベラル";
+    }
+
+    return PROTO_CREATE_BASE.unitName;
+  }
+
+  function getCustomDisplayLabel(kind, key, fallback) {
+    if (!isLiberalLab()) return fallback;
+    return storySave.liberal?.customLabels?.[kind]?.[key] || fallback;
+  }
+
+  function renderCreateUnitSwitchButtons() {
+    if (storySave.liberal?.unlocked !== true) return "";
+
+    return `
+      <div style="margin-bottom:12px;">
+        <button id="storyUseProtoBtn" ${isLiberalLab() ? "" : "disabled"}>プロトクリエイトガンダム</button>
+        <button id="storyUseLiberalBtn" ${isLiberalLab() ? "disabled" : ""}>クリエイトガンダムリベラル</button>
+      </div>
+    `;
+  }
+
+  function renderLiberalGaSelector() {
+    const gaUnits = storySave.liberal?.gaUnits || {};
+    const buttons = [
+      `<button class="story-ga-select-btn" data-ga-unit-id="none" ${storySave.liberal?.activeGaUnitId === "none" ? "disabled" : ""}>リベラル基本形態</button>`,
+      ...Object.values(gaUnits).map(info => `
+        <button class="story-ga-select-btn" data-ga-unit-id="${info.sourceUnitId}" ${storySave.liberal?.activeGaUnitId === info.sourceUnitId ? "disabled" : ""}>
+          ${info.displayName}
+        </button>
+      `)
+    ];
+
+    return `
+      <div style="margin-bottom:12px;">
+        <div>GAデータ</div>
+        ${buttons.join("")}
+      </div>
+    `;
+  }
+
+  function bindLiberalButtons() {
+    document.getElementById("storyUseProtoBtn")?.addEventListener("click", () => {
+      setActiveStoryCreateUnit("proto_create_gundam");
+      refreshStorySave();
+      renderCustomizeTutorial();
+    });
+
+    document.getElementById("storyUseLiberalBtn")?.addEventListener("click", () => {
+      setActiveStoryCreateUnit("create_gundam_liberal");
+      refreshStorySave();
+      renderCustomizeTutorial();
+    });
+
+    document.getElementById("storyUnitNameBtn")?.addEventListener("click", () => {
+      openNameModal("unit", "unitName", getLabUnitTitle());
+    });
+
+    document.querySelectorAll(".story-ga-select-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        setLiberalGaUnit(btn.dataset.gaUnitId || "none");
+        refreshStorySave();
+        renderCustomizeTutorial();
+      });
+    });
+  }
+
+  function bindNameButtons() {
+    document.querySelectorAll(".story-name-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const kind = btn.dataset.kind;
+        const key = btn.dataset.key;
+        const option = getCurrentOption(kind, key);
+        openNameModal(kind, key, getCustomDisplayLabel(kind, key, option?.label || option?.shortLabel || ""));
+      });
+    });
+  }
+
+  function openNameModal(kind, key, currentLabel) {
+    if (!isLiberalLab()) return;
+
+    const modal = document.createElement("div");
+    modal.className = "story-modal";
+    modal.innerHTML = `
+      <h3>名前変更</h3>
+      <input id="storyNameInput" value="${String(currentLabel || "").replace(/"/g, "&quot;")}" maxlength="30">
+      <button id="storyNameSaveBtn">保存</button>
+      <button id="storyNameResetBtn">初期名に戻す</button>
+      <button id="storyNameCloseBtn">閉じる</button>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector("#storyNameSaveBtn")?.addEventListener("click", () => {
+      const value = modal.querySelector("#storyNameInput")?.value || "";
+
+      if (kind === "unit") {
+        setLiberalCustomName(value);
+      } else {
+        setLiberalCustomLabel(kind, key, value);
+      }
+
+      modal.remove();
+      refreshStorySave();
+      renderCustomizeTutorial();
+    });
+
+    modal.querySelector("#storyNameResetBtn")?.addEventListener("click", () => {
+      if (kind === "unit") {
+        setLiberalCustomName("クリエイトガンダムリベラル");
+      } else {
+        setLiberalCustomLabel(kind, key, "");
+      }
+
+      modal.remove();
+      refreshStorySave();
+      renderCustomizeTutorial();
+    });
+
+    modal.querySelector("#storyNameCloseBtn")?.addEventListener("click", () => {
+      modal.remove();
+    });
+  }
+  
     function getCurrentOption(kind, key) {
     if (kind === "slot") return findStorySlotOption(key, customizeState.selectedSlots[key]);
     if (kind === "equipment") return findStoryEquipmentOption(customizeState.equipment[key]);
