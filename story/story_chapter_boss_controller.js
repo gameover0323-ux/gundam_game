@@ -126,7 +126,7 @@ export function createStoryChapterBossController(ctx) {
     saveStorySave(save);
   }
 
-  function startGundamBoss() {
+    function startGundamBoss() {
     const save = loadStorySave();
     const bossUnit = createCpuGundamBossUnit();
     const protoUnit = getStoryCreateUnit("proto_create_gundam");
@@ -135,7 +135,7 @@ export function createStoryChapterBossController(ctx) {
     const allyUnits = companionUnit ? [protoUnit, companionUnit] : [protoUnit];
 
     ctx.startStoryFreeBattle?.({
-      mode: companionUnit ? "2v2" : "1v1",
+      mode: companionUnit ? "2v1boss" : "1v1boss",
       allowModeSwitch: false,
       exitLabel: "チャプターボスを中断",
       allyUnits,
@@ -144,7 +144,7 @@ export function createStoryChapterBossController(ctx) {
       onLose: renderGundamBossDefeat,
       onCancel: () => ctx.renderStoryMainMenu?.()
     });
-  }
+    }
 
   function renderGundamBossDefeat() {
     const root = createRoot();
@@ -170,7 +170,7 @@ AI「うう…さすがガンダム、簡単には勝たせてくれませんね
       "AI「これで私たちはガンダムのデータを手に入れることができました！\nその甲斐があり、まだ不完全ですが、新しい機能を手に入れましたよ！」",
       "[クリエイトガンダムリベラル]が解禁されました。",
       "AI「その名も[クリエイトガンダムリベラル]！\nしかし、その名も、武器も、装備品も、姿形を変えて運用可能な機体なのです！」",
-      "AI「武装や装備品はプロトクリエイトガンダムの持つものをそのまま活かせますが、例えば機体の名前を変えて【マジ〇ガーZ】にしたり、【鉄〇2‪✕‬号】にしたり、武装名を【ロケットパ〇チ】に変えたりすることも可能です！」",
+      "AI「武装や装備品はプロトクリエイトガンダムの持つものをそのまま活かせますが、例えば機体の名前を変えて【マジ〇ガーZ】にしたり、【鉄〇2‪〇‬号】にしたり、武装名を【ロケットパ〇チ】に変えたりすることも可能です！」",
       "AI「しかも、この機体で倒した特別な機体を、元の性能のまま扱うことが可能です！そのためのGAデータを取得しましたので、クリエイトガンダムラボから確認してください！」",
       "AI「さて、私たちの目標はもっと先ですよ！とりあえず、まだ私たちでも勝てそうな機体たちを倒して力を蓄えましょう！」",
       "チャプター2クリア"
