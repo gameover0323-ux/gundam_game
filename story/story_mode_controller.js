@@ -31,6 +31,7 @@ import {
 
 import { createStoryChapter2Controller } from "./story_chapter2_controller.js";
 import { createStoryLearningBattleController } from "./story_learning_battle_controller.js";
+import { createStoryChapterBossController } from "./story_chapter_boss_controller.js";
 export function createStoryModeController(ctx) {
   const DEBUG_ROLES = new Set(["debug", "Ciel_debugger"]);
   const PROTO_UNIT_ID = "proto_create_gundam";
@@ -61,10 +62,15 @@ const chapter2Controller = createStoryChapter2Controller({
   showTitle: closeStoryModeToTitle
 });
 
-const storyLearningBattleController = createStoryLearningBattleController({
-  ...ctx,
-  renderStoryMainMenu
-});
+  const storyLearningBattleController = createStoryLearningBattleController({
+    ...ctx,
+    renderStoryMainMenu
+  });
+
+  const storyChapterBossController = createStoryChapterBossController({
+    ...ctx,
+    renderStoryMainMenu
+  });
   
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
@@ -239,28 +245,30 @@ function renderStoryMainMenu() {
   refreshStorySave();
 
   const root = document.getElementById("storyModeRoot") || createRoot();
-  const chapter2Cleared = storySave.flags?.chapter2Cleared === true;
+      const chapter2Cleared = storySave.flags?.chapter2Cleared === true;
+    const learningBattleUnlocked = storySave.flags?.learningBattleUnlocked === true || chapter2Cleared;
+    const chapterBossUnlocked = storySave.flags?.chapterBossUnlocked === true;
 
-  root.innerHTML = `
-    <h2>ストーリーモード</h2>
-    <button id="storyChapterSelectBtn">チャプターセレクト</button>
-    <button id="storyLabMenuBtn">クリエイトガンダムラボ</button>
-    ${chapter2Cleared ? `<button id="storyLearningBattleBtn">学習戦闘</button>` : ""}
-    ${chapter2Cleared ? `<button id="storyChapterBossBtn">チャプターボス</button>` : ""}
-    <button id="storyMenuCloseBtn">閉じる</button>
-  `;
+    root.innerHTML = `
+      <h2>ストーリーモード</h2>
+      <button id="storyChapterSelectBtn">チャプターセレクト</button>
+      <button id="storyLabMenuBtn">クリエイトガンダムラボ</button>
+      ${learningBattleUnlocked ? `<button id="storyLearningBattleBtn">学習戦闘</button>` : ""}
+      ${chapterBossUnlocked ? `<button id="storyChapterBossBtn">チャプターボス</button>` : ""}
+      <button id="storyMenuCloseBtn">閉じる</button>
+    `;
 
-  document.getElementById("storyChapterSelectBtn")?.addEventListener("click", renderChapterSelect);
-  document.getElementById("storyLabMenuBtn")?.addEventListener("click", renderNormalLab);
-  document.getElementById("storyMenuCloseBtn")?.addEventListener("click", closeStoryModeToTitle);
+    document.getElementById("storyChapterSelectBtn")?.addEventListener("click", renderChapterSelect);
+    document.getElementById("storyLabMenuBtn")?.addEventListener("click", renderNormalLab);
+    document.getElementById("storyMenuCloseBtn")?.addEventListener("click", closeStoryModeToTitle);
 
-  document.getElementById("storyLearningBattleBtn")?.addEventListener("click", () => {
-  storyLearningBattleController.renderLearningMenu();
-});
+    document.getElementById("storyLearningBattleBtn")?.addEventListener("click", () => {
+      storyLearningBattleController.renderLearningMenu();
+    });
 
-  document.getElementById("storyChapterBossBtn")?.addEventListener("click", () => {
-    ctx.showPopup?.("チャプターボス：ガンダム ☆☆ は後ほど実装します");
-  });
+    document.getElementById("storyChapterBossBtn")?.addEventListener("click", () => {
+      storyChapterBossController.startGundamBoss();
+    });
 }
 
 function renderChapterSelect() {
