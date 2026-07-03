@@ -238,12 +238,23 @@ const chapter2Controller = createStoryChapter2Controller({
     }, 3100);
   }
 
-  function closeStoryModeToTitle() {
+    function closeStoryModeToTitle() {
+    activeScene = null;
+    lineIndex = 0;
+    locked = false;
+
     clearStoryCreateUnitLabOverride(PROTO_UNIT_ID);
     clearStoryScreen();
-    ctx.showTitle?.();
-  }
 
+    if (typeof ctx.showTitle === "function") {
+      ctx.showTitle();
+    }
+
+    document.getElementById("battle")?.style.setProperty("display", "none");
+    document.getElementById("select")?.style.setProperty("display", "none");
+    document.getElementById("onlineRoom")?.style.setProperty("display", "none");
+    document.getElementById("title")?.style.setProperty("display", "block");
+    }
 function renderStoryMainMenu() {
   labMode = "normal";
   refreshStorySave();
