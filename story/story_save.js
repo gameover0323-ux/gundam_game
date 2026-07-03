@@ -49,10 +49,15 @@ export function createDefaultStorySave() {
       }
     },
     activeCreateUnitId: "proto_create_gundam",
-    liberal: {
+      liberal: {
       unlocked: false,
       activeGaUnitId: "none",
       customName: "クリエイトガンダムリベラル",
+      customLabels: {
+        slot: {},
+        equipment: {},
+        skill: {}
+      },
       gaUnits: {}
     },
     companionUnits: {}
@@ -128,6 +133,17 @@ export function normalizeStorySave(input) {
     liberal: {
       ...base.liberal,
       ...(src.liberal || {}),
+       customLabels: {
+        slot: src.liberal?.customLabels?.slot && typeof src.liberal.customLabels.slot === "object"
+          ? src.liberal.customLabels.slot
+          : {},
+        equipment: src.liberal?.customLabels?.equipment && typeof src.liberal.customLabels.equipment === "object"
+          ? src.liberal.customLabels.equipment
+          : {},
+        skill: src.liberal?.customLabels?.skill && typeof src.liberal.customLabels.skill === "object"
+          ? src.liberal.customLabels.skill
+          : {}
+      },
       gaUnits: src.liberal?.gaUnits && typeof src.liberal.gaUnits === "object"
         ? src.liberal.gaUnits
         : {}
@@ -278,6 +294,45 @@ export function setLiberalGaUnit(unitId) {
 
   if (unitId === "none" || save.liberal.gaUnits?.[unitId]?.unlocked === true) {
     save.liberal.activeGaUnitId = unitId;
+  }
+
+  saveStorySave(save);
+  return loadStorySave();
+}
+
+export function setLiberalCustomName(name) {
+  const save = loadStorySave();
+  const nextName = String(name || "").trim().slice(0, 30);
+
+  if (nextName) {
+    save.liberal.customName = nextName;
+  }
+
+  saveStorySave(save);
+  return loadStorySave();
+}
+
+export function setLiberalCustomLabel(kind, key, label) {
+  const save = loadStorySave();
+  const safeKind = String(kind || "");
+  const safeKey = String(key || "");
+  const safeLabel = String(label || "").trim().slice(0, 30);
+
+  if (!["slot", "equipment", "skill"].includes(safeKind)) return save;
+  if (!safeKey) return save;
+
+  if (!save.liberal.customLabels) {
+    save.liberal.customLabels = { slot: {}, equipment: {}, skill: {} };
+  }
+
+  if (!save.liberal.customLabels[safeKind]) {
+    save.liberal.customLabels[safeKind] = {};
+  }
+
+  if (safeLabel) {
+    save.liberal.customLabels[safeKind][safeKey] = safeLabel;
+  } else {
+    delete save.liberal.customLabels[safeKind][safeKey];
   }
 
   saveStorySave(save);
