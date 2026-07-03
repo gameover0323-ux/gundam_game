@@ -1,6 +1,3 @@
-// story/story_learning_battle_controller.js
-// 全置換
-
 import { getStoryCreateUnit } from "./story_units.js";
 import {
   loadStorySave,
