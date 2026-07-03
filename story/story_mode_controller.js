@@ -593,13 +593,18 @@ function renderChapterSelect() {
           margin-bottom: 8px;
         }
 
-        #storyCustomizePanel .story-row {
+             #storyCustomizePanel .story-row,
+        #storyCustomizePanel .story-slot,
+        #storyCustomizePanel .story-equipment,
+        #storyCustomizePanel .story-skill,
+        #storyCustomizePanel .story-companion {
           display: grid;
-          grid-template-columns: 1fr auto auto;
+          grid-template-columns: 1fr auto auto auto;
           align-items: center;
           gap: 8px;
           width: 100%;
           margin: 8px 0;
+          text-align: left;
         }
 
         #storyCustomizePanel .story-label {
@@ -747,7 +752,8 @@ function renderChapterSelect() {
 
       return `
         <div class="story-slot">
-          ${slotKey} ${label} [コスト${option?.cost || 0}]
+          <span>${label}</span>
+          <span>[コスト${option?.cost || 0}]</span>
           <button class="story-detail-btn" data-kind="slot" data-key="${slotKey}">詳細</button>
           <button class="story-swap-btn" data-kind="slot" data-key="${slotKey}">入替</button>
           ${isLiberalLab() ? `<button class="story-name-btn" data-kind="slot" data-key="${slotKey}">名前</button>` : ""}
@@ -777,7 +783,8 @@ function renderChapterSelect() {
 
     return `
       <div class="${cls}">
-        ${prefix} ${label} ${costText}
+              <span>${prefix} ${label}</span>
+        <span>${costText}</span>
         ${hasDetail ? `<button class="story-detail-btn" data-kind="${kind}" data-key="${key}">詳細</button>` : ""}
         <button class="story-swap-btn" data-kind="${kind}" data-key="${key}">入替</button>
         ${isLiberalLab() && kind !== "companion" ? `<button class="story-name-btn" data-kind="${kind}" data-key="${key}">名前</button>` : ""}
