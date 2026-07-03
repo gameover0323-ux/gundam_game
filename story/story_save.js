@@ -48,6 +48,13 @@ export function createDefaultStorySave() {
         lab: createInitialProtoCreateLabState()
       }
     },
+    activeCreateUnitId: "proto_create_gundam",
+    liberal: {
+      unlocked: false,
+      activeGaUnitId: "none",
+      customName: "クリエイトガンダムリベラル",
+      gaUnits: {}
+    },
     companionUnits: {}
   };
 }
@@ -97,20 +104,42 @@ export function normalizeStorySave(input) {
   const save = {
     ...base,
     ...src,
-    progress: { ...base.progress, ...(src.progress || {}) },
-    flags: { ...base.flags, ...(src.flags || {}) },
+    progress: {
+      ...base.progress,
+      ...(src.progress || {})
+    },
+    flags: {
+      ...base.flags,
+      ...(src.flags || {})
+    },
     inventory: {
       slots: Array.isArray(src.inventory?.slots) ? src.inventory.slots : base.inventory.slots,
       equipments: Array.isArray(src.inventory?.equipments) ? src.inventory.equipments : base.inventory.equipments,
       skills: Array.isArray(src.inventory?.skills) ? src.inventory.skills : base.inventory.skills,
-      storyDrops:
-        src.inventory?.storyDrops && typeof src.inventory.storyDrops === "object"
-          ? src.inventory.storyDrops
-          : {}
+      storyDrops: src.inventory?.storyDrops && typeof src.inventory.storyDrops === "object"
+        ? src.inventory.storyDrops
+        : {}
     },
-    createUnits: { ...base.createUnits, ...(src.createUnits || {}) },
-    companionUnits: { ...(src.companionUnits || {}) }
+    createUnits: {
+      ...base.createUnits,
+      ...(src.createUnits || {})
+    },
+    activeCreateUnitId: src.activeCreateUnitId || "proto_create_gundam",
+    liberal: {
+      ...base.liberal,
+      ...(src.liberal || {}),
+      gaUnits: src.liberal?.gaUnits && typeof src.liberal.gaUnits === "object"
+        ? src.liberal.gaUnits
+        : {}
+    },
+    companionUnits: {
+      ...(src.companionUnits || {})
+    }
   };
+
+  if (save.flags.createGundamLiberalUnlocked === true) {
+    save.liberal.unlocked = true;
+  }
 
   if (!save.createUnits.proto_create_gundam) {
     save.createUnits.proto_create_gundam = deepClone(base.createUnits.proto_create_gundam);
@@ -120,6 +149,14 @@ export function normalizeStorySave(input) {
   if (!proto.lab) proto.lab = createInitialProtoCreateLabState();
   if (typeof proto.totalExp !== "number") proto.totalExp = 0;
   if (!proto.lab.companion) proto.lab.companion = "none";
+
+  if (save.activeCreateUnitId !== "create_gundam_liberal") {
+    save.activeCreateUnitId = "proto_create_gundam";
+  }
+
+  if (save.liberal.unlocked !== true) {
+    save.activeCreateUnitId = "proto_create_gundam";
+  }
 
   Object.keys(save.companionUnits || {}).forEach(unitId => {
     const unit = save.companionUnits[unitId] || {};
@@ -149,7 +186,7 @@ export function getProtoCreateMaxCost(save = loadStorySave()) {
 export function getStoryUnitTotalExp(unitId, save = loadStorySave()) {
   const normalized = normalizeStorySave(save);
 
-  if (unitId === "proto_create_gundam") {
+  if (unitId === "proto_create_gundam" || unitId === "create_gundam_liberal") {
     return Number(normalized.createUnits.proto_create_gundam.totalExp || 0);
   }
 
@@ -173,18 +210,13 @@ export function addStoryUnitExp(unitId, amount) {
   const save = loadStorySave();
   const add = Math.max(0, Math.floor(Number(amount || 0)));
 
-  if (unitId === "proto_create_gundam") {
+  if (unitId === "proto_create_gundam" || unitId === "create_gundam_liberal") {
     save.createUnits.proto_create_gundam.totalExp =
       Math.max(0, Number(save.createUnits.proto_create_gundam.totalExp || 0) + add);
   } else {
     if (!save.companionUnits[unitId]) {
-      save.companionUnits[unitId] = {
-        unlocked: false,
-        cost: 0,
-        totalExp: 0
-      };
+      save.companionUnits[unitId] = { unlocked: false, cost: 0, totalExp: 0 };
     }
-
     save.companionUnits[unitId].totalExp =
       Math.max(0, Number(save.companionUnits[unitId].totalExp || 0) + add);
   }
@@ -206,6 +238,47 @@ export function unlockStoryCompanionUnit(unitId, cost = 0) {
     cost: Number(cost || save.companionUnits[unitId]?.cost || 0),
     totalExp: Number(save.companionUnits[unitId]?.totalExp || 0)
   };
+
+  saveStorySave(save);
+  return loadStorySave();
+}
+
+export function unlockStoryGaUnit(unit) {
+  if (!unit?.id) return loadStorySave();
+
+  const save = loadStorySave();
+  save.liberal.unlocked = true;
+  save.flags.createGundamLiberalUnlocked = true;
+  save.flags.gaBattleUnlocked = true;
+  save.liberal.gaUnits[unit.id] = {
+    unlocked: true,
+    sourceUnitId: unit.id,
+    displayName: unit.name || unit.id
+  };
+
+  saveStorySave(save);
+  return loadStorySave();
+}
+
+export function setActiveStoryCreateUnit(unitId) {
+  const save = loadStorySave();
+
+  if (unitId === "create_gundam_liberal" && save.liberal.unlocked === true) {
+    save.activeCreateUnitId = "create_gundam_liberal";
+  } else {
+    save.activeCreateUnitId = "proto_create_gundam";
+  }
+
+  saveStorySave(save);
+  return loadStorySave();
+}
+
+export function setLiberalGaUnit(unitId) {
+  const save = loadStorySave();
+
+  if (unitId === "none" || save.liberal.gaUnits?.[unitId]?.unlocked === true) {
+    save.liberal.activeGaUnitId = unitId;
+  }
 
   saveStorySave(save);
   return loadStorySave();
@@ -234,6 +307,7 @@ export function updateProtoCreateLabState(updater) {
   const unit = save.createUnits.proto_create_gundam;
   const currentLab = unit.lab || createInitialProtoCreateLabState();
   const nextLab = typeof updater === "function" ? updater(deepClone(currentLab)) : updater;
+
   unit.lab = nextLab || currentLab;
   saveStorySave(save);
   return loadStorySave();
