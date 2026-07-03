@@ -558,29 +558,43 @@ function renderFreeModeSelect() {
     document.getElementById("storyFree2v2Btn")?.addEventListener("click", renderFreeTwoOnTwo);
     document.getElementById("storyChapter1EndBtn")?.addEventListener("click", clearChapter1);
 }
-  function renderFreeTrainingButtons() {
+    function renderFreeTrainingButtons() {
     removeTutorialFloatingUi();
 
     if (typeof ctx.startStoryFreeBattle === "function") {
-      ctx.startStoryFreeBattle("1v1", { onEnd: clearChapter1 });
+      ctx.startStoryFreeBattle({
+        mode: "1v1",
+        allowModeSwitch: false,
+        exitLabel: "フリー演習を中断",
+        onWin: renderFreeModeSelect,
+        onLose: renderFreeModeSelect,
+        onCancel: renderFreeModeSelect
+      });
       return;
     }
 
     battleEngine.renderOneOnOneTraining({ root: getRoot(), free: true });
     battleEngine.setLog("フリー演習です。");
-  }
+    }
 
-  function renderFreeTwoOnTwo() {
+    function renderFreeTwoOnTwo() {
     removeTutorialFloatingUi();
 
     if (typeof ctx.startStoryFreeBattle === "function") {
-      ctx.startStoryFreeBattle("2v2", { onEnd: clearChapter1 });
+      ctx.startStoryFreeBattle({
+        mode: "2v2",
+        allowModeSwitch: false,
+        exitLabel: "2on2フリー演習を中断",
+        onWin: renderFreeModeSelect,
+        onLose: renderFreeModeSelect,
+        onCancel: renderFreeModeSelect
+      });
       return;
     }
 
     battleEngine.renderTwoOnTwoTraining({ root: getRoot(), free: true });
     battleEngine.setLog("2on2フリー演習です。");
-  }
+    }
 
   function clearChapter1() {
   removeTutorialFloatingUi();
