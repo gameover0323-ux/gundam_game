@@ -127,11 +127,7 @@ const chapter2Controller = createStoryChapter2Controller({
   }
 
   function canUseStoryMode() {
-    const role = ctx.getPlayerProfile?.()?.role;
-    if (DEBUG_ROLES.has(role)) return true;
-
-    const summaryText = document.getElementById("playerCardSummary")?.textContent || "";
-    return summaryText.includes("権限：debug") || summaryText.includes("権限：Ciel_debugger");
+    return true;
   }
 
   function updateStartButtonVisibility() {
