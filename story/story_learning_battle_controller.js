@@ -448,7 +448,7 @@ GA戦闘はクリエイトガンダムリベラル専用です。
     const battleEnemyUnits = [enemy];
 
     ctx.startStoryFreeBattle?.({
-      mode: companionUnit ? "2v2" : "1v1",
+            mode: companionUnit ? "2v1boss" : "1v1",
       allowModeSwitch: false,
       exitLabel: "単体学習を中断",
       allyUnits: battlePlayerUnits,
