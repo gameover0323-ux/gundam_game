@@ -7,10 +7,13 @@ import {
 import { createStoryResultController } from "./story_result_controller.js";
 
 import { gundam_mc } from "../js/js_units_gundam_mc.js";
+
 import { story_zaku_ii_gene } from "../js/js_units_story_zaku_ii_gene.js";
 import { story_zaku_ii_denim } from "../js/js_units_story_zaku_ii_denim.js";
 import { story_ball } from "../js/js_units_story_ball.js";
 import { story_gm } from "../js/js_units_story_gm.js";
+
+import { cpuList } from "../js/js_units_index.js";
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -34,6 +37,7 @@ const cpu_gundam_mc = createCpuGundamUnit();
 
 const STORY_UNIT_MAP = {
   proto_create_gundam: null,
+  create_gundam_liberal: null,
   cpu_gundam_mc,
   story_zaku_ii_gene,
   story_zaku_ii_denim,
@@ -71,7 +75,12 @@ export function createStoryLearningBattleController(ctx) {
 
   function getUnitById(unitId) {
     if (unitId === "proto_create_gundam") return getStoryCreateUnit("proto_create_gundam");
-    return STORY_UNIT_MAP[unitId] || null;
+    if (unitId === "create_gundam_liberal") return getStoryCreateUnit("create_gundam_liberal");
+
+    const storyUnit = STORY_UNIT_MAP[unitId];
+    if (storyUnit) return storyUnit;
+
+    return cpuList.find(unit => unit.id === unitId) || null;
   }
 
   function getUnitLabel(unit) {
@@ -81,7 +90,7 @@ export function createStoryLearningBattleController(ctx) {
   }
 
   function canUseLiberal(save = loadStorySave()) {
-    return save.flags?.createGundamLiberalUnlocked === true;
+    return save.liberal?.unlocked === true || save.flags?.createGundamLiberalUnlocked === true;
   }
 
   function buildAvailablePlayerUnits() {
@@ -119,7 +128,12 @@ export function createStoryLearningBattleController(ctx) {
     return units;
   }
 
+  function buildAvailableGaEnemyUnits() {
+    return cpuList;
+  }
+
   function getCurrentList() {
+    if (learningMode === "ga") return buildAvailableGaEnemyUnits();
     return selectingSide === "A" ? buildAvailablePlayerUnits() : buildAvailableEnemyUnits();
   }
 
@@ -137,6 +151,10 @@ export function createStoryLearningBattleController(ctx) {
   }
 
   function getSideLabel(side = selectingSide) {
+    if (learningMode === "ga") {
+      return side === "A" ? "クリエイトガンダムリベラル" : "GA戦闘CPU";
+    }
+
     if (side === "A") return learningMode === "companion" ? "PLAYER A チーム" : "PLAYER A";
     return learningMode === "companion" ? "CPUチーム" : "CPU";
   }
@@ -146,7 +164,7 @@ export function createStoryLearningBattleController(ctx) {
     if (!root) return;
 
     const save = loadStorySave();
-    const gaUnlocked = save.flags?.gaBattleUnlocked === true;
+    const gaUnlocked = save.flags?.gaBattleUnlocked === true || save.liberal?.unlocked === true;
 
     root.style.justifyContent = "center";
     root.style.overflowY = "auto";
@@ -184,10 +202,17 @@ export function createStoryLearningBattleController(ctx) {
   }
 
   function renderGaBattleSelect() {
+    const liberalUnit = getStoryCreateUnit("create_gundam_liberal");
+
+    if (!liberalUnit) {
+      ctx.showPopup?.("クリエイトガンダムリベラルが未解禁です");
+      return;
+    }
+
     learningMode = "ga";
     selectingSide = "B";
     pendingUnit = null;
-    selectedA = [getStoryCreateUnit("proto_create_gundam")];
+    selectedA = [liberalUnit];
     selectedB = [];
     renderLearningSelect();
   }
@@ -213,7 +238,8 @@ ${buildPreviewText()}
       </div>
 
       ${renderUnitSection(selectingSide === "A" ? "プレイヤー側候補" : "CPU側候補", currentList)}
-      ${selectingSide === "A" ? renderLiberalButton() : ""}
+      ${selectingSide === "A" && learningMode !== "ga" ? renderLiberalButton() : ""}
+      ${learningMode === "ga" ? renderGaNotice() : ""}
 
       <div style="margin:12px 0;">
         ${pendingUnit ? getPendingLabel() : ""}
@@ -295,6 +321,15 @@ ${buildPreviewText()}
     `;
   }
 
+  function renderGaNotice() {
+    return `
+      <div style="margin:12px 0;white-space:pre-wrap;line-height:1.6;">
+GA戦闘はクリエイトガンダムリベラル単騎専用です。
+勝利すると、倒したCPU機体に対応するプレイアブル機体のGAデータを取得します。
+      </div>
+    `;
+  }
+
   function renderLiberalButton() {
     const save = loadStorySave();
 
@@ -312,7 +347,7 @@ ${buildPreviewText()}
         <div>解禁済</div>
         <button disabled>クリエイトガンダムリベラル</button>
         <div style="font-size:12px;opacity:0.8;">
-          クリエイトガンダムリベラルの本体切替・名称変更・GA変化はラボ側実装で使用します。
+          クリエイトガンダムリベラルはGA戦闘専用です。同行学習・通常学習の同行機体には選択できません。
         </div>
       </div>
     `;
@@ -334,7 +369,7 @@ ${buildPreviewText()}
     const requiredCount = getRequiredCount();
 
     const aText = selectedA.length
-      ? `${getSideLabel("A")}: ${selectedA.map(getUnitLabel).join(" / ")}`
+      ? `${getSideLabel("A")}: ${selectedA.map(unit => learningMode === "ga" ? unit.name : getUnitLabel(unit)).join(" / ")}`
       : `${getSideLabel("A")}: 未選択`;
 
     const bText = selectedB.length
@@ -436,15 +471,20 @@ ${buildPreviewText()}
   }
 
   function startGaBattle() {
+    const liberalUnit = selectedA[0];
     const enemy = selectedB[0];
+
+    if (!liberalUnit || liberalUnit.id !== "create_gundam_liberal") {
+      ctx.showPopup?.("GA戦闘はクリエイトガンダムリベラル単騎専用です");
+      return;
+    }
 
     if (!enemy) {
       ctx.showPopup?.("GA戦闘に必要な相手機体が選択されていません");
       return;
     }
 
-    const playerUnit = getStoryCreateUnit("proto_create_gundam");
-    const battlePlayerUnit = decorateStoryBattleUnit(playerUnit);
+    const battlePlayerUnit = decorateStoryBattleUnit(liberalUnit);
     const battleEnemyUnits = [enemy];
 
     ctx.startStoryFreeBattle?.({
@@ -453,8 +493,8 @@ ${buildPreviewText()}
       exitLabel: "GA戦闘を中断",
       allyUnits: [battlePlayerUnit],
       enemyUnits: battleEnemyUnits,
-      onWin: winner => renderLearningResult(winner, [playerUnit], battleEnemyUnits),
-      onLose: winner => renderLearningResult(winner, [playerUnit], battleEnemyUnits),
+      onWin: winner => renderLearningResult(winner, [liberalUnit], battleEnemyUnits),
+      onLose: winner => renderLearningResult(winner, [liberalUnit], battleEnemyUnits),
       onCancel: () => ctx.renderStoryMainMenu?.()
     });
   }
