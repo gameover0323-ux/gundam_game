@@ -93,7 +93,7 @@ export function createStoryResultController(ctx) {
         dropText = `${drop.sourceUnitName}：${drop.label}`;
       }
 
-      if (learningMode === "companion") {
+           if (learningMode === "single" || learningMode === "companion") {
         const unlocked = [];
 
         enemyUnits.forEach(unit => {
