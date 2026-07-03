@@ -21,6 +21,28 @@ export function createStoryChapter1Controller(ctx) {
     return document.getElementById("storyModeRoot");
   }
 
+  function ensureRoot() {
+    let root = document.getElementById("storyModeRoot");
+    if (root) return root;
+
+    root = document.createElement("div");
+    root.id = "storyModeRoot";
+    root.style.position = "fixed";
+    root.style.inset = "0";
+    root.style.zIndex = "20000";
+    root.style.background = "black";
+    root.style.color = "white";
+    root.style.display = "flex";
+    root.style.flexDirection = "column";
+    root.style.alignItems = "center";
+    root.style.justifyContent = "center";
+    root.style.padding = "16px";
+    root.style.boxSizing = "border-box";
+    document.body.appendChild(root);
+
+    return root;
+  }
+  
   function clearHighlight() {
   battleEngine.clearHighlight();
   currentHighlight = null;
@@ -543,8 +565,7 @@ function setHighlight(selector) {
 function renderFreeModeSelect() {
     removeTutorialFloatingUi();
 
-    const root = getRoot();
-    if (!root) return;
+        const root = ensureRoot();
 
     root.innerHTML = `
       <div style="width:min(720px,96vw);border:1px solid white;background:black;color:white;padding:16px;line-height:1.8;text-align:center;">
