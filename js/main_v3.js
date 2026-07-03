@@ -1262,18 +1262,21 @@ function startStoryFreeBattle(modeOrConfig = "1v1", maybeOptions = {}) {
     ? config.enemyUnits
     : [defaultTraining1, defaultTraining2];
 
- if (mode === "2v2") {
+ if (mode === "2v1boss") {
+  battleMode = "challenge2v2";
+  battleInitController.initChallenge2v2(allyUnits, [enemyUnits[0]]);
+} else if (mode === "2v2") {
   battleMode = "vscpu2v2";
-
-  if (!enemyUnits[1]) {
-    battleInitController.initChallenge2v2(allyUnits, [enemyUnits[0]]);
-  } else {
-    init2v2(allyUnits, enemyUnits);
-  }
+  init2v2(allyUnits, enemyUnits);
+} else if (mode === "1v1boss") {
+  battleMode = "challenge1v1";
+  battleInitController.initChallenge1v1(allyUnits[0], enemyUnits[0]);
 } else {
   battleMode = "vscpu1v1";
   battleInitController.init1v1(allyUnits[0], enemyUnits[0]);
 }
+
+  showScreen("battle");
 
   const buttonWrap = document.createElement("div");
   buttonWrap.id = "storyFreeBattleButtons";
