@@ -221,6 +221,7 @@ const chapter2Controller = createStoryChapter2Controller({
     }
 
     labMode = "normal";
+    setStorySavePersistenceEnabled(!!ctx.getPlayerProfile?.());
     refreshStorySave();
     createRoot();
 
