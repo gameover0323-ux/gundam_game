@@ -26,6 +26,7 @@ import {
   setActiveStoryCreateUnit,
   setLiberalGaUnit,
   setLiberalCustomName,
+  setStorySavePersistenceEnabled,
   setLiberalCustomLabel
 } from "./story_save.js";
 
