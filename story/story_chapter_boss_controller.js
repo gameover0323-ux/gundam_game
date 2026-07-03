@@ -2,9 +2,21 @@ import { getStoryCreateUnit } from "./story_units.js";
 import { loadStorySave, saveStorySave } from "./story_save.js";
 import { gundam_mc } from "../js/js_units_gundam_mc.js";
 
+import { story_zaku_ii_gene } from "../js/js_units_story_zaku_ii_gene.js";
+import { story_zaku_ii_denim } from "../js/js_units_story_zaku_ii_denim.js";
+import { story_ball } from "../js/js_units_story_ball.js";
+import { story_gm } from "../js/js_units_story_gm.js";
+
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
+
+const STORY_COMPANION_UNIT_MAP = {
+  story_zaku_ii_gene,
+  story_zaku_ii_denim,
+  story_ball,
+  story_gm
+};
 
 function createCpuGundamBossUnit() {
   const unit = clone(gundam_mc);
@@ -19,6 +31,15 @@ function createCpuGundamBossUnit() {
   });
 
   return unit;
+}
+
+function getSelectedCompanionUnit(save) {
+  const companionId = save.createUnits?.proto_create_gundam?.lab?.companion || "none";
+  if (companionId === "none") return null;
+  if (save.companionUnits?.[companionId]?.unlocked !== true) return null;
+
+  const unit = STORY_COMPANION_UNIT_MAP[companionId];
+  return unit ? clone(unit) : null;
 }
 
 export function createStoryChapterBossController(ctx) {
@@ -84,8 +105,19 @@ export function createStoryChapterBossController(ctx) {
     save.flags.createGundamLiberalUnlocked = true;
     save.flags.createGundamLiberalLabUnlocked = true;
 
-    if (!save.gaUnits) save.gaUnits = {};
-    save.gaUnits.cpu_gundam_mc = {
+    if (!save.liberal) {
+      save.liberal = {
+        unlocked: false,
+        activeGaUnitId: "none",
+        customName: "クリエイトガンダムリベラル",
+        customLabels: { slot: {}, equipment: {}, skill: {} },
+        gaUnits: {}
+      };
+    }
+
+    save.liberal.unlocked = true;
+    if (!save.liberal.gaUnits) save.liberal.gaUnits = {};
+    save.liberal.gaUnits.cpu_gundam_mc = {
       unlocked: true,
       sourceUnitId: "cpu_gundam_mc",
       displayName: "ガンダム"
@@ -95,13 +127,18 @@ export function createStoryChapterBossController(ctx) {
   }
 
   function startGundamBoss() {
+    const save = loadStorySave();
     const bossUnit = createCpuGundamBossUnit();
+    const protoUnit = getStoryCreateUnit("proto_create_gundam");
+    const companionUnit = getSelectedCompanionUnit(save);
+
+    const allyUnits = companionUnit ? [protoUnit, companionUnit] : [protoUnit];
 
     ctx.startStoryFreeBattle?.({
-      mode: "1v1",
+      mode: companionUnit ? "2v2" : "1v1",
       allowModeSwitch: false,
       exitLabel: "チャプターボスを中断",
-      allyUnits: [getStoryCreateUnit("proto_create_gundam")],
+      allyUnits,
       enemyUnits: [bossUnit],
       onWin: renderGundamBossVictory,
       onLose: renderGundamBossDefeat,
