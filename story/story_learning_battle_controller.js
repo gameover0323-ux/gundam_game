@@ -14,6 +14,7 @@ import { story_ball } from "../js/js_units_story_ball.js";
 import { story_gm } from "../js/js_units_story_gm.js";
 
 import { cpuList } from "../js/js_units_index.js";
+import { metal_chikamochi } from "../js/js_units_metal_chikamochi.js";
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -61,6 +62,41 @@ export function createStoryLearningBattleController(ctx) {
     return JSON.parse(JSON.stringify(unit));
   }
 
+  function isMochiEnabled() {
+    return localStorage.getItem("gbs_mochi_enabled") === "true";
+  }
+
+  function shouldMetalChikamochiAppear() {
+    if (learningMode !== "single") return false;
+    if (!isMochiEnabled()) return false;
+    return Math.random() < 0.05;
+  }
+
+  function askMetalChikamochiEncounter(onYes, onNo) {
+    const root = getRoot();
+    if (!root) {
+      onNo?.();
+      return;
+    }
+
+    root.innerHTML = `
+      <div style="width:min(720px,96vw);border:1px solid white;background:black;color:white;padding:16px;line-height:1.8;text-align:center;">
+        <h2>メタルちかもちを見つけた！</h2>
+        <p>近づきますか？</p>
+        <button id="storyMetalChikamochiYesBtn">はい</button>
+        <button id="storyMetalChikamochiNoBtn">いいえ</button>
+      </div>
+    `;
+
+    document.getElementById("storyMetalChikamochiYesBtn")?.addEventListener("click", () => {
+      onYes?.();
+    });
+
+    document.getElementById("storyMetalChikamochiNoBtn")?.addEventListener("click", () => {
+      onNo?.();
+    });
+  }
+  
   function decorateStoryBattleUnit(unit) {
     const cloned = cloneUnit(unit);
     const levelUnitId =
@@ -425,7 +461,7 @@ GA戦闘はクリエイトガンダムリベラル専用です。
     });
   }
 
-  function startSingleLearning() {
+    function startSingleLearning() {
     const ally = selectedA[0];
     const enemy = selectedB[0];
 
@@ -434,6 +470,18 @@ GA戦闘はクリエイトガンダムリベラル専用です。
       return;
     }
 
+    if (shouldMetalChikamochiAppear()) {
+      askMetalChikamochiEncounter(
+        () => startSingleLearningBattle(ally, metal_chikamochi),
+        () => startSingleLearningBattle(ally, enemy)
+      );
+      return;
+    }
+
+    startSingleLearningBattle(ally, enemy);
+  }
+
+  function startSingleLearningBattle(ally, enemy) {
     const save = loadStorySave();
     const companionId = save.createUnits?.proto_create_gundam?.lab?.companion || "none";
     const canUseCompanion =
@@ -448,9 +496,9 @@ GA戦闘はクリエイトガンダムリベラル専用です。
     const battleEnemyUnits = [enemy];
 
     ctx.startStoryFreeBattle?.({
-            mode: companionUnit ? "2v1boss" : "1v1",
+      mode: companionUnit ? "2v1boss" : "1v1",
       allowModeSwitch: false,
-      exitLabel: "単体学習を中断",
+      exitLabel: enemy?.id === "metal_chikamochi" ? "メタルちかもち戦を中断" : "単体学習を中断",
       allyUnits: battlePlayerUnits,
       enemyUnits: battleEnemyUnits,
       onWin: winner => renderLearningResult(winner, playerUnits, battleEnemyUnits),
