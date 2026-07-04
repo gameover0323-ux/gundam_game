@@ -454,6 +454,14 @@ import {
   onProtoCreateResolveChoice
 } from "./js_unit_rules_proto_create_gundam.js";
 
+import {
+  getMetalChikamochiDerivedState,
+  onMetalChikamochiBeforeSlot,
+  onMetalChikamochiAfterSlotResolved,
+  onMetalChikamochiResolveChoice,
+  modifyMetalChikamochiTakenDamage
+} from "./js_unit_rules_metal_chikamochi.js";
+
 
 import {
   getStoryGundamDerivedState,
@@ -535,6 +543,15 @@ export const unitRulesMap = {
   proto_create_gundam: protoCreateRules,
   create_gundam_liberal: protoCreateRules,
 
+metal_chikamochi: {
+  getDerivedState: getMetalChikamochiDerivedState,
+  onBeforeSlot: onMetalChikamochiBeforeSlot,
+  onAfterSlotResolved: onMetalChikamochiAfterSlotResolved,
+  modifyTakenDamage: modifyMetalChikamochiTakenDamage,
+  onResolveChoice: onMetalChikamochiResolveChoice
+},
+
+  
 story_gundam: {
   getDerivedState: getStoryGundamDerivedState,
   canUseSpecial: canUseStoryGundamSpecial,
