@@ -125,11 +125,10 @@ export function createStoryLearningBattleController(ctx) {
 
   function getUnitLabel(unit) {
     if (!unit) return "";
-    const levelUnitId =
-      unit.id === "create_gundam_liberal"
+      const levelUnitId =
+      unit.id === "create_gundam_liberal" || unit.storyLiberal === true
         ? "create_gundam_liberal"
         : unit.id;
-
     const info = getStoryUnitLevelInfo(levelUnitId);
     return `${unit.name} Lv${info.level}`;
   }
@@ -363,11 +362,18 @@ ${buildPreviewText()}
     return `
       <div>
         <h3>${title}</h3>
-        ${units.map(unit => `
-          <button class="story-learning-unit-btn" data-unit-id="${unit.id}">
-            ${selectingSide === "A" ? getUnitLabel(unit) : unit.name}
-          </button>
-        `).join("")}
+             ${units.map(unit => {
+          const selectId =
+            selectingSide === "A" && unit.storyLiberal === true
+              ? "create_gundam_liberal"
+              : unit.id;
+
+          return `
+            <button class="story-learning-unit-btn" data-unit-id="${selectId}">
+              ${selectingSide === "A" ? getUnitLabel(unit) : unit.name}
+            </button>
+          `;
+        }).join("")}
       </div>
     `;
   }
@@ -537,7 +543,10 @@ GA戦闘はクリエイトガンダムリベラル専用です。
     const liberalUnit = selectedA[0];
     const enemy = selectedB[0];
 
-    if (!liberalUnit || liberalUnit.id !== "create_gundam_liberal") {
+       if (
+      !liberalUnit ||
+      (liberalUnit.id !== "create_gundam_liberal" && liberalUnit.storyLiberal !== true)
+    ) {
       ctx.showPopup?.("GA戦闘はクリエイトガンダムリベラル単騎専用です");
       return;
     }
