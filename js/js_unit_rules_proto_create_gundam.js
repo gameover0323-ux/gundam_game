@@ -1,6 +1,13 @@
 import { reduceEvade } from "./js_unit_runtime.js";
 import { createAttack } from "./js_battle_system.js";
 
+import {
+  getStoryDropDerivedStatus,
+  canUseStoryDropSpecial,
+  executeStoryDropSpecial,
+  modifyStoryDropTakenDamage
+} from "../story/story_drop_effect_runtime.js";
+
 const SLOT_KEYS = ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"];
 
 function ensureProtoCreateState(state) {
@@ -165,13 +172,11 @@ export function getProtoCreateDerivedState(state) {
     });
   }
   
-  if (state.storyEnergyAdjustStacks !== 0) {
-    result.status.push({
-      text: `EN調整:${state.storyEnergyAdjustStacks}`,
-      color: "#ffcc66",
-      bold: true
-    });
+    if (state.storyEnergyAdjustStacks !== 0) {
+    result.status.push({ text: `EN調整:${state.storyEnergyAdjustStacks}`, color: "#ffcc66", bold: true });
   }
+
+  result.status.push(...getStoryDropDerivedStatus(state));
 
   SLOT_KEYS.forEach(slotKey => {
     const slot = state.slots?.[slotKey];
@@ -229,6 +234,9 @@ export function canUseProtoCreateSpecial(state, specialKey) {
   }
 
   if (special.effectType === "story_equipment_1" || special.effectType === "story_equipment_2") {
+    const dropSpecialResult = canUseStoryDropSpecial(state, special);
+    if (dropSpecialResult) return dropSpecialResult;
+
     if (!String(special.name || "").includes("シールド")) {
       return { allowed: false, message: "装備品がありません" };
     }
@@ -320,7 +328,10 @@ return {
     };
   }
 
-  if (special.effectType === "story_equipment_1" || special.effectType === "story_equipment_2") {
+   if (special.effectType === "story_equipment_1" || special.effectType === "story_equipment_2") {
+    const dropSpecialResult = executeStoryDropSpecial(state, special);
+    if (dropSpecialResult) return dropSpecialResult;
+
     if (!String(special.name || "").includes("シールド")) {
       return { handled: true, redraw: false, message: "装備品がありません" };
     }
@@ -329,22 +340,13 @@ return {
       return { handled: true, redraw: false, message: "シールド残数がありません" };
     }
 
-  if (state.storyShieldActive) {
-  return {
-    handled: true,
-    redraw: false,
-    message: "シールドは既に展開中"
-  };
-}
+    if (state.storyShieldActive) {
+      return { handled: true, redraw: false, message: "シールドは既に展開中" };
+    }
 
-state.storyShieldUses -= 1;
-state.storyShieldActive = true;
-
-return {
-  handled: true,
-  redraw: true,
-  message: `${state.name} シールド展開。このターンの被ダメージ半減`
-};
+    state.storyShieldUses -= 1;
+    state.storyShieldActive = true;
+    return { handled: true, redraw: true, message: `${state.name} シールド展開。このターンの被ダメージ半減` };
   }
 
   if (special.effectType === "story_create_skill") {
@@ -634,14 +636,25 @@ export function onProtoCreateTurnEnd(state) {
 export function modifyProtoCreateTakenDamage(defender, attacker, attack, damage) {
   ensureProtoCreateState(defender);
 
+  let nextDamage = Math.max(0, Number(damage || 0));
+  const messages = [];
+
   if (defender.storyShieldActive) {
-    return {
-      damage: Math.floor(Number(damage || 0) / 2),
-      message: "シールドによりダメージ半減"
-    };
+    nextDamage = Math.floor(nextDamage / 2);
+    messages.push("シールドによりダメージ半減");
   }
 
-  return { damage, message: null };
+  const dropResult = modifyStoryDropTakenDamage(defender, attacker, attack, nextDamage);
+  nextDamage = Math.max(0, Number(dropResult?.damage ?? nextDamage));
+
+  if (dropResult?.message) {
+    messages.push(dropResult.message);
+  }
+
+  return {
+    damage: nextDamage,
+    message: messages.join(" / ") || null
+  };
 }
 
 export function onProtoCreateActionResolved(attacker, defender, context = {}) {
