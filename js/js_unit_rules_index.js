@@ -516,9 +516,7 @@ import {
 } from "./js_unit_rules_story_gm.js";
 
 
-export const unitRulesMap = {
-
- proto_create_gundam: {
+const protoCreateRules = {
   getDerivedState: getProtoCreateDerivedState,
   canUseSpecial: canUseProtoCreateSpecial,
   executeSpecial: executeProtoCreateSpecial,
@@ -531,7 +529,11 @@ export const unitRulesMap = {
   modifyTakenDamage: modifyProtoCreateTakenDamage,
   modifyEvadeAttempt: modifyProtoCreateEvadeAttempt,
   onResolveChoice: onProtoCreateResolveChoice
-},
+};
+
+export const unitRulesMap = {
+  proto_create_gundam: protoCreateRules,
+  create_gundam_liberal: protoCreateRules,
 
 story_gundam: {
   getDerivedState: getStoryGundamDerivedState,
