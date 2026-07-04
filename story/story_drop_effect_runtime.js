@@ -4,6 +4,8 @@ import {
   findStorySkillOption
 } from "./story_create_lab_data.js";
 
+import { createAttack } from "../js/js_battle_system.js";
+
 const SLOT_KEYS = ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"];
 
 function ensureStoryDropRuntimeState(state) {
@@ -100,13 +102,25 @@ export function getStoryDropDerivedStatus(state) {
   effects.forEach(({ option }) => {
     const data = option?.data || {};
 
-    if (data.kind === "equipment_damage_barrier") {
+        if (data.kind === "equipment_damage_barrier") {
       const max = Number(data.barrierValue || 0);
       const remain = Number(state.storyDropRuntime.oneEyesTargetBarrier ?? max);
 
       result.push({
         text: `${option.label}:${remain}`,
         color: remain > 0 ? "#66ccff" : "#777777",
+        bold: remain > 0
+      });
+    }
+
+    if (data.kind === "equipment_attack") {
+      const useKey = `${option.id}_uses`;
+      const maxUses = Number(data.uses || 0);
+      const remain = Number(state.storyDropRuntime[useKey] ?? maxUses);
+
+      result.push({
+        text: `${option.label}:${remain}`,
+        color: remain > 0 ? "#ffcc66" : "#777777",
         bold: remain > 0
       });
     }
@@ -124,10 +138,28 @@ export function canUseStoryDropSpecial(state, special) {
 
   const data = matched.option?.data || {};
 
-  if (data.kind === "equipment_damage_barrier") {
+   if (data.kind === "equipment_damage_barrier") {
     return {
       allowed: false,
       message: `${matched.option.label}は自動発動装備です`
+    };
+  }
+
+  if (data.kind === "equipment_attack") {
+    ensureStoryDropRuntimeState(state);
+
+    const useKey = `${matched.option.id}_uses`;
+    const maxUses = Number(data.uses || 0);
+
+    if (typeof state.storyDropRuntime[useKey] !== "number") {
+      state.storyDropRuntime[useKey] = maxUses;
+    }
+
+    return {
+      allowed: state.storyDropRuntime[useKey] > 0,
+      message: state.storyDropRuntime[useKey] > 0
+        ? null
+        : `${matched.option.label}の使用回数がありません`
     };
   }
 
@@ -155,6 +187,45 @@ export function executeStoryDropSpecial(state, special) {
       handled: true,
       redraw: false,
       message: `${matched.option.label}は自動発動装備です`
+    };
+  }
+
+  if (data.kind === "equipment_attack") {
+    ensureStoryDropRuntimeState(state);
+
+    const useKey = `${matched.option.id}_uses`;
+    const maxUses = Number(data.uses || 0);
+
+    if (typeof state.storyDropRuntime[useKey] !== "number") {
+      state.storyDropRuntime[useKey] = maxUses;
+    }
+
+    if (state.storyDropRuntime[useKey] <= 0) {
+      return {
+        handled: true,
+        redraw: false,
+        message: `${matched.option.label}の使用回数がありません`
+      };
+    }
+
+    state.storyDropRuntime[useKey] -= 1;
+
+    return {
+      handled: true,
+      redraw: true,
+      message: `${matched.option.label}使用`,
+      appendAttackLabel: matched.option.label,
+      appendAttacks: createAttack(
+        Number(data.damage || 0),
+        Number(data.count || 1),
+        {
+          type: data.attackType || "melee",
+          beam: data.beam === true,
+          ignoreReduction: data.ignoreReduction === true,
+          unavoidable: data.unavoidable === true,
+          source: matched.option.label
+        }
+      )
     };
   }
 
