@@ -3,6 +3,7 @@ import { story_zaku_ii_denim } from "../js/js_units_story_zaku_ii_denim.js";
 import { story_gundam } from "../js/js_units_story_gundam.js";
 import { story_ball } from "../js/js_units_story_ball.js";
 import { story_gm } from "../js/js_units_story_gm.js";
+import { metal_chikamochi } from "../js/js_units_metal_chikamochi.js";
 import { getStoryHiddenDropOptions } from "./story_hidden_drops.js";
 
 
@@ -11,7 +12,8 @@ export const STORY_DROP_SOURCE_UNITS = [
   story_zaku_ii_denim,
   story_gundam,
   story_ball,
-  story_gm
+  story_gm,
+  metal_chikamochi
 ];
 
 export function collectStoryDropOptions(kind = "slot") {
