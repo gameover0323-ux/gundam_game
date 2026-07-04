@@ -1,3 +1,5 @@
+import { loadStorySave } from "../story/story_save.js";
+
 const MOCHI_STORAGE_KEY = "gbs_mochi_state_v1";
 const MOCHI_BASE_PATH = "assets/mochi/";
 const MOCHI_FRAME_MS = 1000 / 60;
@@ -1040,4 +1042,203 @@ document.addEventListener("DOMContentLoaded", () => {
   if (enabled) {
     createMochi();
   }
+});
+
+const MOCHI_BONUS_PREFIX = "mochi_bonus_";
+
+let bonusMochiRoots = [];
+let bonusMochiCheckTimer = null;
+
+function getStoryMochiBonusCount() {
+  let save = null;
+
+  try {
+    save = loadStorySave();
+  } catch {
+    return 0;
+  }
+
+  const lab = save?.createUnits?.proto_create_gundam?.lab;
+  if (!lab) return 0;
+
+  let count = 0;
+
+  Object.values(lab.selectedSlots || {}).forEach(slotId => {
+    if (String(slotId || "").startsWith(MOCHI_BONUS_PREFIX)) count += 1;
+  });
+
+  Object.values(lab.equipment || {}).forEach(equipmentId => {
+    if (String(equipmentId || "").startsWith(MOCHI_BONUS_PREFIX)) count += 1;
+  });
+
+  if (String(lab.skill || "").startsWith(MOCHI_BONUS_PREFIX)) count += 1;
+
+  return count;
+}
+
+function getRandomBonusMochiPosition(index) {
+  const margin = 12;
+  const maxX = Math.max(margin, window.innerWidth - MOCHI_SIZE - margin);
+  const maxY = Math.max(margin, window.innerHeight - MOCHI_SIZE - margin);
+
+  const seedX = (index * 97 + Math.floor(Math.random() * 160)) % Math.max(1, maxX);
+  const seedY = (index * 131 + Math.floor(Math.random() * 220)) % Math.max(1, maxY);
+
+  return {
+    x: window.scrollX + margin + seedX,
+    y: window.scrollY + margin + seedY
+  };
+}
+
+function createBonusMochi(index) {
+  const bonusRoot = document.createElement("div");
+  bonusRoot.className = "mochi-root mochi-bonus-root";
+  bonusRoot.dataset.bonusMochiIndex = String(index);
+  bonusRoot.style.position = "absolute";
+  bonusRoot.style.zIndex = "19999";
+  bonusRoot.style.touchAction = "none";
+
+  const bonusBubble = document.createElement("div");
+  bonusBubble.className = "mochi-bubble";
+
+  const bonusImg = document.createElement("img");
+  bonusImg.className = "mochi-img";
+  bonusImg.draggable = false;
+  bonusImg.src = MOCHI_BASE_PATH + "mochi_nomal.png";
+
+  bonusRoot.appendChild(bonusBubble);
+  bonusRoot.appendChild(bonusImg);
+  document.body.appendChild(bonusRoot);
+
+  const pos = getRandomBonusMochiPosition(index);
+  let x = pos.x;
+  let y = pos.y;
+
+  let holdTimerLocal = null;
+  let draggingLocal = false;
+  let liftedLocal = false;
+  let pointerOffsetLocal = { x: 0, y: 0 };
+
+  function applyBonusPosition() {
+    bonusRoot.style.left = `${x}px`;
+    bonusRoot.style.top = `${y}px`;
+  }
+
+  function setBonusFrame(file) {
+    bonusImg.src = MOCHI_BASE_PATH + file;
+  }
+
+  function showBonusText(text = "のだ〜", durationMs = 1800) {
+    bonusBubble.textContent = text;
+    bonusBubble.classList.add("show");
+
+    setTimeout(() => {
+      bonusBubble.classList.remove("show");
+    }, durationMs);
+  }
+
+  function playBonusLift() {
+    setBonusFrame("mochi_up5.png");
+  }
+
+  function playBonusLand() {
+    setBonusFrame("mochi_nomal.png");
+  }
+
+  bonusRoot.addEventListener("pointerdown", event => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    bonusRoot.setPointerCapture(event.pointerId);
+
+    const rect = bonusRoot.getBoundingClientRect();
+    pointerOffsetLocal.x = event.clientX - rect.left;
+    pointerOffsetLocal.y = event.clientY - rect.top;
+
+    holdTimerLocal = setTimeout(() => {
+      draggingLocal = true;
+      liftedLocal = true;
+      playBonusLift();
+    }, HOLD_MS);
+  });
+
+  bonusRoot.addEventListener("pointermove", event => {
+    if (!draggingLocal) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    x = window.scrollX + event.clientX - pointerOffsetLocal.x;
+    y = window.scrollY + event.clientY - pointerOffsetLocal.y;
+    applyBonusPosition();
+  });
+
+  bonusRoot.addEventListener("pointerup", event => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    clearTimeout(holdTimerLocal);
+    holdTimerLocal = null;
+
+    if (draggingLocal || liftedLocal) {
+      draggingLocal = false;
+      liftedLocal = false;
+      playBonusLand();
+      return;
+    }
+
+    showBonusText("のだ〜？");
+  });
+
+  bonusRoot.addEventListener("pointercancel", event => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    clearTimeout(holdTimerLocal);
+    holdTimerLocal = null;
+    draggingLocal = false;
+    liftedLocal = false;
+    playBonusLand();
+  });
+
+  applyBonusPosition();
+
+  return bonusRoot;
+}
+
+function clearBonusMochi() {
+  bonusMochiRoots.forEach(root => root.remove());
+  bonusMochiRoots = [];
+}
+
+function syncBonusMochi() {
+  if (!enabled) {
+    clearBonusMochi();
+    return;
+  }
+
+  const targetCount = getStoryMochiBonusCount();
+
+  while (bonusMochiRoots.length > targetCount) {
+    const rootToRemove = bonusMochiRoots.pop();
+    rootToRemove?.remove();
+  }
+
+  while (bonusMochiRoots.length < targetCount) {
+    bonusMochiRoots.push(createBonusMochi(bonusMochiRoots.length));
+  }
+}
+
+function startBonusMochiWatcher() {
+  if (bonusMochiCheckTimer) return;
+
+  bonusMochiCheckTimer = setInterval(() => {
+    syncBonusMochi();
+  }, 1500);
+
+  syncBonusMochi();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  startBonusMochiWatcher();
 });
