@@ -722,7 +722,8 @@ function removeMochi() {
   stopFollowTimers();
   removeFollowLayer();
 
-  if (root) root.remove();
+    if (root) root.remove();
+  clearBonusMochi();
 
   root = null;
   img = null;
