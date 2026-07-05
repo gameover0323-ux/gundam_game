@@ -2016,9 +2016,10 @@ attackResolution = createAttackResolution({
 
   appendBattleNotice,
   redrawBattleBoards,
-  renderAttackChoices,
+    renderAttackChoices,
   renderAttackLogText,
   showPopup,
+  finishBattle,
 
   handleChoiceRequest,
 
@@ -2160,9 +2161,10 @@ twoVtwoAdapter,
   appendBattleNotice,
 processReservedActionsForTrigger,
   redrawBattleBoards,
-  renderAttackChoices,
+    renderAttackChoices,
   renderAttackLogText,
   showPopup,
+  finishBattle,
 
   handleChoiceRequest,
 
