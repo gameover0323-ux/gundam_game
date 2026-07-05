@@ -167,7 +167,7 @@ export const story_schwalbe_graze = makeUnit({
     slot1: attack("ロングライフル 60ダメージ", "60ダメージ。射撃、軽減不可", "shoot", 60, 1, { ignoreReduction: true }),
     slot2: attack("バトルアックス 40ダメージ", "40ダメージ。格闘、必中", "melee", 40, 1, { cannotEvade: true }),
     slot3: evade("回避+2", 2),
-    slot4: custom("ワイヤークロー 20ダメージ", "20ダメージ。射撃。次の攻撃に必中付与。", "story_next_attack_cannot_evade"),
+ slot4: attack("ワイヤークロー 20ダメージ", "20ダメージ。射撃。ヒット時、次の攻撃に必中付与。", "shoot", 20, 1, { onHit: "next_attack_cannot_evade" }),
     slot5: heal("回復 60", 60),
     slot6: attack("ランスユニット 100ダメージ", "100ダメージ。格闘、軽減不可", "melee", 100, 1, { ignoreReduction: true })
   },
