@@ -62,9 +62,14 @@ export function createStoryLearningBattleController(ctx) {
     return JSON.parse(JSON.stringify(unit));
   }
 
-  function isMochiEnabled() {
-    return localStorage.getItem("gbs_mochi_enabled") === "true";
-  }
+    function isMochiEnabled() {
+    try {
+      const state = JSON.parse(localStorage.getItem("gbs_mochi_state_v1") || "{}");
+      return state.enabled === true;
+    } catch {
+      return false;
+    }
+    }
 
   function shouldMetalChikamochiAppear() {
     if (learningMode !== "single") return false;
