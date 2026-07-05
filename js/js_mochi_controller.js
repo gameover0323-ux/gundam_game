@@ -1048,6 +1048,20 @@ const MOCHI_BONUS_PREFIX = "mochi_bonus_";
 
 let bonusMochiRoots = [];
 let bonusMochiCheckTimer = null;
+let bonusMochiTarget = {
+  x: window.innerWidth / 2,
+  y: window.innerHeight / 2,
+  active: false
+};
+
+function updateBonusMochiTarget(event) {
+  bonusMochiTarget.x = window.scrollX + event.clientX - MOCHI_SIZE / 2;
+  bonusMochiTarget.y = window.scrollY + event.clientY - MOCHI_SIZE / 2;
+  bonusMochiTarget.active = true;
+}
+
+document.addEventListener("pointerdown", updateBonusMochiTarget);
+document.addEventListener("pointermove", updateBonusMochiTarget);
 
 function getStoryMochiBonusCount() {
   let save = null;
@@ -1119,6 +1133,23 @@ function createBonusMochi(index) {
   let liftedLocal = false;
   let pointerOffsetLocal = { x: 0, y: 0 };
 
+  const followTimerLocal = setInterval(() => {
+    if (!enabled) return;
+    if (!bonusRoot.isConnected) {
+      clearInterval(followTimerLocal);
+      return;
+    }
+
+    if (draggingLocal || liftedLocal) return;
+    if (!bonusMochiTarget.active) return;
+
+    const speed = 0.035 + Math.min(0.03, index * 0.006);
+    x += (bonusMochiTarget.x - x) * speed;
+    y += (bonusMochiTarget.y - y) * speed;
+
+    applyBonusPosition();
+  }, 50);
+  
   function applyBonusPosition() {
     bonusRoot.style.left = `${x}px`;
     bonusRoot.style.top = `${y}px`;
