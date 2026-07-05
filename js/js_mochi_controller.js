@@ -602,8 +602,10 @@ function createFollowLayer() {
 
     event.preventDefault();
 
-    followTarget.x = window.scrollX + event.clientX;
+       followTarget.x = window.scrollX + event.clientX;
     followTarget.y = window.scrollY + event.clientY;
+
+    notifyBonusMochiTargetMoved();
 
     if (arrived) {
   arrived = false;
@@ -655,6 +657,7 @@ function startFollowing(clientX, clientY) {
     }
   }, 5000);
 
+    startBonusMochiFollowingAll();
   walkTowardTarget();
 }
 
@@ -671,7 +674,8 @@ function stopFollowing() {
   followTarget = null;
   arrived = false;
   arriveMessageShown = false;
-  stopFollowTimers();
+    stopFollowTimers();
+  stopBonusMochiFollowingAll();
   removeFollowLayer();
 
   if (!dragging && !lifted) {
@@ -909,8 +913,10 @@ function bindWorldFollowEvents() {
 
     if (!isFollowing || !followTarget) return;
 
-    followTarget.x = window.scrollX + latestX;
+        followTarget.x = window.scrollX + latestX;
     followTarget.y = window.scrollY + latestY;
+
+    notifyBonusMochiTargetMoved();
 
     if (arrived) {
       arrived = false;
@@ -1046,8 +1052,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
 const MOCHI_BONUS_PREFIX = "mochi_bonus_";
 
-let bonusMochiRoots = [];
+let bonusMochiItems = [];
 let bonusMochiCheckTimer = null;
+
+function startBonusMochiFollowingAll() {
+  bonusMochiItems.forEach(item => item.startFollowing?.());
+}
+
+function stopBonusMochiFollowingAll() {
+  bonusMochiItems.forEach(item => item.stopFollowing?.());
+}
+
+function notifyBonusMochiTargetMoved() {
+  bonusMochiItems.forEach(item => item.onTargetMoved?.());
+}
 
 function getStoryMochiBonusCount() {
   let save = null;
@@ -1115,8 +1133,17 @@ function createBonusMochi(index) {
   let y = pos.y;
 
   let holdTimerLocal = null;
+  let frameTimerLocal = null;
+  let followTalkTimerLocal = null;
+  let arriveJumpTimerLocal = null;
+
   let draggingLocal = false;
   let liftedLocal = false;
+  let isFollowingLocal = false;
+  let isWalkingLocal = false;
+  let arrivedLocal = false;
+  let arriveMessageShownLocal = false;
+  let currentDirLocal = "normal";
   let pointerOffsetLocal = { x: 0, y: 0 };
 
   function applyBonusPosition() {
@@ -1128,7 +1155,30 @@ function createBonusMochi(index) {
     bonusImg.src = MOCHI_BASE_PATH + file;
   }
 
-  function showBonusText(text = "のだ〜", durationMs = 1800) {
+  function getBonusCenter() {
+    return {
+      x: x + MOCHI_SIZE / 2,
+      y: y + MOCHI_SIZE / 2
+    };
+  }
+
+  function clearBonusMotionTimers() {
+    clearInterval(frameTimerLocal);
+    frameTimerLocal = null;
+  }
+
+  function stopBonusFollowTimers() {
+    clearInterval(followTalkTimerLocal);
+    followTalkTimerLocal = null;
+    clearInterval(arriveJumpTimerLocal);
+    arriveJumpTimerLocal = null;
+  }
+
+  function showBonusText(textList = MOCHI_TAP_TEXTS, durationMs = 2000) {
+    const text = Array.isArray(textList)
+      ? textList[Math.floor(Math.random() * textList.length)]
+      : String(textList || "のだ〜");
+
     bonusBubble.textContent = text;
     bonusBubble.classList.add("show");
 
@@ -1137,12 +1187,245 @@ function createBonusMochi(index) {
     }, durationMs);
   }
 
-  function playBonusLift() {
-    setBonusFrame("mochi_up5.png");
+  function playBonusSteps(steps, onStep, onEnd) {
+    clearBonusMotionTimers();
+
+    if (!Array.isArray(steps) || steps.length <= 0) {
+      onEnd?.();
+      return;
+    }
+
+    let stepIndex = 0;
+    let frameRemain = Number(steps[0].frames || 1);
+
+    setBonusFrame(steps[0].file);
+    onStep?.(steps[0], stepIndex);
+
+    frameTimerLocal = setInterval(() => {
+      frameRemain--;
+
+      if (frameRemain > 0) return;
+
+      stepIndex++;
+
+      if (stepIndex >= steps.length) {
+        clearBonusMotionTimers();
+        onEnd?.();
+        return;
+      }
+
+      const step = steps[stepIndex];
+      frameRemain = Number(step.frames || 1);
+      setBonusFrame(step.file);
+      onStep?.(step, stepIndex);
+    }, MOCHI_FRAME_MS);
   }
 
-  function playBonusLand() {
-    setBonusFrame("mochi_nomal.png");
+  function playBonusAnim(animName, onStep, onEnd) {
+    playBonusSteps(MOCHI_ANIMS[animName], onStep, onEnd);
+  }
+
+  function chooseBonusDirectionToTarget() {
+    if (!followTarget) return "down";
+
+    const center = getBonusCenter();
+    const dx = followTarget.x - center.x;
+    const dy = followTarget.y - center.y;
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+
+    if (absX < 8 && dy < 0) return "up";
+    if (absX < 8 && dy > 0) return "down";
+    if (absY < 8 && dx < 0) return "left";
+    if (absY < 8 && dx > 0) return "right";
+
+    if (dx > 0 && dy > 0) return "downRight";
+    if (dx < 0 && dy > 0) return "downLeft";
+    if (dx > 0 && dy < 0) return "upRight";
+    if (dx < 0 && dy < 0) return "upLeft";
+
+    return "down";
+  }
+
+  function getBonusTurnSteps(nextDir) {
+    if (currentDirLocal === nextDir) return [];
+
+    if (currentDirLocal === "up") {
+      if (nextDir === "upRight") return [{ file: "mue_nomal.png", frames: 3 }];
+      if (nextDir === "upLeft") return [{ file: "hue_nomal.png", frames: 3 }];
+    }
+
+    if (currentDirLocal === "upRight" && nextDir === "up") {
+      return [{ file: "ue_nomal.png", frames: 3 }];
+    }
+
+    if (currentDirLocal === "upLeft" && nextDir === "up") {
+      return [{ file: "ue_nomal.png", frames: 3 }];
+    }
+
+    if (currentDirLocal === "normal") {
+      const path = TURN_FROM_NORMAL[nextDir];
+      return typeof path === "function" ? path() : (path || []);
+    }
+
+    const currentNormal = DIR_DATA[currentDirLocal]?.normal;
+    const nextNormal = DIR_DATA[nextDir]?.normal;
+
+    if (currentNormal && nextNormal) {
+      return [
+        { file: currentNormal, frames: 3 },
+        { file: nextNormal, frames: 3 }
+      ];
+    }
+
+    const path = TURN_FROM_NORMAL[nextDir];
+    return typeof path === "function" ? path() : (path || []);
+  }
+
+  function moveBonusOneStep() {
+    if (!followTarget) return;
+
+    const center = getBonusCenter();
+    let dx = followTarget.x - center.x;
+    let dy = followTarget.y - center.y;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist <= ARRIVE_DISTANCE) {
+      arriveBonusAtTarget();
+      return;
+    }
+
+    const amount = Math.min(STEP_DISTANCE, dist);
+    dx /= dist;
+    dy /= dist;
+
+    x += dx * amount;
+    y += dy * amount;
+    applyBonusPosition();
+  }
+
+  function walkBonusTowardTarget() {
+    if (!isFollowingLocal || isWalkingLocal || !followTarget || arrivedLocal) return;
+
+    const center = getBonusCenter();
+    const dist = Math.hypot(followTarget.x - center.x, followTarget.y - center.y);
+
+    if (dist <= ARRIVE_DISTANCE) {
+      arriveBonusAtTarget();
+      return;
+    }
+
+    isWalkingLocal = true;
+
+    const dir = chooseBonusDirectionToTarget();
+    const turnSteps = getBonusTurnSteps(dir);
+    const walkSteps = WALK_ANIMS[dir] || [];
+    const fullSteps = [...turnSteps, ...walkSteps];
+
+    currentDirLocal = dir;
+
+    playBonusSteps(fullSteps, step => {
+      if (step.move === true && !arrivedLocal) {
+        moveBonusOneStep();
+      }
+    }, () => {
+      isWalkingLocal = false;
+
+      if (isFollowingLocal && !arrivedLocal) {
+        walkBonusTowardTarget();
+      } else if (!isFollowingLocal) {
+        returnBonusToNormalFromCurrentDir();
+      }
+    });
+  }
+
+  function arriveBonusAtTarget() {
+    if (arrivedLocal) return;
+
+    arrivedLocal = true;
+    isWalkingLocal = false;
+    clearBonusMotionTimers();
+
+    if (!arriveMessageShownLocal) {
+      arriveMessageShownLocal = true;
+      showBonusText(MOCHI_ARRIVE_TEXTS, 2500);
+    }
+
+    clearInterval(arriveJumpTimerLocal);
+    arriveJumpTimerLocal = setInterval(() => {
+      if (!isFollowingLocal || !arrivedLocal || draggingLocal || liftedLocal) return;
+      playBonusAnim("idleJump", null, () => {
+        const normal = currentDirLocal !== "normal"
+          ? DIR_DATA[currentDirLocal]?.normal
+          : "mochi_nomal.png";
+
+        setBonusFrame(normal || "mochi_nomal.png");
+      });
+    }, 2000);
+  }
+
+  function returnBonusToNormalFromCurrentDir() {
+    clearBonusMotionTimers();
+
+    const normalFile = currentDirLocal !== "normal"
+      ? DIR_DATA[currentDirLocal]?.normal
+      : "mochi_nomal.png";
+
+    const steps = normalFile && normalFile !== "mochi_nomal.png"
+      ? [
+          { file: normalFile, frames: 3 },
+          { file: "mochi_nomal.png", frames: 3 }
+        ]
+      : [{ file: "mochi_nomal.png", frames: 1 }];
+
+    playBonusSteps(steps, null, () => {
+      currentDirLocal = "normal";
+      setBonusFrame("mochi_nomal.png");
+    });
+  }
+
+  function startBonusFollowing() {
+    if (!enabled || draggingLocal || liftedLocal || !followTarget) return;
+
+    stopBonusFollowTimers();
+    clearBonusMotionTimers();
+
+    isFollowingLocal = true;
+    isWalkingLocal = false;
+    arrivedLocal = false;
+    arriveMessageShownLocal = false;
+
+    followTalkTimerLocal = setInterval(() => {
+      if (isFollowingLocal && !arrivedLocal) {
+        showBonusText(MOCHI_FOLLOW_TEXTS, 2000);
+      }
+    }, 5000);
+
+    walkBonusTowardTarget();
+  }
+
+  function stopBonusFollowing() {
+    if (!isFollowingLocal) return;
+
+    isFollowingLocal = false;
+    arrivedLocal = false;
+    arriveMessageShownLocal = false;
+    stopBonusFollowTimers();
+
+    if (!draggingLocal && !liftedLocal) {
+      returnBonusToNormalFromCurrentDir();
+    }
+  }
+
+  function onBonusTargetMoved() {
+    if (!isFollowingLocal || !followTarget) return;
+
+    if (arrivedLocal) {
+      arrivedLocal = false;
+      clearInterval(arriveJumpTimerLocal);
+      arriveJumpTimerLocal = null;
+      walkBonusTowardTarget();
+    }
   }
 
   bonusRoot.addEventListener("pointerdown", event => {
@@ -1156,9 +1439,15 @@ function createBonusMochi(index) {
     pointerOffsetLocal.y = event.clientY - rect.top;
 
     holdTimerLocal = setTimeout(() => {
+      stopBonusFollowing();
+      clearBonusMotionTimers();
+
       draggingLocal = true;
       liftedLocal = true;
-      playBonusLift();
+
+      playBonusAnim("lift", null, () => {
+        setBonusFrame("mochi_up5.png");
+      });
     }, HOLD_MS);
   });
 
@@ -1183,7 +1472,11 @@ function createBonusMochi(index) {
     if (draggingLocal || liftedLocal) {
       draggingLocal = false;
       liftedLocal = false;
-      playBonusLand();
+
+      playBonusAnim("land", null, () => {
+        setBonusFrame("mochi_nomal.png");
+        currentDirLocal = "normal";
+      });
       return;
     }
 
@@ -1198,17 +1491,29 @@ function createBonusMochi(index) {
     holdTimerLocal = null;
     draggingLocal = false;
     liftedLocal = false;
-    playBonusLand();
+    stopBonusFollowing();
+    setBonusFrame("mochi_nomal.png");
   });
 
   applyBonusPosition();
 
-  return bonusRoot;
+  return {
+    root: bonusRoot,
+    startFollowing: startBonusFollowing,
+    stopFollowing: stopBonusFollowing,
+    onTargetMoved: onBonusTargetMoved,
+    remove() {
+      clearTimeout(holdTimerLocal);
+      clearBonusMotionTimers();
+      stopBonusFollowTimers();
+      bonusRoot.remove();
+    }
+  };
 }
 
 function clearBonusMochi() {
-  bonusMochiRoots.forEach(root => root.remove());
-  bonusMochiRoots = [];
+  bonusMochiItems.forEach(item => item.remove?.());
+  bonusMochiItems = [];
 }
 
 function syncBonusMochi() {
@@ -1219,13 +1524,13 @@ function syncBonusMochi() {
 
   const targetCount = getStoryMochiBonusCount();
 
-  while (bonusMochiRoots.length > targetCount) {
-    const rootToRemove = bonusMochiRoots.pop();
-    rootToRemove?.remove();
+    while (bonusMochiItems.length > targetCount) {
+    const itemToRemove = bonusMochiItems.pop();
+    itemToRemove?.remove?.();
   }
 
-  while (bonusMochiRoots.length < targetCount) {
-    bonusMochiRoots.push(createBonusMochi(bonusMochiRoots.length));
+  while (bonusMochiItems.length < targetCount) {
+    bonusMochiItems.push(createBonusMochi(bonusMochiItems.length));
   }
 }
 
