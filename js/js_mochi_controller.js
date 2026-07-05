@@ -1065,7 +1065,10 @@ function stopBonusMochiFollowingAll() {
 }
 
 function notifyBonusMochiTargetMoved() {
-  bonusMochiItems.forEach(item => item.onTargetMoved?.());
+  bonusMochiItems.forEach(item => {
+    item.startFollowing?.();
+    item.onTargetMoved?.();
+  });
 }
 
 function getStoryMochiBonusCount() {
