@@ -66,16 +66,17 @@ export function createStoryLearningBattleController(ctx) {
     try {
       const state = JSON.parse(localStorage.getItem("gbs_mochi_state_v1") || "{}");
       return state.enabled === true;
-    } catch {
+        } catch {
       return false;
     }
-    }
+  }
 
-    function shouldMetalChikamochiAppear() {
+  function shouldMetalChikamochiAppear() {
     if (learningMode !== "single") return false;
     if (!isMochiEnabled()) return false;
     return Math.random() < 0.05;
-    }
+  }
+  
   function askMetalChikamochiEncounter(onYes, onNo) {
     const root = getRoot();
     if (!root) {
