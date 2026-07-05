@@ -67,7 +67,7 @@ export function createStoryLearningBattleController(ctx) {
       const state = JSON.parse(localStorage.getItem("gbs_mochi_state_v1") || "{}");
       return state.enabled === true;
     } catch {
-      return false;
+      return Math.random() < 0.05;
     }
     }
 
