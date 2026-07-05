@@ -72,9 +72,11 @@ export function createStoryLearningBattleController(ctx) {
   }
 
   function shouldMetalChikamochiAppear() {
-    if (learningMode !== "single") return false;
-    if (!isMochiEnabled()) return false;
-    return Math.random() < 0.05;
+  if (learningMode !== "single") return false;
+  if (!isMochiEnabled()) return false;
+
+  const roll = Math.floor(Math.random() * 100) + 1;
+  return roll <= 5;
   }
   
   function askMetalChikamochiEncounter(onYes, onNo) {
@@ -473,24 +475,26 @@ GA戦闘はクリエイトガンダムリベラル専用です。
   }
 
     function startSingleLearning() {
-    const ally = selectedA[0];
-    const enemy = selectedB[0];
+  const ally = selectedA[0];
+  const enemy = selectedB[0];
 
-    if (!ally || !enemy) {
-      ctx.showPopup?.("単体学習に必要な機体が選択されていません");
-      return;
-    }
-
-    if (shouldMetalChikamochiAppear()) {
-      askMetalChikamochiEncounter(
-        () => startSingleLearningBattle(ally, metal_chikamochi),
-        () => startSingleLearningBattle(ally, enemy)
-      );
-      return;
-    }
-
-    startSingleLearningBattle(ally, enemy);
+  if (!ally || !enemy) {
+    ctx.showPopup?.("単体学習に必要な機体が選択されていません");
+    return;
   }
+
+  const metalAppeared = shouldMetalChikamochiAppear();
+
+  if (metalAppeared) {
+    askMetalChikamochiEncounter(
+      () => startSingleLearningBattle(ally, metal_chikamochi),
+      () => startSingleLearningBattle(ally, enemy)
+    );
+    return;
+  }
+
+  startSingleLearningBattle(ally, enemy);
+    }
 
   function startSingleLearningBattle(ally, enemy) {
     const save = loadStorySave();
