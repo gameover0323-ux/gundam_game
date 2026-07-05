@@ -321,23 +321,103 @@ export const story_psycho_gundam = makeUnit({
   }
 });
 
-export const story_death_army = makeUnit({
+export const story_death_army = {
   id: "story_death_army",
   name: "デスアーミー",
-  hp: 450,
-  evadeMax: 3,
+  defaultFormId: "base",
   exp: 25,
-  companionCost: 70,
-  unlockCondition: "同行学習モードで3回、デスアーミー2機編成を撃破する。",
-  slots: {
-    slot1: attack("棍棒型ビームライフル 70ダメージ", "70ダメージ。射撃、ビーム", "shoot", 70, 1, { beam: true }),
-    slot2: evade("回避+2", 2),
-    slot3: attack("棍棒 80ダメージ", "80ダメージ。格闘", "melee", 80),
-    slot4: heal("回復 60", 60),
-    slot5: attack("格闘 20ダメージ×3回", "20ダメージ×3回。格闘", "melee", 20, 3),
-    slot6: custom("進化", "HPを80回復し、デスビースト、デスネイビー、デスバーディ、デスマスターのどれかになる。", "story_death_army_evolve")
+  storyCompanion: {
+    unlockCondition: "同行学習モードで3回、デスアーミー2機編成を撃破する。",
+    cost: 70
+  },
+  storyDrops: { random: [] },
+  forms: {
+    base: {
+      name: "デスアーミー",
+      hp: 450,
+      evadeMax: 3,
+      rollableSlotOrder: ORDER,
+      ownedSlotOrder: ORDER,
+      slots: {
+        slot1: attack("棍棒型ビームライフル 70ダメージ", "70ダメージ。射撃、ビーム", "shoot", 70, 1, { beam: true }),
+        slot2: evade("回避+2", 2),
+        slot3: attack("棍棒 80ダメージ", "80ダメージ。格闘", "melee", 80),
+        slot4: heal("回復 60", 60),
+        slot5: attack("格闘 20ダメージ×3回", "20ダメージ×3回。格闘", "melee", 20, 3),
+        slot6: custom("進化", "HPを80回復し、デスビースト、デスネイビー、デスバーディ、デスマスターのどれかになる。", "story_death_army_evolve")
+      },
+      specials: []
+    },
+
+    death_beast: {
+      name: "デスビースト",
+      hp: 600,
+      evadeMax: 3,
+      rollableSlotOrder: ORDER,
+      ownedSlotOrder: ORDER,
+      slots: {
+        slot1: attack("マシンガンデスライフル 10ダメージ×6回", "10ダメージ×6回。射撃", "shoot", 10, 6),
+        slot2: evade("回避+1", 1),
+        slot3: heal("回復 80", 80),
+        slot4: attack("デスライフル 100ダメージ", "100ダメージ。射撃", "shoot", 100),
+        slot5: attack("棍棒型ビームライフル 80ダメージ", "80ダメージ。射撃、ビーム", "shoot", 80, 1, { beam: true }),
+        slot6: custom("進化", "HPを80回復し、デスネイビー、デスバーディ、デスマスターのどれかになる。", "story_death_army_evolve")
+      },
+      specials: []
+    },
+
+    death_navy: {
+      name: "デスネイビー",
+      hp: 400,
+      evadeMax: 1,
+      rollableSlotOrder: ORDER,
+      ownedSlotOrder: ORDER,
+      slots: {
+        slot1: attack("電撃銛 50ダメージ", "50ダメージ。格闘。ヒット時相手回避-2", "melee", 50, 1, { onHit: "reduce_evade_2" }),
+        slot2: attack("銛突き連撃 20ダメージ×3回", "20ダメージ×3回。格闘", "melee", 20, 3),
+        slot3: attack("銛突進 100ダメージ", "100ダメージ。格闘", "melee", 100),
+        slot4: attack("魚雷 30ダメージ×2回", "30ダメージ×2回。射撃", "shoot", 30, 2),
+        slot5: attack("電撃銛連撃 30ダメージ×3回", "30ダメージ×3回。各ヒット時相手回避-1", "melee", 30, 3, { onHit: "reduce_evade_1_each" }),
+        slot6: custom("進化", "HPを80回復し、デスビースト、デスバーディ、デスマスターのどれかになる。", "story_death_army_evolve")
+      },
+      specials: []
+    },
+
+    death_birdy: {
+      name: "デスバーディ",
+      hp: 300,
+      evadeMax: 8,
+      rollableSlotOrder: ORDER,
+      ownedSlotOrder: ORDER,
+      slots: {
+        slot1: evade("回避+2", 2),
+        slot2: attack("大口径ビームキャノン 100ダメージ", "100ダメージ。射撃、ビーム", "shoot", 100, 1, { beam: true }),
+        slot3: evade("回避+2", 2),
+        slot4: attack("大口径ビームキャノン 100ダメージ", "100ダメージ。射撃、ビーム", "shoot", 100, 1, { beam: true }),
+        slot5: evade("回避+2", 2),
+        slot6: custom("進化", "HPを80回復し、デスビースト、デスネイビー、デスマスターのどれかになる。", "story_death_army_evolve")
+      },
+      specials: []
+    },
+
+    death_master: {
+      name: "デスマスター",
+      hp: 800,
+      evadeMax: 6,
+      rollableSlotOrder: ORDER,
+      ownedSlotOrder: ORDER,
+      slots: {
+        slot1: attack("マスタークロス 10ダメージ", "10ダメージ。ヒット時、次の攻撃必中", "melee", 10, 1, { onHit: "next_attack_cannot_evade" }),
+        slot2: attack("マスタークロス凪ぎ 60ダメージ", "60ダメージ。格闘", "melee", 60),
+        slot3: custom("回避+2、回復50", "回避2回、回復50。", "story_death_master_evade_heal"),
+        slot4: custom("乱舞 30ダメージ×3回", "30ダメージ×3回。格闘、回避1回。", "story_death_master_ranbu"),
+        slot5: attack("フェイクダークネスフィンガー 150ダメージ", "150ダメージ。格闘、軽減不可", "melee", 150, 1, { ignoreReduction: true }),
+        slot6: custom("シンクロ", "この形態中の各種攻撃ダメージが10増加する。ただし、選択2回目でリセットされ、デスアーミーに変化する。", "story_death_master_sync")
+      },
+      specials: []
+    }
   }
-});
+};
 
 export const story_gunbarrel_dagger = makeUnit({
   id: "story_gunbarrel_dagger",
