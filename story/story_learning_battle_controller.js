@@ -69,7 +69,7 @@ export function createStoryLearningBattleController(ctx) {
   function shouldMetalChikamochiAppear() {
     if (learningMode !== "single") return false;
     if (!isMochiEnabled()) return false;
-    return Math.random() < 0.05;
+    return Math.random() < 0.9;
   }
 
   function askMetalChikamochiEncounter(onYes, onNo) {
