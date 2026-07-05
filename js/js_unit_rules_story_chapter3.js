@@ -262,7 +262,23 @@ export function onStoryChapter3AfterSlotResolved(state, slotNumber, payload = {}
     state.storyDeathMasterDamageBonus += 10;
     return { redraw: true, message: `シンクロ：攻撃ダメージ+${state.storyDeathMasterDamageBonus}` };
   }
+  if (customEffectId === "story_death_master_evade_heal") {
+    addEvade(state, 2);
+    heal(state, 50);
+    return { redraw: true, message: "デスマスター：回避+2、HP50回復" };
+  }
 
+  if (customEffectId === "story_death_master_ranbu") {
+    addEvade(state, 1);
+    return {
+      redraw: true,
+      message: "乱舞：30ダメージ×3回、回避+1",
+      appendAttacks: createAttack(30 + n(state.storyDeathMasterDamageBonus), 3, {
+        type: "melee",
+        source: "乱舞"
+      })
+    };
+  }
   if (customEffectId === "story_gunbarrel_combo_rifle") {
     const damage = n(state.evade) > 0 ? 20 * n(state.evade) : 50;
     return { redraw: false, appendAttacks: createAttack(damage, 1, { type: "shoot", beam: true, source: "ガンバレルコンビネーションライフル" }) };
