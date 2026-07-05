@@ -339,10 +339,23 @@ function consumeSpecialActionCost(ownerPlayer, actor, cost = 1) {
       reserveAction(actor, afterResult.reserveAction);
     }
 
-    if (Array.isArray(afterResult.reserveActions)) {
+        if (Array.isArray(afterResult.reserveActions)) {
       afterResult.reserveActions.forEach(action => {
         reserveAction(actor, action);
       });
+    }
+
+    if (afterResult.requestChoice) {
+      ctx.handleChoiceRequest({
+        ...afterResult.requestChoice,
+        ownerPlayer: afterResult.requestChoice.ownerPlayer || slotMeta.ownerPlayer,
+        enemyPlayer: afterResult.requestChoice.enemyPlayer || enemyPlayer,
+        ownerUnitKey: afterResult.requestChoice.ownerUnitKey || slotMeta.ownerUnitKey || null
+      });
+    }
+
+    if (afterResult.forceBattleEnd) {
+      ctx.finishBattle?.(afterResult.forceBattleEnd.winnerPlayer);
     }
 
     return afterResult;
@@ -1148,11 +1161,17 @@ if (result.consumeAction) {
   }
 }
     
-    if (result.requestChoice) {
-      ctx.handleChoiceRequest({
-        ...result.requestChoice,
-        ownerUnitKey: result.requestChoice.ownerUnitKey || choiceContext.ownerUnitKey || choice.ownerUnitKey || null
-      });
+        if (result.requestChoice) {
+      ctx.handleChoiceRequest({ ...result.requestChoice, ownerUnitKey: result.requestChoice.ownerUnitKey || choiceContext.ownerUnitKey || choice.ownerUnitKey || null });
+      return;
+    }
+
+    if (result.forceBattleEnd) {
+      if (result.message) {
+        ctx.appendBattleNotice(result.message);
+      }
+      ctx.redrawBattleBoards();
+      ctx.finishBattle?.(result.forceBattleEnd.winnerPlayer);
       return;
     }
 
