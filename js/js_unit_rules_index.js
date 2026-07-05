@@ -523,6 +523,20 @@ import {
   onStoryGmResolveChoice
 } from "./js_unit_rules_story_gm.js";
 
+import {
+  getStoryChapter3DerivedState,
+  canUseStoryChapter3Special,
+  executeStoryChapter3Special,
+  onStoryChapter3TurnEnd,
+  onStoryChapter3BeforeSlot,
+  onStoryChapter3EnemyBeforeSlot,
+  onStoryChapter3AfterSlotResolved,
+  onStoryChapter3ActionResolved,
+  onStoryChapter3Damaged,
+  modifyStoryChapter3TakenDamage,
+  modifyStoryChapter3EvadeAttempt,
+  onStoryChapter3ResolveChoice
+} from "./js_unit_rules_story_chapter3.js";
 
 const protoCreateRules = {
   getDerivedState: getProtoCreateDerivedState,
@@ -539,8 +553,40 @@ const protoCreateRules = {
   onResolveChoice: onProtoCreateResolveChoice
 };
 
+const storyChapter3Rules = {
+  getDerivedState: getStoryChapter3DerivedState,
+  canUseSpecial: canUseStoryChapter3Special,
+  executeSpecial: executeStoryChapter3Special,
+  onTurnEnd: onStoryChapter3TurnEnd,
+  onBeforeSlot: onStoryChapter3BeforeSlot,
+  onEnemyBeforeSlot: onStoryChapter3EnemyBeforeSlot,
+  onAfterSlotResolved: onStoryChapter3AfterSlotResolved,
+  onActionResolved: onStoryChapter3ActionResolved,
+  onDamaged: onStoryChapter3Damaged,
+  modifyTakenDamage: modifyStoryChapter3TakenDamage,
+  modifyEvadeAttempt: modifyStoryChapter3EvadeAttempt,
+  onResolveChoice: onStoryChapter3ResolveChoice
+};
+
 export const unitRulesMap = {
   proto_create_gundam: protoCreateRules,
+
+  story_leo: storyChapter3Rules,
+  story_aries: storyChapter3Rules,
+  story_tallgeese: storyChapter3Rules,
+  story_graze: storyChapter3Rules,
+  story_schwalbe_graze: storyChapter3Rules,
+  story_graze_ritter: storyChapter3Rules,
+  story_graze_ein: storyChapter3Rules,
+  story_guncannon: storyChapter3Rules,
+  story_guntank: storyChapter3Rules,
+  story_gyan: storyChapter3Rules,
+  story_gouf_chapter3: storyChapter3Rules,
+  story_psycho_gundam: storyChapter3Rules,
+  story_death_army: storyChapter3Rules,
+  story_gunbarrel_dagger: storyChapter3Rules,
+
+  
   create_gundam_liberal: protoCreateRules,
 
 metal_chikamochi: {
