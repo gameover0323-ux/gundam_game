@@ -1,4 +1,4 @@
-import { addEvade, reduceEvade, setForm } from "./js_unit_runtime.js";
+import { addEvade, reduceEvade, setForm, doubleEvadeRedCap } from "./js_unit_runtime.js";
 import { createAttack } from "./js_battle_system.js";
 
 function n(value) {
@@ -173,11 +173,11 @@ export function onStoryChapter3AfterSlotResolved(state, slotNumber, payload = {}
   const messages = [];
 
   if (customEffectId === "story_tallgeese_super_vernier") {
-    const current = n(state.evade);
-    const nextMax = current * 2;
-    state.evadeMax = Math.max(n(state.evadeMax), nextMax);
-    state.storyTallgeeseTemporaryEvadeCap = state.evadeMax;
-    return { redraw: true, message: `スーパーバーニア：回避上限${state.evadeMax}` };
+    doubleEvadeRedCap(state);
+    return {
+      redraw: true,
+      message: `スーパーバーニア：回避最大値を一時的に${state.overEvadeCap}へ増加`
+    };
   }
 
   if (customEffectId === "story_tallgeese_beam_saber") {
