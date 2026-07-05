@@ -57,7 +57,23 @@ import { story_zaku_ii_denim } from "./js_units_story_zaku_ii_denim.js";
 import { story_gundam } from "./js_units_story_gundam.js";
 import { story_ball } from "./js_units_story_ball.js";
 import { story_gm } from "./js_units_story_gm.js";
-
+import {
+  storyChapter3Units,
+  story_leo,
+  story_aries,
+  story_tallgeese,
+  story_graze,
+  story_schwalbe_graze,
+  story_graze_ritter,
+  story_graze_ein,
+  story_guncannon,
+  story_guntank,
+  story_gyan,
+  story_gouf_chapter3,
+  story_psycho_gundam,
+  story_death_army,
+  story_gunbarrel_dagger
+} from "./js_units_story_chapter3.js";
 
 
 
@@ -122,7 +138,8 @@ export const debugUnitList = [
   story_gundam,
   story_zaku_ii_denim,
   story_ball,
-story_gm
+  story_gm,
+  ...storyChapter3Units
 ];
 
 
