@@ -1223,6 +1223,9 @@ function cloneStoryBattleUnit(unit, name = null) {
 }
 
 function startStoryFreeBattle(modeOrConfig = "1v1", maybeOptions = {}) {
+  activeStoryFreeBattleOptions = null;
+  cleanupStoryFreeBattleButtons();
+
   const config =
     typeof modeOrConfig === "object" && modeOrConfig !== null
       ? { ...modeOrConfig }
