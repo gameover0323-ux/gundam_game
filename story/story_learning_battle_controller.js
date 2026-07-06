@@ -16,6 +16,23 @@ import { story_gm } from "../js/js_units_story_gm.js";
 import { cpuList } from "../js/js_units_index.js";
 import { metal_chikamochi } from "../js/js_units_metal_chikamochi.js";
 
+import {
+  story_leo,
+  story_graze,
+  story_death_army,
+  story_gunbarrel_dagger,
+  story_aries,
+  story_tallgeese,
+  story_schwalbe_graze,
+  story_graze_ritter,
+  story_graze_ein,
+  story_guncannon,
+  story_guntank,
+  story_gyan,
+  story_gouf_chapter3,
+  story_psycho_gundam
+} from "../js/js_units_story_chapter3.js";
+
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
@@ -42,7 +59,21 @@ const STORY_UNIT_MAP = {
   story_zaku_ii_gene,
   story_zaku_ii_denim,
   story_ball,
-  story_gm
+  story_gm,
+  story_leo,
+  story_graze,
+  story_death_army,
+  story_gunbarrel_dagger,
+  story_aries,
+  story_tallgeese,
+  story_schwalbe_graze,
+  story_graze_ritter,
+  story_graze_ein,
+  story_guncannon,
+  story_guntank,
+  story_gyan,
+  story_gouf_chapter3,
+  story_psycho_gundam
 };
 
 export function createStoryLearningBattleController(ctx) {
@@ -168,21 +199,62 @@ export function createStoryLearningBattleController(ctx) {
   }
 
   function buildAvailableEnemyUnits() {
-    const save = loadStorySave();
-    if (save.flags?.chapter2Cleared !== true) return [];
+  const save = loadStorySave();
+  if (save.flags?.chapter2Cleared !== true) return [];
 
-    const units = [
-      story_zaku_ii_gene,
-      story_zaku_ii_denim,
-      story_ball,
-      story_gm
-    ];
+  const units = [
+    story_zaku_ii_gene,
+    story_zaku_ii_denim,
+    story_ball,
+    story_gm
+  ];
 
-    if (save.flags?.chapterBossGundamCleared === true) {
-      units.push(cpu_gundam_mc);
-    }
+  if (save.flags?.chapterBossGundamCleared === true) {
+    units.push(cpu_gundam_mc);
+  }
 
-    return units;
+  if (save.flags?.chapter3LearningUnlocked === true) {
+    units.push(
+      story_leo,
+      story_death_army,
+      story_gunbarrel_dagger,
+      story_graze
+    );
+  }
+
+  if (save.flags?.chapter3LearningGuncannonGuntankUnlocked === true) {
+    units.push(story_guncannon, story_guntank);
+  }
+
+  if (save.flags?.chapter3LearningGyanGoufUnlocked === true) {
+    units.push(story_gyan, story_gouf_chapter3);
+  }
+
+  if (save.flags?.chapter3LearningPsychoGundamUnlocked === true) {
+    units.push(story_psycho_gundam);
+  }
+
+  if (save.flags?.story_aries_learning_unlocked === true) {
+    units.push(story_aries);
+  }
+
+  if (save.flags?.story_tallgeese_learning_unlocked === true) {
+    units.push(story_tallgeese);
+  }
+
+  if (save.flags?.story_schwalbe_graze_learning_unlocked === true) {
+    units.push(story_schwalbe_graze);
+  }
+
+  if (save.flags?.story_graze_ritter_learning_unlocked === true) {
+    units.push(story_graze_ritter);
+  }
+
+  if (save.flags?.story_graze_ein_learning_unlocked === true) {
+    units.push(story_graze_ein);
+  }
+
+  return units;
   }
 
   function buildAvailableGaEnemyUnits() {
