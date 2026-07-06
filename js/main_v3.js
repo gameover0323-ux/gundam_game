@@ -1279,14 +1279,27 @@ function startStoryFreeBattle(modeOrConfig = "1v1", maybeOptions = {}) {
   battleInitController.init1v1(allyUnits[0], enemyUnits[0]);
 }
 
+    function forceShowStoryBattleScreen() {
     showScreen("battle");
 
-  document.getElementById("title")?.style.setProperty("display", "none");
-  document.getElementById("select")?.style.setProperty("display", "none");
-  document.getElementById("onlineRoom")?.style.setProperty("display", "none");
-  document.getElementById("battle")?.style.setProperty("display", "block");
+    document.getElementById("storyModeRoot")?.remove();
+    document.getElementById("title")?.style.setProperty("display", "none");
+    document.getElementById("select")?.style.setProperty("display", "none");
+    document.getElementById("onlineRoom")?.style.setProperty("display", "none");
+    document.getElementById("battle")?.style.setProperty("display", "block");
 
-  redrawBattleBoards();
+    redrawBattleBoards();
+  }
+
+  forceShowStoryBattleScreen();
+
+  requestAnimationFrame(() => {
+    forceShowStoryBattleScreen();
+  });
+
+  setTimeout(() => {
+    forceShowStoryBattleScreen();
+  }, 0);
 
   const buttonWrap = document.createElement("div");
   buttonWrap.id = "storyFreeBattleButtons";
