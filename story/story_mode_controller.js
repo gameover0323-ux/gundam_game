@@ -36,6 +36,8 @@ import {
 } from "./story_units.js";
 
 import { createStoryChapter2Controller } from "./story_chapter2_controller.js";
+import { createStoryChapter3Controller } from "./story_chapter3_controller.js";
+
 import { createStoryLearningBattleController } from "./story_learning_battle_controller.js";
 import { createStoryChapterBossController } from "./story_chapter_boss_controller.js";
 export function createStoryModeController(ctx) {
@@ -68,6 +70,8 @@ const chapter2Controller = createStoryChapter2Controller({
   showTitle: closeStoryModeToTitle
 });
 
+const chapter3Controller = createStoryChapter3Controller({ ...ctx, renderStoryMainMenu, showTitle: closeStoryModeToTitle });
+  
   const storyLearningBattleController = createStoryLearningBattleController({
     ...ctx,
     renderStoryMainMenu
@@ -127,7 +131,9 @@ const chapter2Controller = createStoryChapter2Controller({
   }
 
   function canUseStoryMode() {
-    return true;
+  const profile = ctx.getPlayerProfile?.();
+  const role = profile?.role || profile?.accountRole || profile?.debugRole || "";
+  return DEBUG_ROLES.has(role);
   }
 
   function updateStartButtonVisibility() {
@@ -260,14 +266,16 @@ function renderStoryMainMenu() {
 
   const root = document.getElementById("storyModeRoot") || createRoot();
       const chapter2Cleared = storySave.flags?.chapter2Cleared === true;
-    const learningBattleUnlocked = storySave.flags?.learningBattleUnlocked === true || chapter2Cleared;
-    const chapterBossUnlocked = storySave.flags?.chapterBossUnlocked === true;
+const chapter3Available = storySave.flags?.chapterBossGundamCleared === true || chapter2Cleared;
+const learningBattleUnlocked = storySave.flags?.learningBattleUnlocked === true || chapter2Cleared;
+const chapterBossUnlocked = storySave.flags?.chapterBossUnlocked === true || storySave.flags?.chapter3BossUnlocked === true;
 
     root.innerHTML = `
       <h2>ストーリーモード</h2>
       <button id="storyChapterSelectBtn">チャプターセレクト</button>
       <button id="storyLabMenuBtn">クリエイトガンダムラボ</button>
       ${learningBattleUnlocked ? `<button id="storyLearningBattleBtn">学習戦闘</button>` : ""}
+      ${chapter3Available && storySave.flags?.chapter3OpeningViewed !== true ? `<button id="storyChapter3StartBtn">チャプター3</button>` : ""}
            ${chapterBossUnlocked ? `<button id="storyChapterBossBtn">チャプターボス</button>` : ""}
       <button id="storyResetSaveBtn">進行データ削除</button>
       <button id="storyMenuCloseBtn">閉じる</button>
@@ -277,6 +285,9 @@ function renderStoryMainMenu() {
     document.getElementById("storyLabMenuBtn")?.addEventListener("click", renderNormalLab);
         document.getElementById("storyMenuCloseBtn")?.addEventListener("click", closeStoryModeToTitle);
 
+  document.getElementById("storyChapter3StartBtn")?.addEventListener("click", () => {
+  chapter3Controller.start();
+});
     document.getElementById("storyResetSaveBtn")?.addEventListener("click", () => {
       const ok = window.confirm("ストーリーモードの進行データを削除します。よろしいですか？");
       if (!ok) return;
@@ -304,12 +315,16 @@ function renderChapterSelect() {
     <h2>チャプターセレクト</h2>
     <button id="storyChapter1Btn">チャプター1</button>
     <button id="storyChapter2Btn">チャプター2</button>
+    ${storySave.flags?.chapterBossGundamCleared === true || storySave.flags?.chapter2Cleared === true ? `<button id="storyChapter3Btn">チャプター3</button>` : ""}
     <button id="storyChapterSelectBackBtn">戻る</button>
   `;
 
   document.getElementById("storyChapter1Btn")?.addEventListener("click", startChapter1FromSelect);
   document.getElementById("storyChapter2Btn")?.addEventListener("click", () => chapter2Controller.start());
   document.getElementById("storyChapterSelectBackBtn")?.addEventListener("click", renderStoryMainMenu);
+
+document.getElementById("storyChapter3Btn")?.addEventListener("click", () => chapter3Controller.start());
+  
 }
 
   function startChapter1FromSelect() {
