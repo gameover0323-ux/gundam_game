@@ -304,8 +304,8 @@ const chapterBossUnlocked = storySave.flags?.chapterBossUnlocked === true || sto
     });
 
     document.getElementById("storyChapterBossBtn")?.addEventListener("click", () => {
-      storyChapterBossController.startGundamBoss();
-    });
+  storyChapterBossController.startCurrentBoss();
+});
 }
 
 function renderChapterSelect() {
