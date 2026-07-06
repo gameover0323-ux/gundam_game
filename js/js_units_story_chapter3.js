@@ -232,8 +232,8 @@ export const story_guncannon = makeUnit({
     slot2: attack("240mm低反動キャノン砲 40ダメージ×4回", "40ダメージ×4回。射撃", "shoot", 40, 4),
     slot3: evade("回避+2", 2),
     slot4: attack("ビームライフル 80ダメージ", "80ダメージ。射撃、ビーム", "shoot", 80, 1, { beam: true }),
-    slot5: heal("回復 80", 80),
-    slot6: attack("格闘 40ダメージ×3回", "40ダメージ×3回。格闘、軽減不可", "melee", 40, 3, { ignoreReduction: true })
+    slot5: heal("回復 40", 40),
+    slot6: attack("格闘 30ダメージ×3回", "30ダメージ×3回。格闘、軽減不可", "melee", 30, 3, { ignoreReduction: true })
   },
   specials: [
     { name: "特性：重装甲", effectType: "story_guncannon_armor", timing: "auto", actionType: "auto", desc: "常にダメージ20%軽減。" }
@@ -249,8 +249,8 @@ export const story_guntank = makeUnit({
   companionCost: 100,
   unlockCondition: "ガンキャノンを同行可能にしている状態で、単体学習で撃破する。",
   slots: {
-    slot1: evade("回避+2", 2),
-    slot2: heal("回復 80", 80),
+    slot1: evade("回避+1", 1),
+    slot2: heal("回復 40", 40),
     slot3: attack("ポップミサイルランチャー 10ダメージ×8回", "10ダメージ×8回。射撃", "shoot", 10, 8),
     slot4: attack("120mm低反動キャノン砲 60ダメージ×2回", "60ダメージ×2回。射撃", "shoot", 60, 2),
     slot5: custom("狙撃耐性", "次の射撃攻撃に必中を付与。", "story_next_shoot_cannot_evade"),
@@ -270,12 +270,12 @@ export const story_gyan = makeUnit({
   companionCost: 100,
   unlockCondition: "単体学習で1on1状態で撃破する。",
   slots: {
-    slot1: attack("ハイドボンブ 80ダメージ", "80ダメージ。射撃。被弾すると回避を消滅させる。", "shoot", 80, 1, { onHit: "clear_evade" }),
-    slot2: evade("回避+2", 2),
+    slot1: attack("ハイドボンブ 30ダメージ", "30ダメージ。射撃。被弾すると回避を消滅させる。", "shoot", 30, 1, { onHit: "clear_evade" }),
+    slot2: evade("回避+1", 1),
     slot3: attack("高出力ビームサーベル 100ダメージ", "100ダメージ。格闘、ビーム", "melee", 100, 1, { beam: true }),
-    slot4: heal("回復 80", 80),
+    slot4: heal("回復 50", 50),
     slot5: attack("ニードルミサイル 10ダメージ×5回", "10ダメージ×5回。射撃", "shoot", 10, 5),
-    slot6: attack("連続突き 10ダメージ×10回", "10ダメージ×10回。格闘、ビーム、軽減不可", "melee", 10, 10, { beam: true, ignoreReduction: true })
+    slot6: attack("連続突き 10ダメージ×8回", "10ダメージ×10回。格闘、ビーム、軽減不可", "melee", 10, 8, { beam: true, ignoreReduction: true })
   },
   specials: [
     { name: "特性：連続攻撃", effectType: "story_no_attack_next_double_slot", timing: "auto", actionType: "auto", desc: "相手が攻撃行動をしてこなかった時の次のターン、2回連続でスロット行動をする。" }
@@ -292,11 +292,11 @@ export const story_gouf_chapter3 = makeUnit({
   unlockCondition: "単体学習で1on1状態で撃破する。",
   slots: {
     slot1: attack("ヒートロッド 30ダメージ", "30ダメージ。格闘。被弾すると所持回避消滅。", "melee", 30, 1, { onHit: "clear_evade" }),
-    slot2: evade("回避+2", 2),
+    slot2: evade("回避+1", 1),
     slot3: attack("ヒートサーベル 80ダメージ", "80ダメージ。格闘", "melee", 80),
-    slot4: heal("回復 80", 80),
+    slot4: heal("回復 50", 50),
     slot5: attack("フィンガーバルカン 10ダメージ×5回", "10ダメージ×5回。射撃", "shoot", 10, 5),
-    slot6: attack("ヒートロッド捕縛 50ダメージ", "50ダメージ。格闘。被弾すると次の攻撃が必中になる。", "melee", 50, 1, { onHit: "next_attack_cannot_evade" })
+    slot6: attack("ヒートロッド捕縛 20ダメージ", "20ダメージ。格闘。被弾すると次の攻撃が必中になる。", "melee", 20, 1, { onHit: "next_attack_cannot_evade" })
   },
   specials: [
     { name: "特性：連続攻撃", effectType: "story_no_attack_next_double_slot", timing: "auto", actionType: "auto", desc: "相手が攻撃行動をしてこなかった時の次のターン、2回連続でスロット行動をする。" }
@@ -306,7 +306,7 @@ export const story_gouf_chapter3 = makeUnit({
 export const story_psycho_gundam = makeUnit({
   id: "story_psycho_gundam",
   name: "サイコ・ガンダム",
-  hp: 2000,
+  hp: 1500,
   evadeMax: 0,
   exp: 50,
   companionCost: 180,
