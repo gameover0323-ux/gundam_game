@@ -324,7 +324,8 @@ export function createStoryChapterBossController(ctx) {
     root.innerHTML = `
       <div style="white-space:pre-wrap;line-height:1.8;text-align:center;">
         AI「うう…さすがガンダム、簡単には勝たせてくれませんね…。
-        準備を整えて、もう一度挑みましょう！」
+        準備を整えて、もう一度挑みましょう！
+        ラボから同行機体をセットして、数の有利を取れますよ！」
       </div>
       <button id="storyGundamBossRetryBtn">再挑戦</button>
       <button id="storyGundamBossBackBtn">戻る</button>
