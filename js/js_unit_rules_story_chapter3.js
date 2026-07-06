@@ -1,4 +1,4 @@
-import { addEvade, reduceEvade, setForm, doubleEvadeRedCap } from "./js_unit_runtime.js";
+import { addEvade, reduceEvade, setForm, doubleEvadeRedCap, normalizeEvadeCapState } from "./js_unit_runtime.js";
 import { createAttack } from "./js_battle_system.js";
 
 function n(value) {
@@ -33,7 +33,7 @@ function ensureChapter3State(state) {
   if (typeof state.storyChapter3IaiStock !== "number") state.storyChapter3IaiStock = 0;
   if (typeof state.storyChapter3IaiPending !== "boolean") state.storyChapter3IaiPending = false;
   if (typeof state.storyChapter3IaiContextId !== "string") state.storyChapter3IaiContextId = "";
-  if (typeof state.storyTallgeeseTemporaryEvadeCap !== "number") state.storyTallgeeseTemporaryEvadeCap = 0;
+  
   if (typeof state.storyGrazeEinPileBunkerUsed !== "boolean") state.storyGrazeEinPileBunkerUsed = false;
   if (typeof state.storyGrazeEinOrganicOrbitReady !== "boolean") state.storyGrazeEinOrganicOrbitReady = false;
   if (!state.storyGrazeEinLastAttack) state.storyGrazeEinLastAttack = null;
@@ -80,7 +80,8 @@ function getStatus(state) {
   if (state.storyChapter3NextCannotEvade) status.push("次攻撃必中");
   if (state.storyChapter3NextShootCannotEvade) status.push("次射撃必中");
   if (state.storyChapter3IaiStock > 0) status.push(`居合待ち:${state.storyChapter3IaiStock}`);
-  if (state.storyTallgeeseTemporaryEvadeCap > 0) status.push(`赤上限:${state.storyTallgeeseTemporaryEvadeCap}`);
+
+  
   if (state.storyGrazeEinOrganicOrbitReady) status.push("次ターン2回行動");
   if (state.formId === "death_master") status.push(`シンクロ+${n(state.storyDeathMasterDamageBonus)}`);
   return status;
@@ -141,8 +142,35 @@ export function onStoryChapter3TurnEnd(state, context = {}) {
 
 export function onStoryChapter3BeforeSlot(state, rolledSlotNumber, context = {}) {
   ensureChapter3State(state);
-  return { redraw: false, message: null };
+
+  const slot = context.slot;
+  const effect = slot?.effect;
+  const messages = [];
+
+  if (state.storyChapter3NextCannotEvade && effect?.type === "attack") {
+    effect.cannotEvade = true;
+    effect.addedCannotEvade = true;
+    state.storyChapter3NextCannotEvade = false;
+    messages.push("必中付与：この攻撃が必中化");
+  }
+
+  if (
+    state.storyChapter3NextShootCannotEvade &&
+    effect?.type === "attack" &&
+    effect.attackType === "shoot"
+  ) {
+    effect.cannotEvade = true;
+    effect.addedCannotEvade = true;
+    state.storyChapter3NextShootCannotEvade = false;
+    messages.push("狙撃耐性：この射撃攻撃が必中化");
+  }
+
+  return {
+    redraw: messages.length > 0,
+    message: messages.join("\n") || null
+  };
 }
+
 
 export function onStoryChapter3EnemyBeforeSlot(state, rolledSlotNumber, context = {}) {
   ensureChapter3State(state);
@@ -188,14 +216,7 @@ export function onStoryChapter3AfterSlotResolved(state, slotNumber, payload = {}
     };
   }
 
-  if (customEffectId === "story_next_attack_cannot_evade") {
-    state.storyChapter3NextCannotEvade = true;
-    return {
-      redraw: true,
-      message: "ワイヤークロー：次の攻撃に必中付与",
-      appendAttacks: createAttack(20, 1, { type: "shoot", source: "ワイヤークロー" })
-    };
-  }
+  
 
   if (customEffectId === "story_next_shoot_cannot_evade") {
     state.storyChapter3NextShootCannotEvade = true;
@@ -299,32 +320,51 @@ export function onStoryChapter3AfterSlotResolved(state, slotNumber, payload = {}
 
 export function onStoryChapter3ActionResolved(attacker, defender, context = {}) {
   ensureChapter3State(attacker);
+
   const messages = [];
   const hitCount = n(context.hitCount);
+  const slotNumber = Number(context.slotNumber || 0);
+  const attackerId = attacker?.unitId || attacker?.id || "";
 
-  if (hitCount > 0 && attacker.storyGrazeEinPileBunkerUsed === false && (attacker.unitId || attacker.id) === "story_graze_ein") {
+  if (hitCount > 0 && defender) {
+    if (
+      (attackerId === "story_gyan" && slotNumber === 1) ||
+      (attackerId === "story_gouf_chapter3" && slotNumber === 1)
+    ) {
+      defender.evade = 0;
+      normalizeEvadeCapState(defender);
+      messages.push("命中効果：相手の所持回避消滅");
+    }
+
+    if (attackerId === "story_gouf_chapter3" && slotNumber === 6) {
+      attacker.storyChapter3NextCannotEvade = true;
+      messages.push("ヒートロッド捕縛：次の攻撃が必中になる");
+    }
+
+    const attack = context.attack || {};
+    if (attack.onHit === "next_attack_cannot_evade") {
+      attacker.storyChapter3NextCannotEvade = true;
+      messages.push("命中効果：次の攻撃が必中になる");
+    }
+  }
+
+  if (
+    hitCount > 0 &&
+    attacker.storyGrazeEinPileBunkerUsed === false &&
+    attackerId === "story_graze_ein"
+  ) {
     attacker.storyGrazeEinPileBunkerUsed = true;
-    messages.push("パイルバンカー：50ダメージ追撃");
     return {
       redraw: true,
-      message: messages.join(" / "),
+      message: [...messages, "パイルバンカー：50ダメージ追撃"].join(" / "),
       appendAttacks: createAttack(50, 1, { type: "melee", source: "パイルバンカー" })
     };
   }
 
-  if (hitCount > 0 && defender) {
-    const attack = context.attack || {};
-    if (attack.onHit === "clear_evade") {
-      defender.evade = 0;
-      messages.push("命中効果：回避消滅");
-    }
-    if (attack.onHit === "next_attack_cannot_evade") {
-      attacker.storyChapter3NextCannotEvade = true;
-      messages.push("命中効果：次の攻撃に必中付与");
-    }
-  }
-
-  return { redraw: messages.length > 0, message: messages.join(" / ") || null };
+  return {
+    redraw: messages.length > 0,
+    message: messages.join(" / ") || null
+  };
 }
 
 export function onStoryChapter3Damaged(defender, attacker, context = {}) {
