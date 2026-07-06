@@ -346,6 +346,17 @@ export function onStoryChapter3ActionResolved(attacker, defender, context = {}) 
       attacker.storyChapter3NextCannotEvade = true;
       messages.push("命中効果：次の攻撃が必中になる");
     }
+        if (attackerId === "story_death_army" && attacker.formId === "death_navy" && slotNumber === 1) {
+      defender.evade = Math.max(0, Number(defender.evade || 0) - 2);
+      normalizeEvadeCapState(defender);
+      messages.push("電撃銛：相手の回避-2");
+    }
+
+    if (attackerId === "story_death_army" && attacker.formId === "death_navy" && slotNumber === 5) {
+      defender.evade = Math.max(0, Number(defender.evade || 0) - hitCount);
+      normalizeEvadeCapState(defender);
+      messages.push(`電撃銛連撃：相手の回避-${hitCount}`);
+    }
   }
 
   if (
