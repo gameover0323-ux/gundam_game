@@ -18,10 +18,12 @@ import {
 
 import {
   loadStorySave,
+  saveStorySave,
   getProtoCreateLevelInfo,
+  getStoryUnitLevelInfo,
   getProtoCreateMaxCost,
   updateProtoCreateLabState,
-    setStoryFlag,
+  setStoryFlag,
   resetStorySave,
   setActiveStoryCreateUnit,
   setLiberalGaUnit,
@@ -274,6 +276,7 @@ const chapterBossUnlocked = storySave.flags?.chapterBossUnlocked === true || sto
       <h2>ストーリーモード</h2>
       <button id="storyChapterSelectBtn">チャプターセレクト</button>
       <button id="storyLabMenuBtn">クリエイトガンダムラボ</button>
+      ${storySave.flags?.chapter3ShopUnlocked === true ? `<button id="storyChapter3ShopBtn">ショップ</button>` : ""}
       ${learningBattleUnlocked ? `<button id="storyLearningBattleBtn">学習戦闘</button>` : ""}
       ${chapter3Available && storySave.flags?.chapter3OpeningViewed !== true ? `<button id="storyChapter3StartBtn">チャプター3</button>` : ""}
            ${chapterBossUnlocked ? `<button id="storyChapterBossBtn">チャプターボス</button>` : ""}
@@ -285,6 +288,7 @@ const chapterBossUnlocked = storySave.flags?.chapterBossUnlocked === true || sto
     document.getElementById("storyLabMenuBtn")?.addEventListener("click", renderNormalLab);
         document.getElementById("storyMenuCloseBtn")?.addEventListener("click", closeStoryModeToTitle);
 
+  document.getElementById("storyChapter3ShopBtn")?.addEventListener("click", renderChapter3Shop);
   document.getElementById("storyChapter3StartBtn")?.addEventListener("click", () => {
   chapter3Controller.start();
 });
@@ -306,6 +310,366 @@ const chapterBossUnlocked = storySave.flags?.chapterBossUnlocked === true || sto
     document.getElementById("storyChapterBossBtn")?.addEventListener("click", () => {
   storyChapterBossController.startCurrentBoss();
 });
+}
+
+  const CHAPTER3_SHOP_EQUIPMENTS = [
+  { id: "energy_converter_lv1", label: "エネルギーコンバーターLv1", priceLevel: 4, detail: "エネルギーを20引き上げる。[コスト5]" },
+  { id: "cost_converter_lv1", label: "コストコンバーターLv1", priceLevel: 4, detail: "使用可能コストが10増加する。[コスト0]" },
+  { id: "simple_vernier", label: "簡易バーニア", priceLevel: 4, detail: "回避ストック最大値+1。[コスト5]" }
+];
+
+const CHAPTER3_SHOP_UNITS = [
+  { id: "story_leo", label: "リーオー", priceLevel: 5, cost: 40 },
+  { id: "story_graze", label: "グレイズ", priceLevel: 8, cost: 35 }
+];
+
+const CHAPTER3_REBUILD_UNITS = [
+  { from: "story_leo", to: "story_aries", label: "リーオー → エアリーズ", priceLevel: 10, cost: 50, learningFlag: "story_aries_learning_unlocked" },
+  { from: "story_aries", to: "story_tallgeese", label: "エアリーズ → トールギス", priceLevel: 25, cost: 120, learningFlag: "story_tallgeese_learning_unlocked" },
+  { from: "story_graze", to: "story_schwalbe_graze", label: "グレイズ → シュバルべグレイズ", priceLevel: 10, cost: 55, learningFlag: "story_schwalbe_graze_learning_unlocked" },
+  { from: "story_schwalbe_graze", to: "story_graze_ritter", label: "シュバルべグレイズ → グレイズリッター", priceLevel: 17, cost: 75, learningFlag: "story_graze_ritter_learning_unlocked" },
+  { from: "story_graze_ritter", to: "story_graze_ein", label: "グレイズリッター → グレイズ・アイン", priceLevel: 40, cost: 130, learningFlag: "story_graze_ein_learning_unlocked", requiresBarbatosGa: true }
+];
+
+function getPaymentUnitIds(save = loadStorySave()) {
+  const ids = ["proto_create_gundam"];
+
+  Object.entries(save.companionUnits || {}).forEach(([unitId, info]) => {
+    if (info?.unlocked === true) ids.push(unitId);
+  });
+
+  return ids;
+}
+
+function getPaymentUnitLabel(unitId) {
+  if (unitId === "proto_create_gundam") return "プロトクリエイトガンダム / クリエイトガンダムリベラル";
+
+  const option = findStoryCompanionOption(unitId);
+  return option?.label || unitId;
+}
+
+function getPaymentUnitTotalExp(save, unitId) {
+  if (unitId === "proto_create_gundam" || unitId === "create_gundam_liberal") {
+    return Number(save.createUnits?.proto_create_gundam?.totalExp || 0);
+  }
+
+  return Number(save.companionUnits?.[unitId]?.totalExp || 0);
+}
+
+function setPaymentUnitTotalExp(save, unitId, totalExp) {
+  const value = Math.max(0, Number(totalExp || 0));
+
+  if (unitId === "proto_create_gundam" || unitId === "create_gundam_liberal") {
+    if (!save.createUnits) save.createUnits = {};
+    if (!save.createUnits.proto_create_gundam) save.createUnits.proto_create_gundam = {};
+    save.createUnits.proto_create_gundam.totalExp = value;
+    return;
+  }
+
+  if (!save.companionUnits) save.companionUnits = {};
+  if (!save.companionUnits[unitId]) save.companionUnits[unitId] = {};
+  save.companionUnits[unitId].totalExp = value;
+}
+
+function reduceUnitLevelBy(save, unitId, levelAmount) {
+  const amount = Math.max(0, Math.floor(Number(levelAmount || 0)));
+  if (amount <= 0) return;
+
+  const beforeInfo = getStoryUnitLevelInfo(unitId, save);
+  const beforeLevel = Math.max(0, Number(beforeInfo.level || 0));
+  const targetLevel = Math.max(0, beforeLevel - amount);
+
+  if (targetLevel <= 0) {
+    setPaymentUnitTotalExp(save, unitId, 0);
+    return;
+  }
+
+  let currentExp = getPaymentUnitTotalExp(save, unitId);
+  let bestExp = 0;
+
+  while (currentExp >= 0) {
+    const testSave = clone(save);
+    setPaymentUnitTotalExp(testSave, unitId, currentExp);
+
+    const info = getStoryUnitLevelInfo(unitId, testSave);
+    const level = Math.max(0, Number(info.level || 0));
+
+    if (level < targetLevel) break;
+
+    if (level === targetLevel) {
+      bestExp = currentExp;
+    }
+
+    currentExp -= 1;
+  }
+
+  setPaymentUnitTotalExp(save, unitId, bestExp);
+}
+
+function renderPaymentScreen({ title, priceLevel, onPaid, onCancel }) {
+  refreshStorySave();
+
+  const root = document.getElementById("storyModeRoot") || createRoot();
+  root.style.justifyContent = "flex-start";
+  root.style.overflowY = "auto";
+
+  const save = loadStorySave();
+  const unitIds = getPaymentUnitIds(save);
+  const payment = {};
+
+  function getPaidTotal() {
+    return Object.values(payment).reduce((sum, value) => sum + Number(value || 0), 0);
+  }
+
+  function render() {
+    const paid = getPaidTotal();
+    const remain = Math.max(0, Number(priceLevel || 0) - paid);
+
+    root.innerHTML = `
+      <h2>支払い</h2>
+      <div>${title}</div>
+      <div style="margin:12px 0;">必要支払 ${priceLevel} [残り${remain}]</div>
+      <div id="storyPaymentRows" style="width:min(760px,96vw);">
+        ${unitIds.map(unitId => {
+          const info = getStoryUnitLevelInfo(unitId, save);
+          const selected = Number(payment[unitId] || 0);
+          const maxPay = Math.max(0, Number(info.level || 0));
+
+          return `
+            <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;border:1px solid #777;border-radius:8px;padding:10px;margin:8px 0;">
+              <span>${getPaymentUnitLabel(unitId)} Lv${info.level}</span>
+              <span>支払${selected}</span>
+              <button class="story-payment-add-btn" data-unit-id="${unitId}" ${paid >= priceLevel || selected >= maxPay ? "disabled" : ""}>追加</button>
+              <button class="story-payment-sub-btn" data-unit-id="${unitId}" ${selected <= 0 ? "disabled" : ""}>減少</button>
+            </div>
+          `;
+        }).join("")}
+      </div>
+      <button id="storyPaymentConfirmBtn" ${remain > 0 ? "disabled" : ""}>支払い確定</button>
+      <button id="storyPaymentCancelBtn">戻る</button>
+    `;
+
+    document.querySelectorAll(".story-payment-add-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const unitId = btn.dataset.unitId;
+        payment[unitId] = Number(payment[unitId] || 0) + 1;
+        render();
+      });
+    });
+
+    document.querySelectorAll(".story-payment-sub-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const unitId = btn.dataset.unitId;
+        payment[unitId] = Math.max(0, Number(payment[unitId] || 0) - 1);
+        render();
+      });
+    });
+
+    document.getElementById("storyPaymentConfirmBtn")?.addEventListener("click", () => {
+      const paidSave = loadStorySave();
+
+      Object.entries(payment).forEach(([unitId, amount]) => {
+        reduceUnitLevelBy(paidSave, unitId, amount);
+      });
+
+      saveStorySave(paidSave);
+      refreshStorySave();
+      onPaid?.();
+    });
+
+    document.getElementById("storyPaymentCancelBtn")?.addEventListener("click", () => {
+      onCancel?.();
+    });
+  }
+
+  render();
+}
+
+function forceLabAfterPurchase(message) {
+  ctx.showPopup?.(message);
+  labMode = "normal";
+  refreshStorySave();
+  renderCustomizeTutorial();
+}
+
+function renderChapter3Shop() {
+  refreshStorySave();
+
+  const root = document.getElementById("storyModeRoot") || createRoot();
+
+  root.style.justifyContent = "flex-start";
+  root.style.overflowY = "auto";
+
+  root.innerHTML = `
+    <h2>ショップ</h2>
+    <button id="storyShopEquipmentBtn">装備購入</button>
+    <button id="storyShopUnitBtn">機体購入</button>
+    <button id="storyShopRebuildBtn">機体改築</button>
+    <button id="storyShopBackBtn">戻る</button>
+    <div id="storyShopList" style="width:min(760px,96vw);margin-top:16px;"></div>
+  `;
+
+  document.getElementById("storyShopEquipmentBtn")?.addEventListener("click", renderShopEquipments);
+  document.getElementById("storyShopUnitBtn")?.addEventListener("click", renderShopUnits);
+  document.getElementById("storyShopRebuildBtn")?.addEventListener("click", renderShopRebuilds);
+  document.getElementById("storyShopBackBtn")?.addEventListener("click", renderStoryMainMenu);
+
+  renderShopEquipments();
+}
+
+function renderShopList(rows) {
+  const list = document.getElementById("storyShopList");
+  if (!list) return;
+
+  list.innerHTML = rows.map(row => `
+    <div style="border:1px solid #777;border-radius:8px;padding:10px;margin:8px 0;">
+      <div><b>${row.label}</b></div>
+      <div>${row.detail || ""}</div>
+      <div>必要Lv ${row.priceLevel}</div>
+      <button class="story-shop-buy-btn" data-shop-id="${row.id}" ${row.disabled ? "disabled" : ""}>${row.buttonLabel || "購入"}</button>
+    </div>
+  `).join("");
+
+  rows.forEach(row => {
+    document.querySelector(`.story-shop-buy-btn[data-shop-id="${row.id}"]`)?.addEventListener("click", row.onBuy);
+  });
+}
+
+function renderShopEquipments() {
+  refreshStorySave();
+
+  renderShopList(CHAPTER3_SHOP_EQUIPMENTS.map(item => {
+    const owned = storySave.inventory?.equipments?.includes(item.id);
+
+    return {
+      id: item.id,
+      label: item.label,
+      priceLevel: item.priceLevel,
+      detail: `${item.detail}${owned ? " / 所持済み" : ""}`,
+      buttonLabel: owned ? "購入済み" : "購入",
+      disabled: owned,
+      onBuy: () => {
+        if (owned) return;
+
+        renderPaymentScreen({
+          title: `${item.label}を購入`,
+          priceLevel: item.priceLevel,
+          onCancel: renderChapter3Shop,
+          onPaid: () => {
+            const save = loadStorySave();
+            if (!save.inventory) save.inventory = {};
+            if (!Array.isArray(save.inventory.equipments)) save.inventory.equipments = [];
+            if (!save.inventory.equipments.includes(item.id)) save.inventory.equipments.push(item.id);
+            saveStorySave(save);
+
+            forceLabAfterPurchase(`${item.label}を購入しました。レベル低下後のコストで編成し直してください。`);
+          }
+        });
+      }
+    };
+  }));
+}
+
+function renderShopUnits() {
+  refreshStorySave();
+
+  renderShopList(CHAPTER3_SHOP_UNITS.map(item => {
+    const owned = storySave.companionUnits?.[item.id]?.unlocked === true;
+
+    return {
+      id: item.id,
+      label: item.label,
+      priceLevel: item.priceLevel,
+      detail: owned ? "所持済み" : `同行コスト ${item.cost}`,
+      buttonLabel: owned ? "購入済み" : "購入",
+      disabled: owned,
+      onBuy: () => {
+        if (owned) return;
+
+        renderPaymentScreen({
+          title: `${item.label}を購入`,
+          priceLevel: item.priceLevel,
+          onCancel: renderChapter3Shop,
+          onPaid: () => {
+            const save = loadStorySave();
+            if (!save.companionUnits) save.companionUnits = {};
+            save.companionUnits[item.id] = {
+              ...(save.companionUnits[item.id] || {}),
+              unlocked: true,
+              cost: item.cost,
+              totalExp: Number(save.companionUnits?.[item.id]?.totalExp || 0)
+            };
+            saveStorySave(save);
+
+            forceLabAfterPurchase(`${item.label}を購入しました。レベル低下後のコストで編成し直してください。`);
+          }
+        });
+      }
+    };
+  }));
+}
+
+function renderShopRebuilds() {
+  refreshStorySave();
+
+  renderShopList(CHAPTER3_REBUILD_UNITS.map(item => {
+    const hasFrom = storySave.companionUnits?.[item.from]?.unlocked === true;
+    const hasTo = storySave.companionUnits?.[item.to]?.unlocked === true;
+    const barbatosOk = item.requiresBarbatosGa !== true || storySave.liberal?.gaUnits?.barbatos?.unlocked === true;
+
+    return {
+      id: item.to,
+      label: item.label,
+      priceLevel: item.priceLevel,
+      detail: [
+        hasFrom ? "改築元あり" : "改築元なし",
+        hasTo ? "改築済み" : "",
+        barbatosOk ? "" : "条件未達：GAデータにガンダム・バルバトスが必要"
+      ].filter(Boolean).join(" / "),
+      buttonLabel: hasTo ? "改築済み" : "改築",
+      disabled: hasTo,
+      onBuy: () => {
+        if (hasTo) return;
+        if (!hasFrom) {
+          ctx.showPopup?.("改築元の機体を所持していません");
+          return;
+        }
+        if (!barbatosOk) {
+          ctx.showPopup?.("改築条件を満たしていません");
+          return;
+        }
+
+        renderPaymentScreen({
+          title: item.label,
+          priceLevel: item.priceLevel,
+          onCancel: renderChapter3Shop,
+          onPaid: () => {
+            const save = loadStorySave();
+            if (!save.companionUnits) save.companionUnits = {};
+
+            delete save.companionUnits[item.from];
+
+            save.companionUnits[item.to] = {
+              ...(save.companionUnits[item.to] || {}),
+              unlocked: true,
+              cost: item.cost,
+              totalExp: Number(save.companionUnits?.[item.to]?.totalExp || 0)
+            };
+
+            if (!save.flags) save.flags = {};
+            if (item.learningFlag) save.flags[item.learningFlag] = true;
+
+            const lab = save.createUnits?.proto_create_gundam?.lab;
+            if (lab?.companion === item.from) lab.companion = "none";
+
+            saveStorySave(save);
+
+            forceLabAfterPurchase(`${item.label}を実行しました。改築元は失われました。レベル低下後のコストで編成し直してください。`);
+          }
+        });
+      }
+    };
+  }));
 }
 
 function renderChapterSelect() {
