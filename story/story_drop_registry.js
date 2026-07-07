@@ -4,8 +4,8 @@ import { story_gundam } from "../js/js_units_story_gundam.js";
 import { story_ball } from "../js/js_units_story_ball.js";
 import { story_gm } from "../js/js_units_story_gm.js";
 import { metal_chikamochi } from "../js/js_units_metal_chikamochi.js";
+import { storyChapter3Units } from "../js/js_units_story_chapter3.js";
 import { getStoryHiddenDropOptions } from "./story_hidden_drops.js";
-
 
 export const STORY_DROP_SOURCE_UNITS = [
   story_zaku_ii_gene,
@@ -13,7 +13,8 @@ export const STORY_DROP_SOURCE_UNITS = [
   story_gundam,
   story_ball,
   story_gm,
-  metal_chikamochi
+  metal_chikamochi,
+  ...storyChapter3Units
 ];
 
 export function collectStoryDropOptions(kind = "slot") {
@@ -43,23 +44,15 @@ export function collectStoryDropOptions(kind = "slot") {
       }
 
       if (kind === "equipment" && !drop.slotKey && drop.data?.kind !== "create_skill") {
-        result.push({
-          ...drop,
-          sourceUnitId: unit.id,
-          sourceUnitName: unit.name
-        });
+        result.push({ ...drop, sourceUnitId: unit.id, sourceUnitName: unit.name });
       }
 
       if (kind === "skill" && drop.data?.kind === "create_skill") {
-        result.push({
-          ...drop,
-          sourceUnitId: unit.id,
-          sourceUnitName: unit.name
-        });
+        result.push({ ...drop, sourceUnitId: unit.id, sourceUnitName: unit.name });
       }
     });
   });
 
-    result.push(...getStoryHiddenDropOptions(kind));
+  result.push(...getStoryHiddenDropOptions(kind));
   return result;
 }
