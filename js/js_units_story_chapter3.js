@@ -1,3 +1,5 @@
+import { getStoryChapter3Drops } from "./js_story_chapter3_drops.js";
+
 const ORDER = ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"];
 
 function attack(label, desc, attackType, damage, count = 1, extra = {}) {
