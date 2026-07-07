@@ -210,8 +210,8 @@ export const story_graze_ein = makeUnit({
 export const story_guncannon = makeUnit({
   id: "story_guncannon",
   name: "ガンキャノン",
-  hp: 600,
-  evadeMax: 5,
+  hp: 400,
+  evadeMax: 3,
   exp: 40,
   companionCost: 100,
   unlockCondition: "ガンダムを同行可能にしている状態で、単体学習で撃破する。",
@@ -231,8 +231,8 @@ export const story_guncannon = makeUnit({
 export const story_guntank = makeUnit({
   id: "story_guntank",
   name: "ガンタンク",
-  hp: 600,
-  evadeMax: 4,
+  hp: 350,
+  evadeMax: 3,
   exp: 40,
   companionCost: 100,
   unlockCondition: "ガンキャノンを同行可能にしている状態で、単体学習で撃破する。",
@@ -252,8 +252,8 @@ export const story_guntank = makeUnit({
 export const story_gyan = makeUnit({
   id: "story_gyan",
   name: "ギャン",
-  hp: 600,
-  evadeMax: 6,
+  hp: 400,
+  evadeMax: 5,
   exp: 40,
   companionCost: 100,
   unlockCondition: "単体学習で1on1状態で撃破する。",
@@ -273,8 +273,8 @@ export const story_gyan = makeUnit({
 export const story_gouf_chapter3 = makeUnit({
   id: "story_gouf_chapter3",
   name: "グフ",
-  hp: 600,
-  evadeMax: 5,
+  hp: 400,
+  evadeMax: 4,
   exp: 40,
   companionCost: 100,
   unlockCondition: "単体学習で1on1状態で撃破する。",
@@ -294,7 +294,7 @@ export const story_gouf_chapter3 = makeUnit({
 export const story_psycho_gundam = makeUnit({
   id: "story_psycho_gundam",
   name: "サイコ・ガンダム",
-  hp: 1500,
+  hp: 1200,
   evadeMax: 0,
   exp: 50,
   companionCost: 180,
