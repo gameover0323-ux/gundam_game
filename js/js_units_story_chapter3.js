@@ -40,27 +40,14 @@ function custom(label, desc, customType) {
   };
 }
 
-function makeUnit({
-  id,
-  name,
-  hp,
-  evadeMax,
-  exp,
-  companionCost,
-  unlockCondition,
-  slots,
-  specials = [],
-  storyDrops = []
-}) {
+function makeUnit({ id, name, hp, evadeMax, exp, companionCost, unlockCondition, slots, specials = [], storyDrops = [] }) {
   return {
     id,
     name,
     defaultFormId: "base",
     exp,
-    storyCompanion: companionCost
-      ? { unlockCondition: unlockCondition || "条件達成で同行可能。", cost: companionCost }
-      : null,
-    storyDrops: { random: storyDrops },
+    storyCompanion: companionCost ? { unlockCondition: unlockCondition || "条件達成で同行可能。", cost: companionCost } : null,
+    storyDrops: { random: getStoryChapter3Drops(id, storyDrops) },
     forms: {
       base: {
         name,
@@ -74,7 +61,6 @@ function makeUnit({
     }
   };
 }
-
 export const story_leo = makeUnit({
   id: "story_leo",
   name: "リーオー",
