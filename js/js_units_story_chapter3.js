@@ -318,7 +318,7 @@ export const story_death_army = {
     unlockCondition: "同行学習モードで3回、デスアーミー2機編成を撃破する。",
     cost: 70
   },
-  storyDrops: { random: [] },
+  storyDrops: { random: getStoryChapter3Drops("story_death_army", []) },
   forms: {
     base: {
       name: "デスアーミー",
