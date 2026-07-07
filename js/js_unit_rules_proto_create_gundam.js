@@ -8,13 +8,28 @@ import {
   modifyStoryDropTakenDamage
 } from "../story/story_drop_effect_runtime.js";
 
+import {
+  getStoryChapter3DerivedState,
+  canUseStoryChapter3Special,
+  executeStoryChapter3Special,
+  onStoryChapter3TurnEnd,
+  onStoryChapter3BeforeSlot,
+  onStoryChapter3EnemyBeforeSlot,
+  onStoryChapter3AfterSlotResolved,
+  onStoryChapter3ActionResolved,
+  onStoryChapter3Damaged,
+  modifyStoryChapter3TakenDamage,
+  modifyStoryChapter3EvadeAttempt,
+  onStoryChapter3ResolveChoice
+} from "./js_unit_rules_story_chapter3.js";
+
 const SLOT_KEYS = ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"];
 
 function ensureProtoCreateState(state) {
   if (!state) return;
 
   if (typeof state.storyDestroyerUses !== "number") state.storyDestroyerUses = 3;
-  
+
   if (typeof state.storyEnergyMax !== "number") {
     state.storyEnergyMax = Number(state.storyEnergyMax || 100);
   }
@@ -130,6 +145,7 @@ function makeAttackFromEffect(slot, effect, sourceLabel = slot.label) {
     beam: effect.beam === true,
     ignoreReduction: effect.ignoreReduction === true,
     cannotEvade: effect.cannotEvade === true,
+    onHit: effect.onHit || null,
     sourceLabel
   });
 }
@@ -171,12 +187,21 @@ export function getProtoCreateDerivedState(state) {
       bold: true
     });
   }
-  
-    if (state.storyEnergyAdjustStacks !== 0) {
-    result.status.push({ text: `EN調整:${state.storyEnergyAdjustStacks}`, color: "#ffcc66", bold: true });
+
+  if (state.storyEnergyAdjustStacks !== 0) {
+    result.status.push({
+      text: `EN調整:${state.storyEnergyAdjustStacks}`,
+      color: "#ffcc66",
+      bold: true
+    });
   }
 
   result.status.push(...getStoryDropDerivedStatus(state));
+
+  const chapter3Derived = getStoryChapter3DerivedState(state);
+  if (Array.isArray(chapter3Derived?.status)) {
+    result.status.push(...chapter3Derived.status);
+  }
 
   SLOT_KEYS.forEach(slotKey => {
     const slot = state.slots?.[slotKey];
@@ -208,11 +233,14 @@ export function getProtoCreateDerivedState(state) {
   return result;
 }
 
-export function canUseProtoCreateSpecial(state, specialKey) {
+export function canUseProtoCreateSpecial(state, specialKey, context = {}) {
   ensureProtoCreateState(state);
 
   const special = state.specials?.[specialKey];
   if (!special) return { allowed: false, message: "特殊行動データが見つかりません" };
+
+  const chapter3CanUse = canUseStoryChapter3Special(state, specialKey, context);
+  if (chapter3CanUse?.allowed === false) return chapter3CanUse;
 
   if (special.effectType === "story_reload") {
     const choices = getReloadChoices(state);
@@ -278,6 +306,9 @@ export function executeProtoCreateSpecial(state, specialKey, context = {}) {
     return { handled: true, redraw: false, message: "特殊行動データが見つかりません" };
   }
 
+  const chapter3Special = executeStoryChapter3Special(state, specialKey, context);
+  if (chapter3Special?.handled === true) return chapter3Special;
+
   if (special.effectType === "story_reload") {
     return {
       handled: true,
@@ -299,12 +330,12 @@ export function executeProtoCreateSpecial(state, specialKey, context = {}) {
     const before = state.storyEnergy;
     state.storyEnergy = state.storyEnergyMax;
 
-return {
-  handled: true,
-  redraw: true,
-  consumeAction: true,
-  message: `エネルギーチャージ：EN${before}→${state.storyEnergy}`
-};
+    return {
+      handled: true,
+      redraw: true,
+      consumeAction: true,
+      message: `エネルギーチャージ：EN${before}→${state.storyEnergy}`
+    };
   }
 
   if (special.effectType === "story_energy_adjust") {
@@ -328,7 +359,7 @@ return {
     };
   }
 
-   if (special.effectType === "story_equipment_1" || special.effectType === "story_equipment_2") {
+  if (special.effectType === "story_equipment_1" || special.effectType === "story_equipment_2") {
     const dropSpecialResult = executeStoryDropSpecial(state, special);
     if (dropSpecialResult) return dropSpecialResult;
 
@@ -393,11 +424,15 @@ return {
 
     return { handled: true, redraw: false, message: "クリエイトスキルがありません" };
   }
+
   return { handled: false, redraw: false, message: null };
 }
 
 export function onProtoCreateResolveChoice(state, pendingChoice, selectedValue, context = {}) {
   ensureProtoCreateState(state);
+
+  const chapter3Choice = onStoryChapter3ResolveChoice(state, pendingChoice, selectedValue, context);
+  if (chapter3Choice?.handled === true) return chapter3Choice;
 
   if (pendingChoice?.effectType === "proto_create_reload_choice") {
     const slotKey = String(selectedValue || "");
@@ -414,11 +449,11 @@ export function onProtoCreateResolveChoice(state, pendingChoice, selectedValue, 
     state.storyReloadCounters[slotKey] = 0;
 
     return {
-  handled: true,
-  redraw: true,
-  consumeAction: true,
-  message: `${slot.label} 全弾リロード：${before}→${max}`
-};
+      handled: true,
+      redraw: true,
+      consumeAction: true,
+      message: `${slot.label} 全弾リロード：${before}→${max}`
+    };
   }
 
   if (pendingChoice?.effectType === "proto_create_energy_adjust_choice") {
@@ -457,7 +492,7 @@ export function onProtoCreateResolveChoice(state, pendingChoice, selectedValue, 
       }
     };
   }
-  
+
   if (pendingChoice?.effectType === "proto_create_reload_followup") {
     const slotKey = String(selectedValue || "");
 
@@ -483,30 +518,31 @@ export function onProtoCreateResolveChoice(state, pendingChoice, selectedValue, 
     state.storyReloadFollowUpUsed[slotKey] = true;
     state.storyAmmo[slotKey] = ammo - useCount;
 
-  const appendAttacks = createAttack(
-  Number(effect.damage || 0),
-  useCount,
-  {
-    type: effect.attackType || "shoot",
-    beam: effect.beam === true,
-    ignoreReduction: effect.ignoreReduction === true,
-    cannotEvade: effect.cannotEvade === true,
-    source: `${slot.label} 追撃`
-  }
-);
+    const appendAttacks = createAttack(
+      Number(effect.damage || 0),
+      useCount,
+      {
+        type: effect.attackType || "shoot",
+        beam: effect.beam === true,
+        ignoreReduction: effect.ignoreReduction === true,
+        cannotEvade: effect.cannotEvade === true,
+        onHit: effect.onHit || null,
+        source: `${slot.label} 追撃`
+      }
+    );
 
-return {
-  handled: true,
-  redraw: true,
-  message: `${slot.label} 追撃：弾数${ammo}→${state.storyAmmo[slotKey]}`,
-  appendAttacks
-};
+    return {
+      handled: true,
+      redraw: true,
+      message: `${slot.label} 追撃：弾数${ammo}→${state.storyAmmo[slotKey]}`,
+      appendAttacks
+    };
   }
 
   return { handled: false, redraw: false, message: null };
 }
 
-export function onProtoCreateBeforeSlot(state, rolledSlotNumber) {
+export function onProtoCreateBeforeSlot(state, rolledSlotNumber, context = {}) {
   ensureProtoCreateState(state);
 
   const slotKey = `slot${rolledSlotNumber}`;
@@ -517,6 +553,19 @@ export function onProtoCreateBeforeSlot(state, rolledSlotNumber) {
 
   let nextSlot = slot;
   const messages = [];
+
+  const chapter3Before = onStoryChapter3BeforeSlot(state, rolledSlotNumber, {
+    ...context,
+    slot: nextSlot
+  });
+
+  if (chapter3Before?.replaceSlotAction?.slotData) {
+    nextSlot = chapter3Before.replaceSlotAction.slotData;
+  }
+
+  if (chapter3Before?.message) {
+    messages.push(chapter3Before.message);
+  }
 
   if (effect.storyReload) {
     const ammo = Number(state.storyAmmo?.[slotKey] || 0);
@@ -542,7 +591,7 @@ export function onProtoCreateBeforeSlot(state, rolledSlotNumber) {
     messages.push(`${slot.label} 弾数${ammo}→${state.storyAmmo[slotKey]}`);
   }
 
-  if (effect.storyEnergy) {
+  if (nextSlot.effect?.storyEnergy) {
     const adjusted = getEnergyAdjustedEffect(nextSlot.effect, state.storyEnergyAdjustStacks);
     const need = Number(adjusted.storyEnergyCost || 0);
     const have = Number(state.storyEnergy || 0);
@@ -576,7 +625,7 @@ export function onProtoCreateBeforeSlot(state, rolledSlotNumber) {
   }
 
   return {
-    redraw: true,
+    redraw: messages.length > 0,
     message: messages.join("\n") || null,
     replaceSlotAction: {
       slotKey,
@@ -586,12 +635,25 @@ export function onProtoCreateBeforeSlot(state, rolledSlotNumber) {
 }
 
 export function onProtoCreateAfterSlotResolved(state, slotNumber, resolveResult, context = {}) {
+  ensureProtoCreateState(state);
+
+  const chapter3Result = onStoryChapter3AfterSlotResolved(state, slotNumber, resolveResult, context);
+  if (
+    chapter3Result?.redraw === true ||
+    chapter3Result?.message ||
+    Array.isArray(chapter3Result?.appendAttacks)
+  ) {
+    return chapter3Result;
+  }
+
   return { redraw: false, message: null };
 }
-export function onProtoCreateTurnEnd(state) {
+
+export function onProtoCreateTurnEnd(state, context = {}) {
   ensureProtoCreateState(state);
 
   let redraw = false;
+  const messages = [];
 
   const beforeEnergy = state.storyEnergy;
   state.storyEnergy = Math.min(state.storyEnergyMax, state.storyEnergy + 5);
@@ -630,10 +692,17 @@ export function onProtoCreateTurnEnd(state) {
   state.storyShieldActive = false;
   state.storyReloadFollowUpUsed = {};
 
-  return { redraw, message: null };
+  const chapter3TurnEnd = onStoryChapter3TurnEnd(state, context);
+  if (chapter3TurnEnd?.redraw) redraw = true;
+  if (chapter3TurnEnd?.message) messages.push(chapter3TurnEnd.message);
+
+  return {
+    redraw,
+    message: messages.join("\n") || null
+  };
 }
 
-export function modifyProtoCreateTakenDamage(defender, attacker, attack, damage) {
+export function modifyProtoCreateTakenDamage(defender, attacker, attack, damage, context = {}) {
   ensureProtoCreateState(defender);
 
   let nextDamage = Math.max(0, Number(damage || 0));
@@ -646,10 +715,11 @@ export function modifyProtoCreateTakenDamage(defender, attacker, attack, damage)
 
   const dropResult = modifyStoryDropTakenDamage(defender, attacker, attack, nextDamage);
   nextDamage = Math.max(0, Number(dropResult?.damage ?? nextDamage));
+  if (dropResult?.message) messages.push(dropResult.message);
 
-  if (dropResult?.message) {
-    messages.push(dropResult.message);
-  }
+  const chapter3Damage = modifyStoryChapter3TakenDamage(defender, attacker, attack, nextDamage, context);
+  nextDamage = Math.max(0, Number(chapter3Damage?.damage ?? nextDamage));
+  if (chapter3Damage?.message) messages.push(chapter3Damage.message);
 
   return {
     damage: nextDamage,
@@ -659,6 +729,16 @@ export function modifyProtoCreateTakenDamage(defender, attacker, attack, damage)
 
 export function onProtoCreateActionResolved(attacker, defender, context = {}) {
   ensureProtoCreateState(attacker);
+
+  const chapter3Action = onStoryChapter3ActionResolved(attacker, defender, context);
+  if (
+    chapter3Action?.redraw === true ||
+    chapter3Action?.message ||
+    Array.isArray(chapter3Action?.appendAttacks) ||
+    chapter3Action?.requestChoice
+  ) {
+    return chapter3Action;
+  }
 
   const slotNumber = context.slotNumber;
   const slotKey = slotNumber ? `slot${slotNumber}` : null;
@@ -689,14 +769,15 @@ export function onProtoCreateActionResolved(attacker, defender, context = {}) {
     }
   };
 }
-export function onProtoCreateDamaged() {
-  return { redraw: false, message: null };
+
+export function onProtoCreateDamaged(defender, attacker, context = {}) {
+  return onStoryChapter3Damaged(defender, attacker, context);
 }
 
-export function onProtoCreateEnemyBeforeSlot() {
-  return { redraw: false, message: null };
+export function onProtoCreateEnemyBeforeSlot(state, rolledSlotNumber, context = {}) {
+  return onStoryChapter3EnemyBeforeSlot(state, rolledSlotNumber, context);
 }
 
-export function modifyProtoCreateEvadeAttempt() {
-  return { handled: false };
+export function modifyProtoCreateEvadeAttempt(defender, attacker, attack, context = {}) {
+  return modifyStoryChapter3EvadeAttempt(defender, attacker, attack, context);
 }
