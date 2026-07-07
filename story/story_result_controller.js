@@ -24,7 +24,8 @@ function getDropGroups(unit) {
 
 function hasAllStoryDrops(unit, save) {
   const required = getDropGroups(unit);
-  if (!required.length) return true;
+  if (!required.length) return false;
+
   const acquired = save.inventory?.storyDrops || {};
   return required.every(drop => drop?.id && acquired[drop.id] === true);
 }
@@ -103,7 +104,6 @@ export function createStoryResultController(ctx) {
 
           const save = loadStorySave();
           if (save.companionUnits?.[unit.id]?.unlocked === true) return;
-
           if (!hasAllStoryDrops(unit, save)) return;
 
           unlockStoryCompanionUnit(unit.id, unit.storyCompanion.cost || 0);
