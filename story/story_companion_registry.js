@@ -1,21 +1,18 @@
 import { story_zaku_ii_gene } from "../js/js_units_story_zaku_ii_gene.js";
 import { story_zaku_ii_denim } from "../js/js_units_story_zaku_ii_denim.js";
 import { story_gundam } from "../js/js_units_story_gundam.js";
+import { storyChapter3Units } from "../js/js_units_story_chapter3.js";
 
 export const STORY_COMPANION_UNITS = [
   story_zaku_ii_gene,
   story_zaku_ii_denim,
-  story_gundam
+  story_gundam,
+  ...storyChapter3Units
 ];
 
 export function buildStoryCompanionOptions() {
   return [
-    {
-      id: "none",
-      label: "なし",
-      cost: 0,
-      detail: ""
-    },
+    { id: "none", label: "なし", cost: 0, detail: "" },
     ...STORY_COMPANION_UNITS
       .filter(unit => unit?.storyCompanion)
       .map(unit => ({
