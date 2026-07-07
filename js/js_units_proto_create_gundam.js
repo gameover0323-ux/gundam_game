@@ -25,37 +25,39 @@ function toSlotEffect(option) {
       beam: data.beam === true,
       cannotEvade: data.cannotEvade === true,
       ignoreReduction: data.ignoreReduction === true,
+      onHit: data.onHit || null,
+
       storyReload: data.reload === true,
       storyAmmoMax: data.ammoMax || null,
       storyAmmoCostPerUse: data.ammoCostPerUse || null,
       storyReloadPerTurn: data.reloadPerTurn || null,
       storyReloadTurnInterval: data.reloadTurnInterval || null,
       storyReloadPerInterval: data.reloadPerInterval || null,
+
       storyEnergy: data.energy === true,
-      storyEnergyCost: data.energyCost || null
+      storyEnergyCost: data.energyCost || null,
+      storyEnergyIncrease: data.energyIncrease || null
     };
   }
 
   if (data.kind === "heal") {
-    return {
-      type: "heal",
-      amount: Number(data.value || 0)
-    };
+    return { type: "heal", amount: Number(data.value || 0) };
   }
 
   if (data.kind === "evade") {
+    return { type: "evade", amount: Number(data.value || 0) };
+  }
+
+  if (data.kind === "custom") {
     return {
-      type: "evade",
-      amount: Number(data.value || 0)
+      type: "custom",
+      effectId: data.effectId || data.customType || "story_unknown",
+      customType: data.effectId || data.customType || "story_unknown"
     };
   }
 
-  return {
-    type: "custom",
-    effectId: "story_unknown"
-  };
+  return { type: "custom", effectId: "story_unknown", customType: "story_unknown" };
 }
-
 function buildSlot(slotKey, selectedId) {
   const option = findStorySlotOption(slotKey, selectedId);
 
