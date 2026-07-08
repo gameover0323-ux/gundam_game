@@ -3,7 +3,7 @@ export const metal_chikamochi = {
   name: "メタルちかもち",
   defaultFormId: "normal",
   storyOnly: true,
-  exp: 0,
+  exp: 50,
   forms: {
     normal: {
       name: "メタルちかもち",
