@@ -1,14 +1,6 @@
-function getAdapter(context) {
-  return context?.twoVtwoAdapter || null;
-}
-
-function getOwnerPlayer(context) {
-  return context?.ownerPlayer || null;
-}
-
 function addRuleEvade(state, amount, context = {}) {
-  const adapter = getAdapter(context);
-  const ownerPlayer = getOwnerPlayer(context);
+  const adapter = context?.twoVtwoAdapter;
+  const ownerPlayer = context?.ownerPlayer;
 
   if (adapter?.addTeamEvade && ownerPlayer) {
     return adapter.addTeamEvade(ownerPlayer, state, amount);
@@ -23,6 +15,9 @@ function ensureStoryGundamState(state) {
   if (typeof state.ntTimer !== "number") state.ntTimer = 0;
   if (typeof state.ntGuessSlotKey !== "string") state.ntGuessSlotKey = "";
   if (typeof state.storyGundamNtSuccessCount !== "number") state.storyGundamNtSuccessCount = 0;
+
+  if (typeof state.storyGundamDropNtCooldown !== "number") state.storyGundamDropNtCooldown = 0;
+  if (typeof state.storyGundamDropNtGuessSlotKey !== "string") state.storyGundamDropNtGuessSlotKey = "";
 }
 
 function pickRandomPredictSlotKey(slotKeys) {
@@ -30,37 +25,27 @@ function pickRandomPredictSlotKey(slotKeys) {
     ? slotKeys.filter(key => typeof key === "string" && /^slot\d+$/.test(key))
     : [];
 
-  if (keys.length <= 0) return "";
+  if (!keys.length) return "";
   return keys[Math.floor(Math.random() * keys.length)];
 }
 
 export function getStoryGundamDerivedState(state) {
   ensureStoryGundamState(state);
 
-  const result = {
-    name: null,
-    slots: {},
-    specials: {},
-    status: []
-  };
+  const status = [];
 
-  if (state.ntGuessSlotKey) {
-    result.status.push("ニュータイプ予測中");
-  }
+  if (state.ntGuessSlotKey) status.push("ニュータイプ予測中");
+  if (state.storyGundamNtSuccessCount > 0) status.push(`予測成功:${state.storyGundamNtSuccessCount}`);
 
-  if (state.storyGundamNtSuccessCount > 0) {
-    result.status.push(`予測成功:${state.storyGundamNtSuccessCount}`);
-  }
-
-  return result;
+  return { name: null, slots: {}, specials: {}, status };
 }
 
-export function canUseStoryGundamSpecial(state, specialKey, context = {}) {
-  return true;
+export function canUseStoryGundamSpecial() {
+  return { allowed: true, message: null };
 }
 
-export function executeStoryGundamSpecial(state, specialKey, context = {}) {
-  return { handled: false, message: null };
+export function executeStoryGundamSpecial() {
+  return { handled: false, redraw: false, message: null };
 }
 
 export function onStoryGundamTurnEnd(state, context = {}) {
@@ -73,26 +58,17 @@ export function onStoryGundamTurnEnd(state, context = {}) {
   }
 
   state.ntTimer = 0;
-
-  const predictSlotKey = pickRandomPredictSlotKey(context.enemyPredictableSlotKeys);
-
-  if (!predictSlotKey) {
-    state.ntGuessSlotKey = "";
-    return {
-      redraw: true,
-      message: "ガンダム：ニュータイプ予測対象なし"
-    };
-  }
-
-  state.ntGuessSlotKey = predictSlotKey;
+  state.ntGuessSlotKey = pickRandomPredictSlotKey(context.enemyPredictableSlotKeys);
 
   return {
     redraw: true,
-    message: "ガンダム：ニュータイプ予測を自動設定"
+    message: state.ntGuessSlotKey
+      ? "ガンダム：ニュータイプ予測を自動設定"
+      : "ガンダム：ニュータイプ予測対象なし"
   };
 }
 
-export function onStoryGundamBeforeSlot(state, rolledSlotNumber, context = {}) {
+export function onStoryGundamBeforeSlot(state) {
   ensureStoryGundamState(state);
   return { redraw: false, message: null };
 }
@@ -115,21 +91,25 @@ export function onStoryGundamEnemyBeforeSlot(state, rolledSlotNumber, context = 
     };
   }
 
-  state.ntGuessSlotKey = "";
+  if (state.ntGuessSlotKey) {
+    state.ntGuessSlotKey = "";
+    return { redraw: true, message: "ガンダム：ニュータイプ予測失敗" };
+  }
+
   return { redraw: false, message: null };
 }
 
-export function onStoryGundamAfterSlotResolved(state, slotNumber, context = {}) {
+export function onStoryGundamAfterSlotResolved(state) {
   ensureStoryGundamState(state);
   return { redraw: false, message: null };
 }
 
-export function onStoryGundamActionResolved(attacker, defender, context = {}) {
+export function onStoryGundamActionResolved(attacker) {
   ensureStoryGundamState(attacker);
   return { redraw: false, message: null };
 }
 
-export function onStoryGundamDamaged(defender, attacker, context = {}) {
+export function onStoryGundamDamaged(defender) {
   ensureStoryGundamState(defender);
   return { redraw: false, message: null };
 }
@@ -139,18 +119,129 @@ export function modifyStoryGundamTakenDamage(defender, attacker, attack, damage)
   return { damage, message: null };
 }
 
-export function modifyStoryGundamEvadeAttempt(defender, attacker, attack, context = {}) {
+export function modifyStoryGundamEvadeAttempt(defender) {
   ensureStoryGundamState(defender);
-  return null;
+  return { handled: false };
 }
 
-export function onStoryGundamResolveChoice(state, pendingChoice, selectedValue, context = {}) {
+export function onStoryGundamResolveChoice(state) {
+  ensureStoryGundamState(state);
+  return { handled: false, redraw: false, message: null };
+}
+
+/* ドロップ品：ニュータイプ感性 */
+
+export function getStoryGundamDropDerivedStatus(state, option) {
   ensureStoryGundamState(state);
 
-  if (pendingChoice?.source === "story_gundam_nt_prediction") {
-    state.ntGuessSlotKey = String(selectedValue || "");
-    return { handled: true, redraw: true, message: "予測を設定した" };
+  const result = [];
+
+  if (state.storyGundamDropNtCooldown > 0) {
+    result.push({
+      text: `${option?.label || "ニュータイプ感性"}CT:${state.storyGundamDropNtCooldown}`,
+      color: "#99ccff",
+      bold: true
+    });
   }
 
-  return { handled: false, redraw: false, message: null };
+  if (state.storyGundamDropNtGuessSlotKey) {
+    result.push({
+      text: `${option?.label || "ニュータイプ感性"}予測中`,
+      color: "#66ffcc",
+      bold: true
+    });
+  }
+
+  return result;
+}
+
+export function canUseStoryGundamDropSpecial(state, option) {
+  ensureStoryGundamState(state);
+
+  return {
+    allowed: state.storyGundamDropNtCooldown <= 0,
+    message: state.storyGundamDropNtCooldown <= 0
+      ? null
+      : `${option?.label || "ニュータイプ感性"}再使用まで${state.storyGundamDropNtCooldown}ターン`
+  };
+}
+
+export function executeStoryGundamDropSpecial(state, option, special, context = {}) {
+  ensureStoryGundamState(state);
+
+  if (state.storyGundamDropNtCooldown > 0) {
+    return {
+      handled: true,
+      redraw: false,
+      message: `${option?.label || "ニュータイプ感性"}再使用まで${state.storyGundamDropNtCooldown}ターン`
+    };
+  }
+
+  return {
+    handled: true,
+    redraw: true,
+    message: null,
+    requestChoice: {
+      choiceType: "slot_predict",
+      source: "story_gundam_drop_nt_prediction",
+      ownerPlayer: context.ownerPlayer,
+      enemyPlayer: context.enemyPlayer,
+      ownerUnitKey: context.ownerUnitKey || null,
+      title: `${state.name} ${option?.label || "ニュータイプ感性"}`,
+      slotKeys: context.enemyPredictableSlotKeys || []
+    }
+  };
+}
+
+export function onStoryGundamDropResolveChoice(state, pendingChoice, selectedValue) {
+  ensureStoryGundamState(state);
+
+  if (pendingChoice?.source !== "story_gundam_drop_nt_prediction") {
+    return { handled: false, redraw: false, message: null };
+  }
+
+  state.storyGundamDropNtGuessSlotKey = String(selectedValue || "");
+  state.storyGundamDropNtCooldown = 5;
+
+  return {
+    handled: true,
+    redraw: true,
+    message: "ニュータイプ感性：予測を設定した"
+  };
+}
+
+export function onStoryGundamDropEnemyBeforeSlot(state, rolledSlotNumber, context = {}) {
+  ensureStoryGundamState(state);
+
+  if (
+    state.storyGundamDropNtGuessSlotKey &&
+    context.enemyRolledSlotKey &&
+    state.storyGundamDropNtGuessSlotKey === context.enemyRolledSlotKey
+  ) {
+    addRuleEvade(state, 3, context);
+    state.storyGundamDropNtGuessSlotKey = "";
+
+    return {
+      redraw: true,
+      message: `${state.name} ニュータイプ感性成功！回避+3`
+    };
+  }
+
+  if (state.storyGundamDropNtGuessSlotKey) {
+    state.storyGundamDropNtGuessSlotKey = "";
+    return { redraw: true, message: "ニュータイプ感性：予測失敗" };
+  }
+
+  return { redraw: false, message: null };
+}
+
+export function onStoryGundamDropTurnEnd(state) {
+  ensureStoryGundamState(state);
+
+  if (state.storyGundamDropNtCooldown > 0) {
+    state.storyGundamDropNtCooldown -= 1;
+    return { redraw: true, message: null };
+  }
+
+  return { redraw: false, message: null };
 }
