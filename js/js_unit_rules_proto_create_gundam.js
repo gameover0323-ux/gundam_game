@@ -281,10 +281,13 @@ export function canUseProtoCreateSpecial(state, specialKey, context = {}) {
     };
   }
 
-  if (special.effectType === "story_create_skill") {
-    const name = String(special.name || "");
+if (special.effectType === "story_create_skill") {
+  const dropSpecialResult = canUseStoryDropSpecial(state, special);
+  if (dropSpecialResult) return dropSpecialResult;
 
-    if (name.includes("ラウンドフォース")) {
+  const name = String(special.name || "");
+
+  if (name.includes("ラウンドフォース")) {
       return {
         allowed: state.storyRoundForceCooldown <= 0,
         message: state.storyRoundForceCooldown <= 0 ? null : `ラウンドフォース再使用まで${state.storyRoundForceCooldown}ターン`
@@ -386,8 +389,11 @@ const dropSpecialResult = executeStoryDropSpecial(state, special, context);
     return { handled: true, redraw: true, message: `${state.name} シールド展開。このターンの被ダメージ半減` };
   }
 
-  if (special.effectType === "story_create_skill") {
-    const name = String(special.name || "");
+ if (special.effectType === "story_create_skill") {
+  const dropSpecialResult = executeStoryDropSpecial(state, special, context);
+  if (dropSpecialResult) return dropSpecialResult;
+
+  const name = String(special.name || "");
 
     if (name.includes("ラウンドフォース")) {
       if (state.storyRoundForceCooldown > 0) {
