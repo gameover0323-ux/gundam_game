@@ -1,3 +1,6 @@
+//ここには初期装備のもの以外のスロット、装備品、スキルの定義は増やさないこと。追加スキルやスロットの特殊効果はドロップ元機体のファイルで定義して引用できる形にすること。//
+
+
 import { reduceEvade } from "./js_unit_runtime.js";
 import { createAttack } from "./js_battle_system.js";
 
@@ -5,7 +8,10 @@ import {
   getStoryDropDerivedStatus,
   canUseStoryDropSpecial,
   executeStoryDropSpecial,
-  modifyStoryDropTakenDamage
+  modifyStoryDropTakenDamage,
+  onStoryDropResolveChoice,
+  onStoryDropEnemyBeforeSlot,
+  onStoryDropTurnEnd
 } from "../story/story_drop_effect_runtime.js";
 
 import {
@@ -360,7 +366,7 @@ export function executeProtoCreateSpecial(state, specialKey, context = {}) {
   }
 
   if (special.effectType === "story_equipment_1" || special.effectType === "story_equipment_2") {
-    const dropSpecialResult = executeStoryDropSpecial(state, special);
+const dropSpecialResult = executeStoryDropSpecial(state, special, context);
     if (dropSpecialResult) return dropSpecialResult;
 
     if (!String(special.name || "").includes("シールド")) {
@@ -430,6 +436,8 @@ export function executeProtoCreateSpecial(state, specialKey, context = {}) {
 
 export function onProtoCreateResolveChoice(state, pendingChoice, selectedValue, context = {}) {
   ensureProtoCreateState(state);
+  const dropChoiceResult = onStoryDropResolveChoice(state, pendingChoice, selectedValue, context);
+if (dropChoiceResult?.handled === true) return dropChoiceResult;
 
   const chapter3Choice = onStoryChapter3ResolveChoice(state, pendingChoice, selectedValue, context);
   if (chapter3Choice?.handled === true) return chapter3Choice;
@@ -691,7 +699,9 @@ export function onProtoCreateTurnEnd(state, context = {}) {
 
   state.storyShieldActive = false;
   state.storyReloadFollowUpUsed = {};
-
+const dropTurnEnd = onStoryDropTurnEnd(state, context);
+if (dropTurnEnd?.redraw) redraw = true;
+  
   const chapter3TurnEnd = onStoryChapter3TurnEnd(state, context);
   if (chapter3TurnEnd?.redraw) redraw = true;
   if (chapter3TurnEnd?.message) messages.push(chapter3TurnEnd.message);
@@ -775,6 +785,9 @@ export function onProtoCreateDamaged(defender, attacker, context = {}) {
 }
 
 export function onProtoCreateEnemyBeforeSlot(state, rolledSlotNumber, context = {}) {
+  const dropResult = onStoryDropEnemyBeforeSlot(state, rolledSlotNumber, context);
+  if (dropResult?.redraw === true || dropResult?.message) return dropResult;
+
   return onStoryChapter3EnemyBeforeSlot(state, rolledSlotNumber, context);
 }
 
