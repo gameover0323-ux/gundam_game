@@ -1,3 +1,4 @@
+import { story_gundam } from "../js/js_units_story_gundam.js";
 import { getStoryCreateUnit } from "./story_units.js";
 import {
   loadStorySave,
@@ -6,7 +7,6 @@ import {
 } from "./story_save.js";
 import { createStoryResultController } from "./story_result_controller.js";
 
-import { gundam_mc } from "../js/js_units_gundam_mc.js";
 
 import { story_zaku_ii_gene } from "../js/js_units_story_zaku_ii_gene.js";
 import { story_zaku_ii_denim } from "../js/js_units_story_zaku_ii_denim.js";
@@ -37,20 +37,8 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-function createCpuGundamUnit() {
-  const unit = clone(gundam_mc);
-  unit.id = "cpu_gundam_mc";
-  unit.name = "ガンダム";
-  unit.exp = 30;
 
-  Object.values(unit.forms || {}).forEach(form => {
-    form.name = "ガンダム";
-  });
 
-  return unit;
-}
-
-const cpu_gundam_mc = createCpuGundamUnit();
 
 const STORY_UNIT_MAP = {
   proto_create_gundam: null,
