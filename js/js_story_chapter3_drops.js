@@ -1,57 +1,15 @@
-
-function normalizeDropArgs(detail, data) {
-  if (data === undefined && detail && typeof detail === "object") {
-    return {
-      detail: detail.detail || detail.desc || "",
-      data: detail
-    };
-  }
-
-  return {
-    detail: String(detail || ""),
-    data: data || {}
-  };
-}
-
 function slot(id, slotKey, label, cost, detail, data) {
-  const normalized = normalizeDropArgs(detail, data);
-  return {
-    id,
-    type: "slot",
-    slotKey,
-    label,
-    cost,
-    detail: normalized.detail,
-    data: normalized.data
-  };
+  return { id, type: "slot", slotKey, label, cost, detail, data };
 }
 
 function equipment(id, label, cost, detail, data) {
-  const normalized = normalizeDropArgs(detail, data);
-  return {
-    id,
-    type: "equipment",
-    label,
-    cost,
-    detail: normalized.detail,
-    data: normalized.data
-  };
+  return { id, type: "equipment", label, cost, detail, data };
 }
 
 function skill(id, label, cost, detail, data) {
-  const normalized = normalizeDropArgs(detail, data);
-  return {
-    id,
-    type: "skill",
-    label,
-    cost,
-    detail: normalized.detail,
-    data: {
-      kind: "create_skill",
-      ...normalized.data
-    }
-  };
+  return { id, type: "skill", label, cost, detail, data: { kind: "create_skill", ...data } };
 }
+
 export const STORY_CHAPTER3_DROPS_BY_UNIT_ID = {
   story_leo: [
     slot("story_leo_slot1_evade_1", "slot1", "回避 1回", 5, "回避を1回獲得する。", { kind: "evade", value: 1 }),
@@ -144,56 +102,53 @@ export const STORY_CHAPTER3_DROPS_BY_UNIT_ID = {
     slot("story_psycho_slot5_focus_beam", "slot5", "収束ビーム砲", 0, "250ダメージ / 射撃 / ビーム / エネルギー / EN消費100 / ダメージ増加値100", { kind: "attack", damage: 250, count: 1, attackType: "shoot", beam: true, energy: true, energyCost: 100, energyIncrease: 100 })
   ],
 
-    story_death_army: [
-    slot("story_death_army_slot1_beam_rifle", "slot1", "棍棒型ビームライフル", 10, {
+  story_death_army: [
+    slot("story_death_army_slot1_beam_rifle", "slot1", "棍棒型ビームライフル", 10, "70ダメージ / 射撃 / ビーム", {
       kind: "attack", damage: 70, count: 1, attackType: "shoot", beam: true
     }),
-    slot("story_death_army_slot1_spear", "slot1", "電撃銛", 20, {
+    slot("story_death_army_slot1_spear", "slot1", "電撃銛", 20, "50ダメージ / 格闘 / ヒット時相手回避-2", {
       kind: "attack", damage: 50, count: 1, attackType: "melee", onHit: "reduce_evade_2"
     }),
-    slot("story_death_army_slot1_machine_gun", "slot1", "マシンガンデスライフル", 10, {
+    slot("story_death_army_slot1_machine_gun", "slot1", "マシンガンデスライフル", 10, "10ダメージ×6回 / 射撃", {
       kind: "attack", damage: 10, count: 6, attackType: "shoot"
     }),
-    slot("story_death_army_slot1_evade_2", "slot1", "回避 2回", 15, {
+    slot("story_death_army_slot1_evade_2", "slot1", "回避 2回", 15, "回避を2回獲得する。", {
       kind: "evade", value: 2
     }),
-    slot("story_death_army_slot1_master_cross", "slot1", "マスタークロス", 20, {
+    slot("story_death_army_slot1_master_cross", "slot1", "マスタークロス", 20, "10ダメージ / 格闘 / ヒット時、次の攻撃必中", {
       kind: "attack", damage: 10, count: 1, attackType: "melee", onHit: "next_attack_cannot_evade"
     }),
-    slot("story_death_army_slot2_club", "slot2", "棍棒", 15, {
+    slot("story_death_army_slot2_club", "slot2", "棍棒", 15, "80ダメージ / 格闘", {
       kind: "attack", damage: 80, count: 1, attackType: "melee"
     }),
-    slot("story_death_army_slot2_beam_cannon", "slot2", "大口径ビームキャノン", 0, {
-      kind: "attack", damage: 100, count: 1, attackType: "shoot", beam: true,
-      energy: true, energyCost: 50, energyIncrease: 50
+    slot("story_death_army_slot2_beam_cannon", "slot2", "大口径ビームキャノン", 0, "100ダメージ / 射撃 / ビーム / EN消費50 / 増加値50", {
+      kind: "attack", damage: 100, count: 1, attackType: "shoot", beam: true, energy: true, energyCost: 50, energyIncrease: 50
     }),
-    slot("story_death_army_slot3_charge", "slot3", "銛突進", 13, {
+    slot("story_death_army_slot3_charge", "slot3", "銛突進", 13, "100ダメージ / 格闘", {
       kind: "attack", damage: 100, count: 1, attackType: "melee"
     }),
-    slot("story_death_army_slot4_beam_cannon", "slot4", "大口径ビームキャノン", 0, {
-      kind: "attack", damage: 100, count: 1, attackType: "shoot", beam: true,
-      energy: true, energyCost: 50, energyIncrease: 50
+    slot("story_death_army_slot4_beam_cannon", "slot4", "大口径ビームキャノン", 0, "100ダメージ / 射撃 / ビーム / EN消費50 / 増加値50", {
+      kind: "attack", damage: 100, count: 1, attackType: "shoot", beam: true, energy: true, energyCost: 50, energyIncrease: 50
     }),
-    slot("story_death_army_slot4_ranbu", "slot4", "乱舞", 45, {
+    slot("story_death_army_slot4_ranbu", "slot4", "乱舞", 45, "30ダメージ×3回 / 格闘 / 回避1回", {
       kind: "custom", effectId: "story_death_army_drop_ranbu"
     }),
-    slot("story_death_army_slot5_spear_combo", "slot5", "電撃銛連撃", 45, {
+    slot("story_death_army_slot5_spear_combo", "slot5", "電撃銛連撃", 45, "30ダメージ×3回 / 格闘 / 各ヒット時相手回避-1", {
       kind: "attack", damage: 30, count: 3, attackType: "melee", onHit: "reduce_evade_1_each"
     }),
-    slot("story_death_army_slot5_melee", "slot5", "格闘", 15, {
+    slot("story_death_army_slot5_melee", "slot5", "格闘", 15, "20ダメージ×3回 / 格闘", {
       kind: "attack", damage: 20, count: 3, attackType: "melee"
     }),
-    slot("story_death_army_slot6_fake_finger", "slot6", "フェイクダークネスフィンガー", 0, {
-      kind: "attack", damage: 150, count: 1, attackType: "melee", ignoreReduction: true,
-      energy: true, energyCost: 30, energyIncrease: 20
+    slot("story_death_army_slot6_fake_finger", "slot6", "フェイクダークネスフィンガー", 0, "150ダメージ / 格闘 / 軽減不可 / EN消費30 / 増加値20", {
+      kind: "attack", damage: 150, count: 1, attackType: "melee", ignoreReduction: true, energy: true, energyCost: 30, energyIncrease: 20
     }),
-    equipment("story_death_army_master_cross", "マスタークロス", 7, {
+    equipment("story_death_army_master_cross", "マスタークロス", 7, "ゲーム中1度だけ行動権を2増加させる。", {
       kind: "action_gain_equipment", uses: 1, actionGain: 2
     }),
-    equipment("story_death_army_dg_cells", "DG細胞(デス)", 20, {
+    equipment("story_death_army_dg_cells", "DG細胞(デス)", 20, "回避所持数が1以上ある時、毎ターンHPが5ずつ回復する。回避所持数が0の時、毎ターン5ずつダメージを受ける。", {
       kind: "turn_regen_or_damage_by_evade", heal: 5, damage: 5
     }),
-    skill("story_death_army_arts", "デスアーミーアーツ", 30, {
+    skill("story_death_army_arts", "デスアーミーアーツ", 30, "3ターンに1回発動可能。行動権を1消費し、デスアーミー種の持つスロットを1つランダムで発動する。", {
       effectId: "death_army_arts", cooldown: 3, actionCost: 1
     })
   ],
