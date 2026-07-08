@@ -96,7 +96,8 @@ export const story_gundam = {
         data: {
   kind: "create_skill",
   effectId: "story_gundam_nt_prediction",
-  cooldown: 5,
+  autoTrigger: "turn_end",
+  interval: 5,
   evadeGain: 3
         }
       }
