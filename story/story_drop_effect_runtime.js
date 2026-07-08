@@ -1,6 +1,7 @@
 import { findStorySlotOption, findStoryEquipmentOption, findStorySkillOption } from "./story_create_lab_data.js";
 import { collectStoryDropOptions } from "./story_drop_registry.js";
 import { createAttack } from "../js/js_battle_system.js";
+import { addEvade } from "../js/js_unit_runtime.js";
 
 import {
   getStoryGundamDropDerivedStatus,
@@ -23,13 +24,22 @@ function ensureStoryDropRuntimeState(state) {
   }
 }
 
+function heal(state, amount) {
+  const value = Math.max(0, Number(amount || 0));
+  state.hp = Math.min(Number(state.maxHp || state.hp || 0), Number(state.hp || 0) + value);
+  return value;
+}
+
+function damageSelf(state, amount) {
+  const value = Math.max(0, Number(amount || 0));
+  state.hp = Math.max(0, Number(state.hp || 0) - value);
+  return value;
+}
+
 function isGundamNtSense(option) {
   const data = option?.data || {};
   const label = String(option?.label || "");
-  return (
-    data.effectId === "story_gundam_nt_prediction" ||
-    label.includes("ニュータイプ感性")
-  );
+  return data.effectId === "story_gundam_nt_prediction" || label.includes("ニュータイプ感性");
 }
 
 function getEquippedDropOptions(state) {
@@ -63,31 +73,14 @@ function getEquippedDropOptions(state) {
   specials.forEach(special => {
     const name = String(special?.name || "");
 
-    collectStoryDropOptions("skill").forEach(option => {
-      if (!option?.label) return;
-      if (!name.includes(option.label)) return;
-      if (result.some(item => item.option?.id === option.id)) return;
-      result.push({ kind: "skill", key: special.effectType || "skill", option });
-    });
-
-    collectStoryDropOptions("equipment").forEach(option => {
-      if (!option?.label) return;
-      if (!name.includes(option.label)) return;
-      if (result.some(item => item.option?.id === option.id)) return;
-      result.push({ kind: "equipment", key: special.effectType || "equipment", option });
-    });
-
-    if (name.includes("ワンアイズターゲット")) {
-      result.push({
-        kind: "equipment",
-        key: special?.effectType || "equipment",
-        option: {
-          id: "one_eyes_target",
-          label: "ワンアイズターゲット",
-          data: { kind: "equipment_damage_barrier", barrierValue: 120 }
-        }
+    ["skill", "equipment"].forEach(kind => {
+      collectStoryDropOptions(kind).forEach(option => {
+        if (!option?.label) return;
+        if (!name.includes(option.label)) return;
+        if (result.some(item => item.option?.id === option.id)) return;
+        result.push({ kind, key: special.effectType || kind, option });
       });
-    }
+    });
   });
 
   return result;
@@ -97,9 +90,34 @@ export function getEquippedStoryDropEffects(state) {
   return getEquippedDropOptions(state);
 }
 
+function getUseCount(state, option, maxUses) {
+  ensureStoryDropRuntimeState(state);
+  const key = `${option.id}_uses`;
+  if (typeof state.storyDropRuntime[key] !== "number") {
+    state.storyDropRuntime[key] = Number(maxUses || 0);
+  }
+  return state.storyDropRuntime[key];
+}
+
+function spendUse(state, option) {
+  const key = `${option.id}_uses`;
+  state.storyDropRuntime[key] = Math.max(0, Number(state.storyDropRuntime[key] || 0) - 1);
+}
+
+function getCooldown(state, option) {
+  ensureStoryDropRuntimeState(state);
+  const key = `${option.id}_cooldown`;
+  if (typeof state.storyDropRuntime[key] !== "number") state.storyDropRuntime[key] = 0;
+  return state.storyDropRuntime[key];
+}
+
+function setCooldown(state, option, value) {
+  ensureStoryDropRuntimeState(state);
+  state.storyDropRuntime[`${option.id}_cooldown`] = Math.max(0, Number(value || 0));
+}
+
 export function getStoryDropDerivedStatus(state) {
   ensureStoryDropRuntimeState(state);
-
   const result = [];
 
   getEquippedStoryDropEffects(state).forEach(({ option }) => {
@@ -108,22 +126,17 @@ export function getStoryDropDerivedStatus(state) {
     if (data.kind === "equipment_damage_barrier") {
       const max = Number(data.barrierValue || 0);
       const remain = Number(state.storyDropRuntime.oneEyesTargetBarrier ?? max);
-      result.push({
-        text: `${option.label}:${remain}`,
-        color: remain > 0 ? "#66ccff" : "#777777",
-        bold: remain > 0
-      });
+      result.push({ text: `${option.label}:${remain}`, color: remain > 0 ? "#66ccff" : "#777777", bold: remain > 0 });
     }
 
-    if (data.kind === "equipment_attack") {
-      const useKey = `${option.id}_uses`;
-      const maxUses = Number(data.uses || 0);
-      const remain = Number(state.storyDropRuntime[useKey] ?? maxUses);
-      result.push({
-        text: `${option.label}:${remain}`,
-        color: remain > 0 ? "#ffcc66" : "#777777",
-        bold: remain > 0
-      });
+    if (data.kind === "equipment_attack" || data.kind === "action_gain_equipment") {
+      const remain = getUseCount(state, option, data.uses || 0);
+      result.push({ text: `${option.label}:${remain}`, color: remain > 0 ? "#ffcc66" : "#777777", bold: remain > 0 });
+    }
+
+    if (data.effectId === "death_army_arts") {
+      const cooldown = getCooldown(state, option);
+      result.push({ text: `${option.label}CT:${cooldown}`, color: cooldown > 0 ? "#ff9999" : "#66ffcc", bold: true });
     }
 
     if (isGundamNtSense(option)) {
@@ -136,10 +149,7 @@ export function getStoryDropDerivedStatus(state) {
 
 export function canUseStoryDropSpecial(state, special) {
   const name = String(special?.name || "");
-  const matched = getEquippedStoryDropEffects(state).find(({ option }) => {
-    return option?.label && name.includes(option.label);
-  });
-
+  const matched = getEquippedStoryDropEffects(state).find(({ option }) => option?.label && name.includes(option.label));
   if (!matched) return null;
 
   const data = matched.option?.data || {};
@@ -148,38 +158,52 @@ export function canUseStoryDropSpecial(state, special) {
     return canUseStoryGundamDropSpecial(state, matched.option, special);
   }
 
-  if (data.kind === "equipment_damage_barrier") {
+  if (data.kind === "equipment_damage_barrier" || data.kind === "turn_regen_or_damage_by_evade") {
     return { allowed: false, message: `${matched.option.label}は自動発動装備です` };
   }
 
-  if (data.kind === "equipment_attack") {
-    ensureStoryDropRuntimeState(state);
-    const useKey = `${matched.option.id}_uses`;
-    const maxUses = Number(data.uses || 0);
-
-    if (typeof state.storyDropRuntime[useKey] !== "number") {
-      state.storyDropRuntime[useKey] = maxUses;
-    }
-
+  if (data.kind === "equipment_attack" || data.kind === "action_gain_equipment") {
+    const remain = getUseCount(state, matched.option, data.uses || 0);
     return {
-      allowed: state.storyDropRuntime[useKey] > 0,
-      message: state.storyDropRuntime[useKey] > 0 ? null : `${matched.option.label}の使用回数がありません`
+      allowed: remain > 0,
+      message: remain > 0 ? null : `${matched.option.label}の使用回数がありません`
     };
   }
 
-  if (data.mochiBonus === true) {
-    return { allowed: false, message: `${matched.option.label}は戦闘中効果なしです` };
+  if (data.effectId === "death_army_arts") {
+    const cooldown = getCooldown(state, matched.option);
+    return {
+      allowed: cooldown <= 0,
+      message: cooldown <= 0 ? null : `${matched.option.label}再使用まで${cooldown}ターン`
+    };
   }
 
   return null;
 }
 
+function createDeathArmyArtsAttacks(state) {
+  const table = [
+    () => createAttack(70, 1, { type: "shoot", beam: true, source: "デスアーミーアーツ：棍棒型ビームライフル" }),
+    () => createAttack(50, 1, { type: "melee", onHit: "reduce_evade_2", source: "デスアーミーアーツ：電撃銛" }),
+    () => createAttack(10, 6, { type: "shoot", source: "デスアーミーアーツ：マシンガンデスライフル" }),
+    () => {
+      addEvade(state, 2);
+      return [];
+    },
+    () => createAttack(10, 1, { type: "melee", onHit: "next_attack_cannot_evade", source: "デスアーミーアーツ：マスタークロス" }),
+    () => createAttack(80, 1, { type: "melee", source: "デスアーミーアーツ：棍棒" }),
+    () => createAttack(100, 1, { type: "melee", source: "デスアーミーアーツ：銛突進" }),
+    () => createAttack(30, 3, { type: "melee", onHit: "reduce_evade_1_each", source: "デスアーミーアーツ：電撃銛連撃" }),
+    () => createAttack(20, 3, { type: "melee", source: "デスアーミーアーツ：格闘" }),
+    () => createAttack(150, 1, { type: "melee", ignoreReduction: true, source: "デスアーミーアーツ：フェイクダークネスフィンガー" })
+  ];
+
+  return table[Math.floor(Math.random() * table.length)]();
+}
+
 export function executeStoryDropSpecial(state, special, context = {}) {
   const name = String(special?.name || "");
-  const matched = getEquippedStoryDropEffects(state).find(({ option }) => {
-    return option?.label && name.includes(option.label);
-  });
-
+  const matched = getEquippedStoryDropEffects(state).find(({ option }) => option?.label && name.includes(option.label));
   if (!matched) return null;
 
   const data = matched.option?.data || {};
@@ -188,47 +212,61 @@ export function executeStoryDropSpecial(state, special, context = {}) {
     return executeStoryGundamDropSpecial(state, matched.option, special, context);
   }
 
-  if (data.kind === "equipment_damage_barrier") {
+  if (data.kind === "equipment_damage_barrier" || data.kind === "turn_regen_or_damage_by_evade") {
     return { handled: true, redraw: false, message: `${matched.option.label}は自動発動装備です` };
   }
 
+  if (data.kind === "action_gain_equipment") {
+    const remain = getUseCount(state, matched.option, data.uses || 0);
+    if (remain <= 0) return { handled: true, redraw: false, message: `${matched.option.label}の使用回数がありません` };
+
+    spendUse(state, matched.option);
+    state.actionCount = Number(state.actionCount || 0) + Number(data.actionGain || 0);
+
+    return {
+      handled: true,
+      redraw: true,
+      message: `${matched.option.label}：行動権+${Number(data.actionGain || 0)}`
+    };
+  }
+
   if (data.kind === "equipment_attack") {
-    ensureStoryDropRuntimeState(state);
+    const remain = getUseCount(state, matched.option, data.uses || 0);
+    if (remain <= 0) return { handled: true, redraw: false, message: `${matched.option.label}の使用回数がありません` };
 
-    const useKey = `${matched.option.id}_uses`;
-    const maxUses = Number(data.uses || 0);
-
-    if (typeof state.storyDropRuntime[useKey] !== "number") {
-      state.storyDropRuntime[useKey] = maxUses;
-    }
-
-    if (state.storyDropRuntime[useKey] <= 0) {
-      return { handled: true, redraw: false, message: `${matched.option.label}の使用回数がありません` };
-    }
-
-    state.storyDropRuntime[useKey] -= 1;
+    spendUse(state, matched.option);
 
     return {
       handled: true,
       redraw: true,
       message: `${matched.option.label}使用`,
       appendAttackLabel: matched.option.label,
-      appendAttacks: createAttack(
-        Number(data.damage || 0),
-        Number(data.count || 1),
-        {
-          type: data.attackType || "melee",
-          beam: data.beam === true,
-          ignoreReduction: data.ignoreReduction === true,
-          cannotEvade: data.cannotEvade === true,
-          source: matched.option.label
-        }
-      )
+      appendAttacks: createAttack(Number(data.damage || 0), Number(data.count || 1), {
+        type: data.attackType || "melee",
+        beam: data.beam === true,
+        ignoreReduction: data.ignoreReduction === true,
+        cannotEvade: data.cannotEvade === true,
+        source: matched.option.label
+      })
     };
   }
 
-  if (data.mochiBonus === true) {
-    return { handled: true, redraw: false, message: `${matched.option.label}は戦闘中効果なしです` };
+  if (data.effectId === "death_army_arts") {
+    const cooldown = getCooldown(state, matched.option);
+    if (cooldown > 0) {
+      return { handled: true, redraw: false, message: `${matched.option.label}再使用まで${cooldown}ターン` };
+    }
+
+    setCooldown(state, matched.option, Number(data.cooldown || 3));
+
+    return {
+      handled: true,
+      redraw: true,
+      consumeAction: true,
+      message: "デスアーミーアーツ発動",
+      appendAttackLabel: "デスアーミーアーツ",
+      appendAttacks: createDeathArmyArtsAttacks(state)
+    };
   }
 
   return null;
@@ -237,22 +275,66 @@ export function executeStoryDropSpecial(state, special, context = {}) {
 export function onStoryDropResolveChoice(state, pendingChoice, selectedValue, context = {}) {
   const gundamResult = onStoryGundamDropResolveChoice(state, pendingChoice, selectedValue, context);
   if (gundamResult?.handled === true) return gundamResult;
-
   return { handled: false, redraw: false, message: null };
 }
 
 export function onStoryDropEnemyBeforeSlot(state, rolledSlotNumber, context = {}) {
   const hasNtSense = getEquippedStoryDropEffects(state).some(({ option }) => isGundamNtSense(option));
   if (hasNtSense) return onStoryGundamDropEnemyBeforeSlot(state, rolledSlotNumber, context);
-
   return { redraw: false, message: null };
 }
 
 export function onStoryDropTurnEnd(state, context = {}) {
-  const matched = getEquippedStoryDropEffects(state).find(({ option }) => isGundamNtSense(option));
-  if (matched) return onStoryGundamDropTurnEnd(state, matched.option, context);
+  ensureStoryDropRuntimeState(state);
 
-  return { redraw: false, message: null };
+  const messages = [];
+  let redraw = false;
+  let requestChoice = null;
+
+  getEquippedStoryDropEffects(state).forEach(({ option }) => {
+    const data = option?.data || {};
+
+    if (data.kind === "energy_regen_bonus") {
+      const before = Number(state.storyEnergy || 0);
+      state.storyEnergy = Math.min(Number(state.storyEnergyMax || before), before + Number(data.value || 0));
+      if (state.storyEnergy !== before) {
+        redraw = true;
+        messages.push(`${option.label}:EN+${Number(data.value || 0)}`);
+      }
+    }
+
+    if (data.kind === "turn_regen_or_damage_by_evade") {
+      if (Number(state.evade || 0) > 0) {
+        heal(state, Number(data.heal || 0));
+        messages.push(`${option.label}:HP+${Number(data.heal || 0)}`);
+      } else {
+        damageSelf(state, Number(data.damage || 0));
+        messages.push(`${option.label}:HP-${Number(data.damage || 0)}`);
+      }
+      redraw = true;
+    }
+
+    if (data.effectId === "death_army_arts") {
+      const cooldown = getCooldown(state, option);
+      if (cooldown > 0) {
+        setCooldown(state, option, cooldown - 1);
+        redraw = true;
+      }
+    }
+
+    if (isGundamNtSense(option)) {
+      const gundamTurn = onStoryGundamDropTurnEnd(state, option, context);
+      if (gundamTurn?.redraw) redraw = true;
+      if (gundamTurn?.message) messages.push(gundamTurn.message);
+      if (gundamTurn?.requestChoice) requestChoice = gundamTurn.requestChoice;
+    }
+  });
+
+  return {
+    redraw,
+    message: messages.join(" / ") || null,
+    requestChoice
+  };
 }
 
 export function modifyStoryDropTakenDamage(defender, attacker, attack, damage) {
@@ -266,18 +348,24 @@ export function modifyStoryDropTakenDamage(defender, attacker, attack, damage) {
 
     if (data.kind === "equipment_damage_barrier") {
       const max = Number(data.barrierValue || 0);
-
       if (typeof defender.storyDropRuntime.oneEyesTargetBarrier !== "number") {
         defender.storyDropRuntime.oneEyesTargetBarrier = max;
       }
-
       if (defender.storyDropRuntime.oneEyesTargetBarrier <= 0 || nextDamage <= 0) return;
 
       const block = Math.min(defender.storyDropRuntime.oneEyesTargetBarrier, nextDamage);
       defender.storyDropRuntime.oneEyesTargetBarrier -= block;
       nextDamage -= block;
-
       messages.push(`${option.label}：${block}ダメージ無効化 残${defender.storyDropRuntime.oneEyesTargetBarrier}`);
+    }
+
+    if (data.kind === "beam_damage_half_with_energy" && attack?.beam === true && nextDamage > 0) {
+      const cost = Number(data.energyCost || 0);
+      if (Number(defender.storyEnergy || 0) >= cost) {
+        defender.storyEnergy -= cost;
+        nextDamage = Math.ceil(nextDamage / 2);
+        messages.push(`${option.label}:EN${cost}消費 ビーム半減`);
+      }
     }
   });
 
