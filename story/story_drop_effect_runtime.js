@@ -1,20 +1,22 @@
-import {
-  findStorySlotOption,
-  findStoryEquipmentOption,
-  findStorySkillOption
-} from "./story_create_lab_data.js";
-
+import { findStorySlotOption, findStoryEquipmentOption, findStorySkillOption } from "./story_create_lab_data.js";
 import { createAttack } from "../js/js_battle_system.js";
+
+import {
+  getStoryGundamDropDerivedStatus,
+  canUseStoryGundamDropSpecial,
+  executeStoryGundamDropSpecial,
+  onStoryGundamDropResolveChoice,
+  onStoryGundamDropEnemyBeforeSlot,
+  onStoryGundamDropTurnEnd
+} from "../js/js_unit_rules_story_gundam.js";
 
 const SLOT_KEYS = ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"];
 
 function ensureStoryDropRuntimeState(state) {
   if (!state) return;
-
   if (!state.storyDropRuntime || typeof state.storyDropRuntime !== "object") {
     state.storyDropRuntime = {};
   }
-
   if (typeof state.storyDropRuntime.oneEyesTargetBarrier !== "number") {
     state.storyDropRuntime.oneEyesTargetBarrier = 120;
   }
@@ -26,7 +28,6 @@ function getEquippedDropOptions(state) {
   SLOT_KEYS.forEach(slotKey => {
     const optionId = state?.storyLabSelectedSlots?.[slotKey] || state?.labSelectedSlots?.[slotKey];
     if (!optionId) return;
-
     const option = findStorySlotOption(slotKey, optionId);
     if (option?.data) result.push({ kind: "slot", key: slotKey, option });
   });
@@ -38,7 +39,6 @@ function getEquippedDropOptions(state) {
       state?.storyEquipmentIds?.[equipmentKey];
 
     if (!optionId) return;
-
     const option = findStoryEquipmentOption(optionId);
     if (option?.data) result.push({ kind: "equipment", key: equipmentKey, option });
   });
@@ -66,10 +66,7 @@ function getEquippedDropOptionsFallbackByName(state) {
         option: {
           id: "one_eyes_target",
           label: "ワンアイズターゲット",
-          data: {
-            kind: "equipment_damage_barrier",
-            barrierValue: 120
-          }
+          data: { kind: "equipment_damage_barrier", barrierValue: 120 }
         }
       });
     }
@@ -81,7 +78,6 @@ function getEquippedDropOptionsFallbackByName(state) {
 export function getEquippedStoryDropEffects(state) {
   const direct = getEquippedDropOptions(state);
   const fallback = getEquippedDropOptionsFallbackByName(state);
-
   const merged = [...direct];
 
   fallback.forEach(item => {
@@ -93,6 +89,10 @@ export function getEquippedStoryDropEffects(state) {
   return merged;
 }
 
+function isGundamNtSense(data) {
+  return data?.kind === "create_skill" && data?.effectId === "story_gundam_nt_prediction";
+}
+
 export function getStoryDropDerivedStatus(state) {
   ensureStoryDropRuntimeState(state);
 
@@ -102,7 +102,7 @@ export function getStoryDropDerivedStatus(state) {
   effects.forEach(({ option }) => {
     const data = option?.data || {};
 
-        if (data.kind === "equipment_damage_barrier") {
+    if (data.kind === "equipment_damage_barrier") {
       const max = Number(data.barrierValue || 0);
       const remain = Number(state.storyDropRuntime.oneEyesTargetBarrier ?? max);
 
@@ -124,6 +124,10 @@ export function getStoryDropDerivedStatus(state) {
         bold: remain > 0
       });
     }
+
+    if (isGundamNtSense(data)) {
+      result.push(...getStoryGundamDropDerivedStatus(state, option));
+    }
   });
 
   return result;
@@ -132,17 +136,18 @@ export function getStoryDropDerivedStatus(state) {
 export function canUseStoryDropSpecial(state, special) {
   const name = String(special?.name || "");
   const effects = getEquippedStoryDropEffects(state);
-
   const matched = effects.find(({ option }) => name.includes(option?.label || ""));
+
   if (!matched) return null;
 
   const data = matched.option?.data || {};
 
-   if (data.kind === "equipment_damage_barrier") {
-    return {
-      allowed: false,
-      message: `${matched.option.label}は自動発動装備です`
-    };
+  if (isGundamNtSense(data)) {
+    return canUseStoryGundamDropSpecial(state, matched.option, special);
+  }
+
+  if (data.kind === "equipment_damage_barrier") {
+    return { allowed: false, message: `${matched.option.label}は自動発動装備です` };
   }
 
   if (data.kind === "equipment_attack") {
@@ -157,37 +162,32 @@ export function canUseStoryDropSpecial(state, special) {
 
     return {
       allowed: state.storyDropRuntime[useKey] > 0,
-      message: state.storyDropRuntime[useKey] > 0
-        ? null
-        : `${matched.option.label}の使用回数がありません`
+      message: state.storyDropRuntime[useKey] > 0 ? null : `${matched.option.label}の使用回数がありません`
     };
   }
 
   if (data.mochiBonus === true) {
-    return {
-      allowed: false,
-      message: `${matched.option.label}は戦闘中効果なしです`
-    };
+    return { allowed: false, message: `${matched.option.label}は戦闘中効果なしです` };
   }
 
   return null;
 }
 
-export function executeStoryDropSpecial(state, special) {
+export function executeStoryDropSpecial(state, special, context = {}) {
   const name = String(special?.name || "");
   const effects = getEquippedStoryDropEffects(state);
-
   const matched = effects.find(({ option }) => name.includes(option?.label || ""));
+
   if (!matched) return null;
 
   const data = matched.option?.data || {};
 
+  if (isGundamNtSense(data)) {
+    return executeStoryGundamDropSpecial(state, matched.option, special, context);
+  }
+
   if (data.kind === "equipment_damage_barrier") {
-    return {
-      handled: true,
-      redraw: false,
-      message: `${matched.option.label}は自動発動装備です`
-    };
+    return { handled: true, redraw: false, message: `${matched.option.label}は自動発動装備です` };
   }
 
   if (data.kind === "equipment_attack") {
@@ -201,11 +201,7 @@ export function executeStoryDropSpecial(state, special) {
     }
 
     if (state.storyDropRuntime[useKey] <= 0) {
-      return {
-        handled: true,
-        redraw: false,
-        message: `${matched.option.label}の使用回数がありません`
-      };
+      return { handled: true, redraw: false, message: `${matched.option.label}の使用回数がありません` };
     }
 
     state.storyDropRuntime[useKey] -= 1;
@@ -222,7 +218,7 @@ export function executeStoryDropSpecial(state, special) {
           type: data.attackType || "melee",
           beam: data.beam === true,
           ignoreReduction: data.ignoreReduction === true,
-          unavoidable: data.unavoidable === true,
+          cannotEvade: data.cannotEvade === true,
           source: matched.option.label
         }
       )
@@ -230,14 +226,39 @@ export function executeStoryDropSpecial(state, special) {
   }
 
   if (data.mochiBonus === true) {
-    return {
-      handled: true,
-      redraw: false,
-      message: `${matched.option.label}は戦闘中効果なしです`
-    };
+    return { handled: true, redraw: false, message: `${matched.option.label}は戦闘中効果なしです` };
   }
 
   return null;
+}
+
+export function onStoryDropResolveChoice(state, pendingChoice, selectedValue, context = {}) {
+  const gundamResult = onStoryGundamDropResolveChoice(state, pendingChoice, selectedValue, context);
+  if (gundamResult?.handled === true) return gundamResult;
+
+  return { handled: false, redraw: false, message: null };
+}
+
+export function onStoryDropEnemyBeforeSlot(state, rolledSlotNumber, context = {}) {
+  const effects = getEquippedStoryDropEffects(state);
+  const hasGundamNtSense = effects.some(({ option }) => isGundamNtSense(option?.data));
+
+  if (hasGundamNtSense) {
+    return onStoryGundamDropEnemyBeforeSlot(state, rolledSlotNumber, context);
+  }
+
+  return { redraw: false, message: null };
+}
+
+export function onStoryDropTurnEnd(state, context = {}) {
+  const effects = getEquippedStoryDropEffects(state);
+  const hasGundamNtSense = effects.some(({ option }) => isGundamNtSense(option?.data));
+
+  if (hasGundamNtSense) {
+    return onStoryGundamDropTurnEnd(state, context);
+  }
+
+  return { redraw: false, message: null };
 }
 
 export function modifyStoryDropTakenDamage(defender, attacker, attack, damage) {
@@ -252,6 +273,7 @@ export function modifyStoryDropTakenDamage(defender, attacker, attack, damage) {
 
     if (data.kind === "equipment_damage_barrier") {
       const max = Number(data.barrierValue || 0);
+
       if (typeof defender.storyDropRuntime.oneEyesTargetBarrier !== "number") {
         defender.storyDropRuntime.oneEyesTargetBarrier = max;
       }
