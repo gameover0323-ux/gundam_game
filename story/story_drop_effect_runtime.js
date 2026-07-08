@@ -1,7 +1,7 @@
 import { findStorySlotOption, findStoryEquipmentOption, findStorySkillOption } from "./story_create_lab_data.js";
 import { collectStoryDropOptions } from "./story_drop_registry.js";
 import { createAttack } from "../js/js_battle_system.js";
-import { addEvade } from "../js/js_unit_runtime.js";
+import { addEvade, reduceEvade } from "../js/js_unit_runtime.js";
 
 import {
   getStoryGundamDropDerivedStatus,
@@ -170,35 +170,76 @@ export function canUseStoryDropSpecial(state, special) {
     };
   }
 
-  if (data.effectId === "death_army_arts") {
-    const cooldown = getCooldown(state, matched.option);
-    return {
-      allowed: cooldown <= 0,
-      message: cooldown <= 0 ? null : `${matched.option.label}再使用まで${cooldown}ターン`
-    };
+if (data.effectId === "death_army_arts") {
+  const cooldown = getCooldown(state, matched.option);
+  const evadeCost = Number(data.evadeCost ?? data.actionCost ?? 1);
+
+  if (cooldown > 0) {
+    return { allowed: false, message: `${matched.option.label}再使用まで${cooldown}ターン` };
   }
+
+  if (Number(state.evade || 0) < evadeCost) {
+    return { allowed: false, message: `${matched.option.label}：回避が足りません` };
+  }
+
+  return { allowed: true, message: null };
+}
 
   return null;
 }
 
-function createDeathArmyArtsAttacks(state) {
+function createDeathArmyArtsResult(state) {
   const table = [
-    () => createAttack(70, 1, { type: "shoot", beam: true, source: "デスアーミーアーツ：棍棒型ビームライフル" }),
-    () => createAttack(50, 1, { type: "melee", onHit: "reduce_evade_2", source: "デスアーミーアーツ：電撃銛" }),
-    () => createAttack(10, 6, { type: "shoot", source: "デスアーミーアーツ：マシンガンデスライフル" }),
-    () => {
-      addEvade(state, 2);
-      return [];
+    {
+      label: "棍棒型ビームライフル",
+      run: () => createAttack(70, 1, { type: "shoot", beam: true, source: "デスアーミーアーツ：棍棒型ビームライフル" })
     },
-    () => createAttack(10, 1, { type: "melee", onHit: "next_attack_cannot_evade", source: "デスアーミーアーツ：マスタークロス" }),
-    () => createAttack(80, 1, { type: "melee", source: "デスアーミーアーツ：棍棒" }),
-    () => createAttack(100, 1, { type: "melee", source: "デスアーミーアーツ：銛突進" }),
-    () => createAttack(30, 3, { type: "melee", onHit: "reduce_evade_1_each", source: "デスアーミーアーツ：電撃銛連撃" }),
-    () => createAttack(20, 3, { type: "melee", source: "デスアーミーアーツ：格闘" }),
-    () => createAttack(150, 1, { type: "melee", ignoreReduction: true, source: "デスアーミーアーツ：フェイクダークネスフィンガー" })
+    {
+      label: "電撃銛",
+      run: () => createAttack(50, 1, { type: "melee", onHit: "reduce_evade_2", source: "デスアーミーアーツ：電撃銛" })
+    },
+    {
+      label: "マシンガンデスライフル",
+      run: () => createAttack(10, 6, { type: "shoot", source: "デスアーミーアーツ：マシンガンデスライフル" })
+    },
+    {
+      label: "回避 2回",
+      run: () => {
+        addEvade(state, 2);
+        return [];
+      }
+    },
+    {
+      label: "マスタークロス",
+      run: () => createAttack(10, 1, { type: "melee", onHit: "next_attack_cannot_evade", source: "デスアーミーアーツ：マスタークロス" })
+    },
+    {
+      label: "棍棒",
+      run: () => createAttack(80, 1, { type: "melee", source: "デスアーミーアーツ：棍棒" })
+    },
+    {
+      label: "銛突進",
+      run: () => createAttack(100, 1, { type: "melee", source: "デスアーミーアーツ：銛突進" })
+    },
+    {
+      label: "電撃銛連撃",
+      run: () => createAttack(30, 3, { type: "melee", onHit: "reduce_evade_1_each", source: "デスアーミーアーツ：電撃銛連撃" })
+    },
+    {
+      label: "格闘",
+      run: () => createAttack(20, 3, { type: "melee", source: "デスアーミーアーツ：格闘" })
+    },
+    {
+      label: "フェイクダークネスフィンガー",
+      run: () => createAttack(150, 1, { type: "melee", ignoreReduction: true, source: "デスアーミーアーツ：フェイクダークネスフィンガー" })
+    }
   ];
 
-  return table[Math.floor(Math.random() * table.length)]();
+  const selected = table[Math.floor(Math.random() * table.length)];
+  return {
+    label: selected.label,
+    attacks: selected.run()
+  };
 }
 
 export function executeStoryDropSpecial(state, special, context = {}) {
@@ -251,23 +292,32 @@ export function executeStoryDropSpecial(state, special, context = {}) {
     };
   }
 
-  if (data.effectId === "death_army_arts") {
-    const cooldown = getCooldown(state, matched.option);
-    if (cooldown > 0) {
-      return { handled: true, redraw: false, message: `${matched.option.label}再使用まで${cooldown}ターン` };
-    }
+if (data.effectId === "death_army_arts") {
+  const cooldown = getCooldown(state, matched.option);
+  const evadeCost = Number(data.evadeCost ?? data.actionCost ?? 1);
 
-    setCooldown(state, matched.option, Number(data.cooldown || 3));
-
-    return {
-      handled: true,
-      redraw: true,
-      consumeAction: true,
-      message: "デスアーミーアーツ発動",
-      appendAttackLabel: "デスアーミーアーツ",
-      appendAttacks: createDeathArmyArtsAttacks(state)
-    };
+  if (cooldown > 0) {
+    return { handled: true, redraw: false, message: `${matched.option.label}再使用まで${cooldown}ターン` };
   }
+
+  if (Number(state.evade || 0) < evadeCost) {
+    return { handled: true, redraw: false, message: `${matched.option.label}：回避が足りません` };
+  }
+
+  reduceEvade(state, evadeCost);
+  setCooldown(state, matched.option, Number(data.cooldown || 3));
+
+  const artsResult = createDeathArmyArtsResult(state);
+
+  return {
+    handled: true,
+    redraw: true,
+    consumeAction: false,
+    message: `デスアーミーアーツ発動：${artsResult.label} / 回避-${evadeCost}`,
+    appendAttackLabel: `デスアーミーアーツ：${artsResult.label}`,
+    appendAttacks: artsResult.attacks
+  };
+}
 
   return null;
 }
