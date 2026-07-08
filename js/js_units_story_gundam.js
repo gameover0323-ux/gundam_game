@@ -94,10 +94,10 @@ export const story_gundam = {
         cost: 20,
         detail: "5ターンに1度、相手のスロット行動を予測し、成功した時回避+3を得る。",
         data: {
-          kind: "create_skill",
-          effectId: "nt_sense_prediction",
-          cooldown: 5,
-          evadeGain: 3
+  kind: "create_skill",
+  effectId: "story_gundam_nt_prediction",
+  cooldown: 5,
+  evadeGain: 3
         }
       }
     ]
