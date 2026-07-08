@@ -43,7 +43,7 @@ function clone(value) {
 const STORY_UNIT_MAP = {
   proto_create_gundam: null,
   create_gundam_liberal: null,
-  cpu_gundam_mc,
+  story_gundam,
   story_zaku_ii_gene,
   story_zaku_ii_denim,
   story_ball,
@@ -198,7 +198,7 @@ export function createStoryLearningBattleController(ctx) {
   ];
 
   if (save.flags?.chapterBossGundamCleared === true) {
-    units.push(cpu_gundam_mc);
+    units.push(story_gundam);
   }
 
   if (save.flags?.chapter3LearningUnlocked === true) {
