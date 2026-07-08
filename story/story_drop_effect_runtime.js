@@ -1,4 +1,5 @@
 import { findStorySlotOption, findStoryEquipmentOption, findStorySkillOption } from "./story_create_lab_data.js";
+import { collectStoryDropOptions } from "./story_drop_registry.js";
 import { createAttack } from "../js/js_battle_system.js";
 
 import {
@@ -20,6 +21,15 @@ function ensureStoryDropRuntimeState(state) {
   if (typeof state.storyDropRuntime.oneEyesTargetBarrier !== "number") {
     state.storyDropRuntime.oneEyesTargetBarrier = 120;
   }
+}
+
+function isGundamNtSense(option) {
+  const data = option?.data || {};
+  const label = String(option?.label || "");
+  return (
+    data.effectId === "story_gundam_nt_prediction" ||
+    label.includes("ニュータイプ感性")
+  );
 }
 
 function getEquippedDropOptions(state) {
@@ -49,15 +59,23 @@ function getEquippedDropOptions(state) {
     if (option?.data) result.push({ kind: "skill", key: "skill", option });
   }
 
-  return result;
-}
-
-function getEquippedDropOptionsFallbackByName(state) {
-  const result = [];
   const specials = Object.values(state?.specials || {});
-
   specials.forEach(special => {
     const name = String(special?.name || "");
+
+    collectStoryDropOptions("skill").forEach(option => {
+      if (!option?.label) return;
+      if (!name.includes(option.label)) return;
+      if (result.some(item => item.option?.id === option.id)) return;
+      result.push({ kind: "skill", key: special.effectType || "skill", option });
+    });
+
+    collectStoryDropOptions("equipment").forEach(option => {
+      if (!option?.label) return;
+      if (!name.includes(option.label)) return;
+      if (result.some(item => item.option?.id === option.id)) return;
+      result.push({ kind: "equipment", key: special.effectType || "equipment", option });
+    });
 
     if (name.includes("ワンアイズターゲット")) {
       result.push({
@@ -76,36 +94,20 @@ function getEquippedDropOptionsFallbackByName(state) {
 }
 
 export function getEquippedStoryDropEffects(state) {
-  const direct = getEquippedDropOptions(state);
-  const fallback = getEquippedDropOptionsFallbackByName(state);
-  const merged = [...direct];
-
-  fallback.forEach(item => {
-    if (!merged.some(existing => existing.option?.id === item.option?.id)) {
-      merged.push(item);
-    }
-  });
-
-  return merged;
-}
-
-function isGundamNtSense(data) {
-  return data?.kind === "create_skill" && data?.effectId === "story_gundam_nt_prediction";
+  return getEquippedDropOptions(state);
 }
 
 export function getStoryDropDerivedStatus(state) {
   ensureStoryDropRuntimeState(state);
 
   const result = [];
-  const effects = getEquippedStoryDropEffects(state);
 
-  effects.forEach(({ option }) => {
+  getEquippedStoryDropEffects(state).forEach(({ option }) => {
     const data = option?.data || {};
 
     if (data.kind === "equipment_damage_barrier") {
       const max = Number(data.barrierValue || 0);
       const remain = Number(state.storyDropRuntime.oneEyesTargetBarrier ?? max);
-
       result.push({
         text: `${option.label}:${remain}`,
         color: remain > 0 ? "#66ccff" : "#777777",
@@ -117,7 +119,6 @@ export function getStoryDropDerivedStatus(state) {
       const useKey = `${option.id}_uses`;
       const maxUses = Number(data.uses || 0);
       const remain = Number(state.storyDropRuntime[useKey] ?? maxUses);
-
       result.push({
         text: `${option.label}:${remain}`,
         color: remain > 0 ? "#ffcc66" : "#777777",
@@ -125,7 +126,7 @@ export function getStoryDropDerivedStatus(state) {
       });
     }
 
-    if (isGundamNtSense(data)) {
+    if (isGundamNtSense(option)) {
       result.push(...getStoryGundamDropDerivedStatus(state, option));
     }
   });
@@ -135,14 +136,15 @@ export function getStoryDropDerivedStatus(state) {
 
 export function canUseStoryDropSpecial(state, special) {
   const name = String(special?.name || "");
-  const effects = getEquippedStoryDropEffects(state);
-  const matched = effects.find(({ option }) => name.includes(option?.label || ""));
+  const matched = getEquippedStoryDropEffects(state).find(({ option }) => {
+    return option?.label && name.includes(option.label);
+  });
 
   if (!matched) return null;
 
   const data = matched.option?.data || {};
 
-  if (isGundamNtSense(data)) {
+  if (isGundamNtSense(matched.option)) {
     return canUseStoryGundamDropSpecial(state, matched.option, special);
   }
 
@@ -152,7 +154,6 @@ export function canUseStoryDropSpecial(state, special) {
 
   if (data.kind === "equipment_attack") {
     ensureStoryDropRuntimeState(state);
-
     const useKey = `${matched.option.id}_uses`;
     const maxUses = Number(data.uses || 0);
 
@@ -175,14 +176,15 @@ export function canUseStoryDropSpecial(state, special) {
 
 export function executeStoryDropSpecial(state, special, context = {}) {
   const name = String(special?.name || "");
-  const effects = getEquippedStoryDropEffects(state);
-  const matched = effects.find(({ option }) => name.includes(option?.label || ""));
+  const matched = getEquippedStoryDropEffects(state).find(({ option }) => {
+    return option?.label && name.includes(option.label);
+  });
 
   if (!matched) return null;
 
   const data = matched.option?.data || {};
 
-  if (isGundamNtSense(data)) {
+  if (isGundamNtSense(matched.option)) {
     return executeStoryGundamDropSpecial(state, matched.option, special, context);
   }
 
@@ -240,23 +242,15 @@ export function onStoryDropResolveChoice(state, pendingChoice, selectedValue, co
 }
 
 export function onStoryDropEnemyBeforeSlot(state, rolledSlotNumber, context = {}) {
-  const effects = getEquippedStoryDropEffects(state);
-  const hasGundamNtSense = effects.some(({ option }) => isGundamNtSense(option?.data));
-
-  if (hasGundamNtSense) {
-    return onStoryGundamDropEnemyBeforeSlot(state, rolledSlotNumber, context);
-  }
+  const hasNtSense = getEquippedStoryDropEffects(state).some(({ option }) => isGundamNtSense(option));
+  if (hasNtSense) return onStoryGundamDropEnemyBeforeSlot(state, rolledSlotNumber, context);
 
   return { redraw: false, message: null };
 }
 
 export function onStoryDropTurnEnd(state, context = {}) {
-  const effects = getEquippedStoryDropEffects(state);
-  const hasGundamNtSense = effects.some(({ option }) => isGundamNtSense(option?.data));
-
-  if (hasGundamNtSense) {
-    return onStoryGundamDropTurnEnd(state, context);
-  }
+  const hasNtSense = getEquippedStoryDropEffects(state).some(({ option }) => isGundamNtSense(option));
+  if (hasNtSense) return onStoryGundamDropTurnEnd(state, context);
 
   return { redraw: false, message: null };
 }
@@ -266,9 +260,8 @@ export function modifyStoryDropTakenDamage(defender, attacker, attack, damage) {
 
   let nextDamage = Math.max(0, Number(damage || 0));
   const messages = [];
-  const effects = getEquippedStoryDropEffects(defender);
 
-  effects.forEach(({ option }) => {
+  getEquippedStoryDropEffects(defender).forEach(({ option }) => {
     const data = option?.data || {};
 
     if (data.kind === "equipment_damage_barrier") {
