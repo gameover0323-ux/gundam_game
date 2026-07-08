@@ -1,15 +1,57 @@
+
+function normalizeDropArgs(detail, data) {
+  if (data === undefined && detail && typeof detail === "object") {
+    return {
+      detail: detail.detail || detail.desc || "",
+      data: detail
+    };
+  }
+
+  return {
+    detail: String(detail || ""),
+    data: data || {}
+  };
+}
+
 function slot(id, slotKey, label, cost, detail, data) {
-  return { id, type: "slot", slotKey, label, cost, detail, data };
+  const normalized = normalizeDropArgs(detail, data);
+  return {
+    id,
+    type: "slot",
+    slotKey,
+    label,
+    cost,
+    detail: normalized.detail,
+    data: normalized.data
+  };
 }
 
 function equipment(id, label, cost, detail, data) {
-  return { id, type: "equipment", label, cost, detail, data };
+  const normalized = normalizeDropArgs(detail, data);
+  return {
+    id,
+    type: "equipment",
+    label,
+    cost,
+    detail: normalized.detail,
+    data: normalized.data
+  };
 }
 
 function skill(id, label, cost, detail, data) {
-  return { id, type: "skill", label, cost, detail, data: { kind: "create_skill", ...data } };
+  const normalized = normalizeDropArgs(detail, data);
+  return {
+    id,
+    type: "skill",
+    label,
+    cost,
+    detail: normalized.detail,
+    data: {
+      kind: "create_skill",
+      ...normalized.data
+    }
+  };
 }
-
 export const STORY_CHAPTER3_DROPS_BY_UNIT_ID = {
   story_leo: [
     slot("story_leo_slot1_evade_1", "slot1", "回避 1回", 5, "回避を1回獲得する。", { kind: "evade", value: 1 }),
