@@ -416,33 +416,71 @@ ${buildPreviewText()}
     return selectingSide === "A" ? getUnitLabel(pendingUnit) : pendingUnit.name;
   }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function getStoryDropGroups(unit) {
+  const drops = unit?.storyDrops || {};
+  return [
+    ...(Array.isArray(drops.initial) ? drops.initial : []),
+    ...(Array.isArray(drops.random) ? drops.random : []),
+    ...(Array.isArray(drops.conditional) ? drops.conditional : []),
+    ...(Array.isArray(drops.equipment) ? drops.equipment : [])
+  ];
+}
+
+function renderEnemyLearningInfo(unit) {
+  if (selectingSide !== "B" || learningMode === "ga") return "";
+
+  const companionCondition = unit?.storyCompanion?.unlockCondition || "同行条件なし";
+  const drops = getStoryDropGroups(unit);
+
+  return `
+    <div style="font-size:0.85em; opacity:0.9; margin:4px 0 10px 12px; white-space:pre-wrap;">
+      <div>同行条件：${escapeHtml(companionCondition)}</div>
+      <details>
+        <summary>ドロップ品 ${drops.length}件</summary>
+        ${
+          drops.length
+            ? drops.map(drop => `・${escapeHtml(drop.label || drop.id || "名称未設定")} [コスト${Number(drop.cost || 0)}]`).join("<br>")
+            : "なし"
+        }
+      </details>
+    </div>
+  `;
+}
+  
   function renderUnitSection(title, units) {
-    if (!units.length) {
+  if (!units.length) {
+    return `
+      <h3>${title}</h3>
+      <p>選択可能な機体がありません</p>
+    `;
+  }
+
+  return `
+    <h3>${title}</h3>
+    ${units.map(unit => {
+      const selectId = selectingSide === "A" && unit.storyLiberal === true
+        ? "create_gundam_liberal"
+        : unit.id;
+
       return `
-        <div>
-          <h3>${title}</h3>
-          <p>選択可能な機体がありません</p>
+        <div style="border:1px solid #555; border-radius:8px; padding:8px; margin:8px 0;">
+          <button class="story-learning-unit-btn" data-unit-id="${escapeHtml(selectId)}">
+            ${escapeHtml(selectingSide === "A" ? getUnitLabel(unit) : unit.name)}
+          </button>
+          ${renderEnemyLearningInfo(unit)}
         </div>
       `;
-    }
-
-    return `
-      <div>
-        <h3>${title}</h3>
-             ${units.map(unit => {
-          const selectId =
-            selectingSide === "A" && unit.storyLiberal === true
-              ? "create_gundam_liberal"
-              : unit.id;
-
-          return `
-            <button class="story-learning-unit-btn" data-unit-id="${selectId}">
-              ${selectingSide === "A" ? getUnitLabel(unit) : unit.name}
-            </button>
-          `;
-        }).join("")}
-      </div>
-    `;
+    }).join("")}
+  `;
   }
 
   function renderGaNotice() {
