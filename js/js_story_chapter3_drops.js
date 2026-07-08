@@ -148,9 +148,9 @@ export const STORY_CHAPTER3_DROPS_BY_UNIT_ID = {
     equipment("story_death_army_dg_cells", "DG細胞(デス)", 20, "回避所持数が1以上ある時、毎ターンHPが5ずつ回復する。回避所持数が0の時、毎ターン5ずつダメージを受ける。", {
       kind: "turn_regen_or_damage_by_evade", heal: 5, damage: 5
     }),
-    skill("story_death_army_arts", "デスアーミーアーツ", 30, "3ターンに1回発動可能。行動権を1消費し、デスアーミー種の持つスロットを1つランダムで発動する。", {
-      effectId: "death_army_arts", cooldown: 3, actionCost: 1
-    })
+    skill("story_death_army_arts", "デスアーミーアーツ", 30, "3ターンに1回発動可能。所持回避数を1消費し、デスアーミー種の持つスロットを1つランダムで発動する。", {
+  effectId: "death_army_arts", cooldown: 3, evadeCost: 1
+})
   ],
 
   story_gunbarrel_dagger: [
