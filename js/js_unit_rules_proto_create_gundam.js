@@ -707,6 +707,13 @@ export function onProtoCreateTurnEnd(state, context = {}) {
   state.storyReloadFollowUpUsed = {};
 const dropTurnEnd = onStoryDropTurnEnd(state, context);
 if (dropTurnEnd?.redraw) redraw = true;
+if (dropTurnEnd?.requestChoice) {
+  return {
+    redraw,
+    message: dropTurnEnd.message || null,
+    requestChoice: dropTurnEnd.requestChoice
+  };
+}
   
   const chapter3TurnEnd = onStoryChapter3TurnEnd(state, context);
   if (chapter3TurnEnd?.redraw) redraw = true;
