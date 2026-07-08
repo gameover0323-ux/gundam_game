@@ -249,8 +249,8 @@ export function onStoryDropEnemyBeforeSlot(state, rolledSlotNumber, context = {}
 }
 
 export function onStoryDropTurnEnd(state, context = {}) {
-  const hasNtSense = getEquippedStoryDropEffects(state).some(({ option }) => isGundamNtSense(option));
-  if (hasNtSense) return onStoryGundamDropTurnEnd(state, context);
+  const matched = getEquippedStoryDropEffects(state).find(({ option }) => isGundamNtSense(option));
+  if (matched) return onStoryGundamDropTurnEnd(state, matched.option, context);
 
   return { redraw: false, message: null };
 }
