@@ -111,13 +111,13 @@ function buildSpecials(lab) {
       actionType: "instant",
       desc: "エネルギー武器の消費ENを同量追加し、ダメージを元値の1.5倍ぶん強化する。加算累積可能。"
     },
-    {
-      name: `クリエイトスキル ${skill?.label || "なし"}`,
-      effectType: "story_create_skill",
-      timing: "self",
-      actionType: skill?.id === "none" ? "auto" : "instant",
-      desc: skill?.detail || "クリエイトスキルは未装備。"
-    }
+   {
+  name: `クリエイトスキル ${skill?.label || "なし"}`,
+  effectType: "story_create_skill",
+  timing: skill?.data?.autoTrigger === "turn_end" ? "auto" : "self",
+  actionType: skill?.id === "none" || skill?.data?.autoTrigger === "turn_end" ? "auto" : "instant",
+  desc: skill?.detail || "クリエイトスキルは未装備。"
+   }
   ];
 }
 
