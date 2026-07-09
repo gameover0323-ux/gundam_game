@@ -1,16 +1,24 @@
 import { loadStorySave } from "../story/story_save.js";
 import { buildProtoCreateGundamUnit } from "./js_units_proto_create_gundam.js";
 
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
 export function isCreateGundamLiberalUnlocked(save = loadStorySave()) {
   return save?.liberal?.unlocked === true || save?.flags?.createGundamLiberalUnlocked === true;
 }
 
+export function getCreateGundamLiberalCustomName(save = loadStorySave()) {
+  const liberal = save?.liberal || {};
+  return String(liberal.customName || liberal.name || "").trim() || "クリエイトガンダムリベラル";
+}
+
 export function buildCreateGundamLiberalUnit(save = loadStorySave()) {
   const base = buildProtoCreateGundamUnit(save);
+  const unit = clone(base);
   const liberal = save?.liberal || {};
-  const customName = String(liberal.customName || "").trim() || "クリエイトガンダムリベラル";
-
-  const unit = JSON.parse(JSON.stringify(base));
+  const customName = getCreateGundamLiberalCustomName(save);
 
   unit.id = "create_gundam_liberal";
   unit.name = customName;
@@ -27,8 +35,9 @@ export function buildCreateGundamLiberalUnit(save = loadStorySave()) {
     form.name = customName;
 
     Object.entries(liberal.customLabels?.slot || {}).forEach(([slotKey, label]) => {
-      if (form.slots?.[slotKey] && String(label || "").trim()) {
-        form.slots[slotKey].label = String(label).trim();
+      const safeLabel = String(label || "").trim();
+      if (safeLabel && form.slots?.[slotKey]) {
+        form.slots[slotKey].label = safeLabel;
       }
     });
   }
