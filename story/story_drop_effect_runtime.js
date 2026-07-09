@@ -129,7 +129,7 @@ export function getStoryDropDerivedStatus(state) {
       result.push({ text: `${option.label}:${remain}`, color: remain > 0 ? "#66ccff" : "#777777", bold: remain > 0 });
     }
 
-    if (data.kind === "equipment_attack" || data.kind === "action_gain_equipment") {
+    if (data.kind === "equipment_attack" || data.kind === "equipment_random_attack" || data.kind === "action_gain_equipment") {
       const remain = getUseCount(state, option, data.uses || 0);
       result.push({ text: `${option.label}:${remain}`, color: remain > 0 ? "#ffcc66" : "#777777", bold: remain > 0 });
     }
@@ -162,7 +162,7 @@ export function canUseStoryDropSpecial(state, special) {
     return { allowed: false, message: `${matched.option.label}は自動発動装備です` };
   }
 
-  if (data.kind === "equipment_attack" || data.kind === "action_gain_equipment") {
+ if (data.kind === "equipment_attack" || data.kind === "equipment_random_attack" || data.kind === "action_gain_equipment") {
     const remain = getUseCount(state, matched.option, data.uses || 0);
     return {
       allowed: remain > 0,
@@ -271,7 +271,30 @@ export function executeStoryDropSpecial(state, special, context = {}) {
     };
   }
 
-  if (data.kind === "equipment_attack") {
+ if (data.kind === "equipment_attack" || data.kind === "equipment_random_attack") {
+  const remain = getUseCount(state, matched.option, data.uses || 0);
+  if (remain <= 0) return { handled: true, redraw: false, message: `${matched.option.label}の使用回数がありません` };
+
+  spendUse(state, matched.option);
+
+  const count = data.kind === "equipment_random_attack"
+    ? Math.floor(Math.random() * (Number(data.maxCount || 1) - Number(data.minCount || 1) + 1)) + Number(data.minCount || 1)
+    : Number(data.count || 1);
+
+  return {
+    handled: true,
+    redraw: true,
+    message: `${matched.option.label}使用：${Number(data.damage || 0)}ダメージ×${count}回`,
+    appendAttackLabel: matched.option.label,
+    appendAttacks: createAttack(Number(data.damage || 0), count, {
+      type: data.attackType || "melee",
+      beam: data.beam === true,
+      ignoreReduction: data.ignoreReduction === true,
+      cannotEvade: data.cannotEvade === true,
+      source: matched.option.label
+    })
+  };
+}
     const remain = getUseCount(state, matched.option, data.uses || 0);
     if (remain <= 0) return { handled: true, redraw: false, message: `${matched.option.label}の使用回数がありません` };
 
