@@ -2,12 +2,97 @@ export const story_zaku_ii_gene = {
   id: "story_zaku_ii_gene",
   name: "ザクII(ジーン機)",
   defaultFormId: "base",
-  
-  exp: 2,
+  exp: 4,
 
   storyCompanion: {
     unlockCondition: "初回チャプター2をクリア",
     cost: 30
+  },
+
+  storyDrops: {
+    random: [
+      {
+        id: "story_gene_zaku_slot1_think",
+        type: "slot",
+        slotKey: "slot1",
+        label: "思考",
+        cost: 0,
+        detail: "何も起きない。",
+        data: { kind: "custom", effectId: "proto_create_no_fire" }
+      },
+      {
+        id: "story_gene_zaku_slot2_think",
+        type: "slot",
+        slotKey: "slot2",
+        label: "思考",
+        cost: 0,
+        detail: "何も起きない。",
+        data: { kind: "custom", effectId: "proto_create_no_fire" }
+      },
+      {
+        id: "story_gene_zaku_slot3_think",
+        type: "slot",
+        slotKey: "slot3",
+        label: "思考",
+        cost: 0,
+        detail: "何も起きない。",
+        data: { kind: "custom", effectId: "proto_create_no_fire" }
+      },
+      {
+        id: "story_gene_zaku_slot3_heal_40",
+        type: "slot",
+        slotKey: "slot3",
+        label: "回復40",
+        cost: 5,
+        detail: "HPを40回復する。",
+        data: { kind: "heal", value: 40 }
+      },
+      {
+        id: "story_gene_zaku_slot4_think",
+        type: "slot",
+        slotKey: "slot4",
+        label: "思考",
+        cost: 0,
+        detail: "何も起きない。",
+        data: { kind: "custom", effectId: "proto_create_no_fire" }
+      },
+      {
+        id: "story_gene_zaku_slot5_think",
+        type: "slot",
+        slotKey: "slot5",
+        label: "思考",
+        cost: 0,
+        detail: "何も起きない。",
+        data: { kind: "custom", effectId: "proto_create_no_fire" }
+      },
+      {
+        id: "story_gene_zaku_slot6_think",
+        type: "slot",
+        slotKey: "slot6",
+        label: "思考",
+        cost: 0,
+        detail: "何も起きない。",
+        data: { kind: "custom", effectId: "proto_create_no_fire" }
+      }
+    ],
+
+    equipment: [
+      {
+        id: "story_gene_zaku_machinegun_equipment",
+        type: "equipment",
+        label: "ザクマシンガン(ジーン)",
+        cost: 15,
+        detail: "ゲーム中5回まで、10ダメージ×1～6回の射撃攻撃を行う。",
+        data: {
+          kind: "equipment_random_attack",
+          damage: 10,
+          minCount: 1,
+          maxCount: 6,
+          attackType: "shoot",
+          uses: 5
+        }
+      }
+    ]
   },
 
   forms: {
