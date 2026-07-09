@@ -1,3 +1,10 @@
+import { loadStorySave } from "../story/story_save.js";
+import {
+  buildCreateGundamLiberalUnit,
+  isCreateGundamLiberalUnlocked
+} from "./js_units_create_gundam_liberal.js";
+
+
 export function createGameSetup(ctx) {
   const PLAYABLE_UNIT_DESCRIPTIONS = {
     "ガンダム(ﾏｸﾞﾈｯﾄｺｰﾃｨﾝｸﾞ)": `強さ☆☆☆
@@ -110,6 +117,14 @@ HPがもりもり減る代わりに回避に
 活用次第では格上を上回る戦闘が
 可能。しかし、ふとした時に加速が
 高まりすぎて自爆してしまう。`,
+
+"クリエイトガンダムリベラル": `強さ？？？
+ストーリーモードの性能そのまま。
+自分だけのカスタムで自慢したり
+ガチ～ネタ戦闘を楽しもう。
+クリエイトガンダムラボで性能を
+確認しておこう。`,
+    
   };
 
   const CPU_UNIT_DESCRIPTIONS = {
@@ -323,13 +338,24 @@ HPがもりもり減る代わりに回避に
     return typeof ctx.canUseDebugUnit === "function" && ctx.canUseDebugUnit();
   }
 
+function getPlayableUnitsWithLiberal(baseUnits) {
+  const units = Array.isArray(baseUnits) ? [...baseUnits] : [];
+  const save = loadStorySave();
+
+  if (isCreateGundamLiberalUnlocked(save)) {
+    units.push(buildCreateGundamLiberalUnit(save));
+  }
+
+  return units;
+}
+
+  
 function getSelectList() {
-  const extraUnits = typeof ctx.getExtraUnlockedUnits === "function"
-    ? ctx.getExtraUnlockedUnits()
-    : [];
+  const extraUnits = typeof ctx.getExtraUnlockedUnits === "function" ? ctx.getExtraUnlockedUnits() : [];
+  const playableUnits = getPlayableUnitsWithLiberal(ctx.units);
 
   if (!isChallengeMode()) {
-    return isOnlineMode() ? ctx.units : [...ctx.units, ...extraUnits];
+    return isOnlineMode() ? playableUnits : [...playableUnits, ...extraUnits];
   }
 
   if (isVsCpuMode() && ctx.getSelectingPlayer() === "B") {
@@ -343,16 +369,22 @@ function getSelectList() {
     if (ctx.getBattleMode() === "challenge2v2") {
       return ctx.twoVsBosses || [];
     }
-
     return ctx.bosses || [];
   }
 
-  return ctx.units;
+  return playableUnits;
 }
 
   function getUnitDescription(unit) {
     if (!unit) return "";
-
+if (unit.id === "create_gundam_liberal") {
+  return `強さ？？？
+ストーリーモードの性能そのまま。
+自分だけのカスタムで自慢したり
+ガチ～ネタ戦闘を楽しもう。
+クリエイトガンダムラボで性能を
+確認しておこう。`;
+}
     const mode = ctx.getBattleMode();
     const selectingPlayer = ctx.getSelectingPlayer();
     const name = unit.name;
