@@ -1,5 +1,6 @@
 import {
   loadStorySave,
+  saveStorySave,
   addStoryUnitExp,
   getStoryUnitLevelInfo,
   unlockStoryCompanionUnit,
@@ -25,7 +26,6 @@ function getDropGroups(unit) {
 function hasAllStoryDrops(unit, save) {
   const required = getDropGroups(unit);
   if (!required.length) return false;
-
   const acquired = save.inventory?.storyDrops || {};
   return required.every(drop => drop?.id && acquired[drop.id] === true);
 }
@@ -53,6 +53,45 @@ function pickOneDrop(units, save) {
 
 function formatLevelLine(unit, before, after, gainExp) {
   return ` ${unit.name} Lv ${before.level} → ${after.level} Exp ${before.currentExp} → ${after.currentExp} 獲得Exp +${gainExp} `;
+}
+
+function isDeathArmyDoubleBattle(learningMode, enemyUnits) {
+  if (learningMode !== "companion") return false;
+  if (!Array.isArray(enemyUnits) || enemyUnits.length !== 2) return false;
+  return enemyUnits.every(unit => unit?.id === "story_death_army");
+}
+
+function addDeathArmyCompanionWinIfNeeded(learningMode, enemyUnits) {
+  if (!isDeathArmyDoubleBattle(learningMode, enemyUnits)) return null;
+
+  const save = loadStorySave();
+  const current = Number(save.flags?.storyDeathArmyCompanionWinCount || 0);
+  const next = Math.min(3, current + 1);
+
+  save.flags.storyDeathArmyCompanionWinCount = next;
+  saveStorySave(save);
+
+  return next;
+}
+
+function tryUnlockSpecialCompanion(unit, learningMode, enemyUnits) {
+  if (unit?.id !== "story_death_army") return null;
+
+  const save = loadStorySave();
+  if (save.companionUnits?.story_death_army?.unlocked === true) return null;
+
+  const count = Number(save.flags?.storyDeathArmyCompanionWinCount || 0);
+
+  if (count >= 3) {
+    unlockStoryCompanionUnit("story_death_army", unit.storyCompanion?.cost || 70);
+    return "デスアーミー が同行可能になりました";
+  }
+
+  if (isDeathArmyDoubleBattle(learningMode, enemyUnits)) {
+    return `デスアーミー同行条件：${count}/3`;
+  }
+
+  return null;
 }
 
 export function createStoryResultController(ctx) {
@@ -88,6 +127,8 @@ export function createStoryResultController(ctx) {
     let gaText = "なし";
 
     if (win) {
+      addDeathArmyCompanionWinIfNeeded(learningMode, enemyUnits);
+
       const saveBeforeDrop = loadStorySave();
       const drop = pickOneDrop(enemyUnits, saveBeforeDrop);
 
@@ -101,6 +142,12 @@ export function createStoryResultController(ctx) {
 
         enemyUnits.forEach(unit => {
           if (!unit?.storyCompanion) return;
+
+          const specialMessage = tryUnlockSpecialCompanion(unit, learningMode, enemyUnits);
+          if (specialMessage) {
+            if (!unlocked.includes(specialMessage)) unlocked.push(specialMessage);
+            return;
+          }
 
           const save = loadStorySave();
           if (save.companionUnits?.[unit.id]?.unlocked === true) return;
