@@ -282,7 +282,7 @@ const chapterBossUnlocked = storySave.flags?.chapterBossUnlocked === true || sto
       <button id="storyLabMenuBtn">クリエイトガンダムラボ</button>
       ${storySave.flags?.chapter3ShopUnlocked === true ? `<button id="storyChapter3ShopBtn">ショップ</button>` : ""}
       ${learningBattleUnlocked ? `<button id="storyLearningBattleBtn">学習戦闘</button>` : ""}
-   ${canUseChapter3Debug() && chapter3Available && storySave.flags?.chapter3OpeningViewed !== true ? `<button id="storyChapter3StartBtn">チャプター3</button>` : ""}
+ ${chapter3Available && storySave.flags?.chapter3OpeningViewed !== true ? `<button id="storyChapter3StartBtn">チャプター3</button>` : ""}
            ${chapterBossUnlocked ? `<button id="storyChapterBossBtn">チャプターボス</button>` : ""}
       <button id="storyResetSaveBtn">進行データ削除</button>
       <button id="storyMenuCloseBtn">閉じる</button>
@@ -683,7 +683,7 @@ function renderChapterSelect() {
     <h2>チャプターセレクト</h2>
     <button id="storyChapter1Btn">チャプター1</button>
     <button id="storyChapter2Btn">チャプター2</button>
-    ${canUseChapter3Debug() && (storySave.flags?.chapterBossGundamCleared === true || storySave.flags?.chapter2Cleared === true) ? `<button id="storyChapter3Btn">チャプター3</button>` : ""}
+ ${storySave.flags?.chapterBossGundamCleared === true || storySave.flags?.chapter2Cleared === true ? `<button id="storyChapter3Btn">チャプター3</button>` : ""}
     <button id="storyChapterSelectBackBtn">戻る</button>
   `;
 
