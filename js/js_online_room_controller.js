@@ -220,6 +220,19 @@ export function createOnlineRoomController(ctx) {
     }
   }
 
+
+function cloneOnlineUnitSnapshot(unit) {
+  if (!unit) return null;
+  return JSON.parse(JSON.stringify(unit));
+}
+
+function getOnlineSelectedUnit(playerData) {
+  if (playerData?.unitSnapshot) return playerData.unitSnapshot;
+  if (playerData?.unitId) return ctx.getUnitById(playerData.unitId);
+  return null;
+}
+
+  
   async function selectOnlineUnit(unit) {
     if (!ctx.isOnlineEnabled || !ctx.isOnlineEnabled()) return false;
     if (!unit) return true;
@@ -241,12 +254,14 @@ export function createOnlineRoomController(ctx) {
     ctx.updateSelectUi();
 
     await ctx.updateRoom(roomId, {
-      [`players/${myPlayer}/unitId`]: unit.id || unit.name,
-      [`players/${myPlayer}/ready`]: true,
-      [`players/${myPlayer}/lastSeen`]: Date.now(),
-      "meta/status": "selecting",
-      "meta/updatedAt": Date.now()
-    });
+  [`players/${myPlayer}/unitId`]: unit.id || unit.name,
+  [`players/${myPlayer}/unitName`]: unit.name || unit.id,
+  [`players/${myPlayer}/unitSnapshot`]: cloneOnlineUnitSnapshot(unit),
+  [`players/${myPlayer}/ready`]: true,
+  [`players/${myPlayer}/lastSeen`]: Date.now(),
+  "meta/status": "selecting",
+  "meta/updatedAt": Date.now()
+});
 
     return true;
   }
@@ -261,13 +276,16 @@ export function createOnlineRoomController(ctx) {
     const playerA = roomData.players?.A || {};
     const playerB = roomData.players?.B || {};
 
-    if (playerA.unitId) {
-      ctx.setSelectedUnitA(ctx.getUnitById(playerA.unitId));
-    }
+  const unitA = getOnlineSelectedUnit(playerA);
+const unitB = getOnlineSelectedUnit(playerB);
 
-    if (playerB.unitId) {
-      ctx.setSelectedUnitB(ctx.getUnitById(playerB.unitId));
-    }
+if (unitA) {
+  ctx.setSelectedUnitA(unitA);
+}
+
+if (unitB) {
+  ctx.setSelectedUnitB(unitB);
+}
 
     ctx.updateSelectUi();
 
