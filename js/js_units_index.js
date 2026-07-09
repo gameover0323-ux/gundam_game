@@ -1,3 +1,6 @@
+import { buildCreateGundamLiberalUnit } from "./js_units_create_gundam_liberal.js";
+
+
 import { gundam_mc } from "./js_units_gundam_mc.js";
 import { z_gundam } from "./js_units_z_gundam.js";
 import { shining_gundam } from "./js_units_shining_gundam.js";
@@ -150,5 +153,6 @@ export const allUnitList = [
   ...twoVsBossUnitList,
   ...cpuBeginnerList,
   ...cpuList,
-  ...debugUnitList
+  ...debugUnitList,
+  buildCreateGundamLiberalUnit()
 ];
