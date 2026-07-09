@@ -2,7 +2,7 @@ export const story_gundam = {
   id: "story_gundam",
   name: "ガンダム",
   defaultFormId: "base",
-  exp: 10,
+  exp: 15,
 
   storyCompanion: {
     unlockCondition: "ドロップ品を全て入手した状態でプロトクリエイトガンダムで撃破。",
