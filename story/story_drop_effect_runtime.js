@@ -271,41 +271,22 @@ export function executeStoryDropSpecial(state, special, context = {}) {
     };
   }
 
- if (data.kind === "equipment_attack" || data.kind === "equipment_random_attack") {
-  const remain = getUseCount(state, matched.option, data.uses || 0);
-  if (remain <= 0) return { handled: true, redraw: false, message: `${matched.option.label}の使用回数がありません` };
-
-  spendUse(state, matched.option);
-
-  const count = data.kind === "equipment_random_attack"
-    ? Math.floor(Math.random() * (Number(data.maxCount || 1) - Number(data.minCount || 1) + 1)) + Number(data.minCount || 1)
-    : Number(data.count || 1);
-
-  return {
-    handled: true,
-    redraw: true,
-    message: `${matched.option.label}使用：${Number(data.damage || 0)}ダメージ×${count}回`,
-    appendAttackLabel: matched.option.label,
-    appendAttacks: createAttack(Number(data.damage || 0), count, {
-      type: data.attackType || "melee",
-      beam: data.beam === true,
-      ignoreReduction: data.ignoreReduction === true,
-      cannotEvade: data.cannotEvade === true,
-      source: matched.option.label
-    })
-  };
-}
+  if (data.kind === "equipment_attack" || data.kind === "equipment_random_attack") {
     const remain = getUseCount(state, matched.option, data.uses || 0);
     if (remain <= 0) return { handled: true, redraw: false, message: `${matched.option.label}の使用回数がありません` };
 
     spendUse(state, matched.option);
 
+    const count = data.kind === "equipment_random_attack"
+      ? Math.floor(Math.random() * (Number(data.maxCount || 1) - Number(data.minCount || 1) + 1)) + Number(data.minCount || 1)
+      : Number(data.count || 1);
+
     return {
       handled: true,
       redraw: true,
-      message: `${matched.option.label}使用`,
+      message: `${matched.option.label}使用：${Number(data.damage || 0)}ダメージ×${count}回`,
       appendAttackLabel: matched.option.label,
-      appendAttacks: createAttack(Number(data.damage || 0), Number(data.count || 1), {
+      appendAttacks: createAttack(Number(data.damage || 0), count, {
         type: data.attackType || "melee",
         beam: data.beam === true,
         ignoreReduction: data.ignoreReduction === true,
@@ -315,32 +296,32 @@ export function executeStoryDropSpecial(state, special, context = {}) {
     };
   }
 
-if (data.effectId === "death_army_arts") {
-  const cooldown = getCooldown(state, matched.option);
-  const evadeCost = Number(data.evadeCost ?? data.actionCost ?? 1);
+  if (data.effectId === "death_army_arts") {
+    const cooldown = getCooldown(state, matched.option);
+    const evadeCost = Number(data.evadeCost ?? data.actionCost ?? 1);
 
-  if (cooldown > 0) {
-    return { handled: true, redraw: false, message: `${matched.option.label}再使用まで${cooldown}ターン` };
+    if (cooldown > 0) {
+      return { handled: true, redraw: false, message: `${matched.option.label}再使用まで${cooldown}ターン` };
+    }
+
+    if (Number(state.evade || 0) < evadeCost) {
+      return { handled: true, redraw: false, message: `${matched.option.label}：回避が足りません` };
+    }
+
+    reduceEvade(state, evadeCost);
+    setCooldown(state, matched.option, Number(data.cooldown || 3));
+
+    const artsResult = createDeathArmyArtsResult(state);
+
+    return {
+      handled: true,
+      redraw: true,
+      consumeAction: false,
+      message: `デスアーミーアーツ発動：${artsResult.label} / 回避-${evadeCost}`,
+      appendAttackLabel: `デスアーミーアーツ：${artsResult.label}`,
+      appendAttacks: artsResult.attacks
+    };
   }
-
-  if (Number(state.evade || 0) < evadeCost) {
-    return { handled: true, redraw: false, message: `${matched.option.label}：回避が足りません` };
-  }
-
-  reduceEvade(state, evadeCost);
-  setCooldown(state, matched.option, Number(data.cooldown || 3));
-
-  const artsResult = createDeathArmyArtsResult(state);
-
-  return {
-    handled: true,
-    redraw: true,
-    consumeAction: false,
-    message: `デスアーミーアーツ発動：${artsResult.label} / 回避-${evadeCost}`,
-    appendAttackLabel: `デスアーミーアーツ：${artsResult.label}`,
-    appendAttacks: artsResult.attacks
-  };
-}
 
   return null;
 }
