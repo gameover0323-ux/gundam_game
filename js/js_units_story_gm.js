@@ -2,7 +2,7 @@ export const story_gm = {
   id: "story_gm",
   name: "GM",
   defaultFormId: "base",
-  exp: 4,
+  exp: 6,
 
   storyCompanion: {
     unlockCondition: "同行学習モードのGMを撃破する。",
