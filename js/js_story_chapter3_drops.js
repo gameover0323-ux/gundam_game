@@ -20,7 +20,7 @@ export const STORY_CHAPTER3_DROPS_BY_UNIT_ID = {
 
   story_aries: [
     slot("story_aries_slot1_evade_2", "slot1", "回避 2回", 15, "回避を2回獲得する。", { kind: "evade", value: 2 }),
-    slot("story_aries_slot2_chain_rifle", "slot2", "チェーンライフル", 0, "50ダメージ / 射撃 / リロード / 弾数3 / 1ターン1装填", { kind: "attack", damage: 50, count: 1, attackType: "shoot", reload: true, ammoMax: 3, ammoCostPerUse: 1, reloadPerTurn: 1 }),
+    slot("story_aries_slot2_chain_rifle", "slot2", "チェーンライフル", 10, "50ダメージ / 射撃 / リロード / 弾数3 / 1ターン1装填", { kind: "attack", damage: 50, count: 1, attackType: "shoot", reload: true, ammoMax: 3, ammoCostPerUse: 1, reloadPerTurn: 1 }),
     slot("story_aries_slot3_evade_2", "slot3", "回避 2回", 15, "回避を2回獲得する。", { kind: "evade", value: 2 }),
     slot("story_aries_slot6_full_barrage", "slot6", "一斉射撃(エアリーズ)", 40, "20ダメージ×4回 / 射撃 / 軽減不可", { kind: "attack", damage: 20, count: 4, attackType: "shoot", ignoreReduction: true }),
     equipment("story_aries_flight_unit", "追加フライトユニット", 15, "回避ストック最大値+1。", { kind: "evade_max_bonus", value: 1 })
