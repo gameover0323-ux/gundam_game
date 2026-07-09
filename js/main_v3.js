@@ -976,8 +976,24 @@ function get2v2StatsModeKey() {
   return battleRecordController.get2v2StatsModeKey();
 }
 function finishBattle(winnerPlayer) {
-  if (activeStoryFreeBattleOptions) {
-    const options = activeStoryFreeBattleOptions;
+
+ if (activeStoryFreeBattleOptions) {
+  const options = activeStoryFreeBattleOptions;
+
+  if (
+    winnerPlayer === "A" &&
+    Array.isArray(options.enemyUnits) &&
+    options.enemyUnits.length >= 2 &&
+    teamB
+  ) {
+    const unit1Alive = teamB.unit1 && Number(teamB.unit1.hp || 0) > 0;
+    const unit2Alive = teamB.unit2 && Number(teamB.unit2.hp || 0) > 0;
+
+    if (unit1Alive || unit2Alive) {
+      redrawBattleBoards();
+      return;
+    }
+  }
     activeStoryFreeBattleOptions = null;
 
     cleanupStoryFreeBattleButtons();
