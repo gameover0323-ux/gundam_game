@@ -121,13 +121,13 @@ export const STORY_CHAPTER3_DROPS_BY_UNIT_ID = {
     slot("story_death_army_slot2_club", "slot2", "棍棒", 15, "80ダメージ / 格闘", {
       kind: "attack", damage: 80, count: 1, attackType: "melee"
     }),
-    slot("story_death_army_slot2_beam_cannon", "slot2", "大口径ビームキャノン", 0, "100ダメージ / 射撃 / ビーム / EN消費50 / 増加値50", {
+    slot("story_death_army_slot2_beam_cannon", "slot2", "大口径ビームキャノン", 60, "100ダメージ / 射撃 / ビーム / EN消費50 / 増加値50", {
       kind: "attack", damage: 100, count: 1, attackType: "shoot", beam: true, energy: true, energyCost: 50, energyIncrease: 50
     }),
     slot("story_death_army_slot3_charge", "slot3", "銛突進", 13, "100ダメージ / 格闘", {
       kind: "attack", damage: 100, count: 1, attackType: "melee"
     }),
-    slot("story_death_army_slot4_beam_cannon", "slot4", "大口径ビームキャノン", 0, "100ダメージ / 射撃 / ビーム / EN消費50 / 増加値50", {
+    slot("story_death_army_slot4_beam_cannon", "slot4", "大口径ビームキャノン", 60, "100ダメージ / 射撃 / ビーム / EN消費50 / 増加値50", {
       kind: "attack", damage: 100, count: 1, attackType: "shoot", beam: true, energy: true, energyCost: 50, energyIncrease: 50
     }),
     slot("story_death_army_slot4_ranbu", "slot4", "乱舞", 45, "30ダメージ×3回 / 格闘 / 回避1回", {
