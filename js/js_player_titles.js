@@ -68,6 +68,26 @@ export const DEFEAT_TITLE_RULES = [
     ]
   }),
 
+...makeDefeatTitleRules({
+  category: "playable",
+  targetId: "create_gundam_liberal",
+  prefix: "create_gundam_liberal",
+  entries: [
+    [1, "リベラル"],
+    [5, "クリエイト"],
+    [10, "創造"],
+    [15, "やりこみ"],
+    [20, "自分だけの"],
+    [25, "オリジナル"],
+    [30, "センス"],
+    [35, "自慢"],
+    [40, "ストーリー"],
+    [45, "ようちか"],
+    [50, "もち"]
+  ]
+}),
+
+  
   ...makeDefeatTitleRules({
     category: "cpu",
     targetId: "cpu_gundam_mc",
