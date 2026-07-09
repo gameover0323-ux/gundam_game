@@ -3,7 +3,7 @@ export const story_zaku_ii_denim = {
   name: "ザクII(デニム機)",
   defaultFormId: "base",
 
-  exp: 3,
+  exp: 6,
 
   storyCompanion: {
     unlockCondition: "チャプター2終了後、チャプター1on1モードでプロトクリエイトガンダムのみで倒す。",
