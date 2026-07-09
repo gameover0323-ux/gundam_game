@@ -17,21 +17,15 @@ import {
 
 import { CHAPTER3_ENDING_LINES } from "./story_chapter3_controller.js";
 
+import { STORY_COMPANION_UNITS } from "./story_companion_registry.js";
+
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-const STORY_COMPANION_UNIT_MAP = {
-  story_zaku_ii_gene,
-  story_zaku_ii_denim,
-  story_ball,
-  story_gm,
-  story_guncannon,
-  story_guntank,
-  story_gyan,
-  story_gouf_chapter3,
-  story_psycho_gundam
-};
+const STORY_COMPANION_UNIT_MAP = Object.fromEntries(
+  STORY_COMPANION_UNITS.map(unit => [unit.id, unit])
+);
 
 function createCpuGundamBossUnit() {
   const unit = clone(gundam_mc);
