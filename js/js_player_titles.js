@@ -1,3 +1,5 @@
+import { loadStorySave } from "../story/story_save.js";
+
 function makeTitleId(prefix, count) {
   return `${prefix}_${String(count).padStart(3, "0")}`;
 }
@@ -773,6 +775,11 @@ const TITLE_LABEL_MAP = Object.fromEntries(
 );
 
 export function getTitleLabel(titleId) {
+  if (titleId === "create_gundam_liberal_045") {
+    const save = loadStorySave();
+    return String(save?.liberal?.customName || save?.liberal?.name || "").trim() || "クリエイトガンダムリベラル";
+  }
+
   return TITLE_LABEL_MAP[titleId] || titleId;
 }
 
@@ -830,7 +837,8 @@ cpu_zudah: "ヅダのCPU",
     cpu_mobile_ginn: "モビルジン",
     devil_gundam: "デビルガンダム",
     extreme_gundam: "エクストリームガンダム",
-    frost_brothers: "フロスト兄弟"
+    frost_brothers: "フロスト兄弟",
+    create_gundam_liberal: "クリエイトガンダムリベラル",
   };
 
   const targetName = nameMap[rule.targetId] || rule.targetId;
@@ -895,7 +903,8 @@ export const TITLE_GROUPS = [
     ["cpu_mobile_ginn", "モビルジン撃破"],
   ["devil_gundam", "デビルガンダム撃破"],
     ["extreme_gundam", "エクストリームガンダム撃破"],
-    ["frost_brothers", "フロスト兄弟撃破"]
+    ["frost_brothers", "フロスト兄弟撃破"],
+    ["create_gundam_liberal", "クリエイトガンダムリベラル使用"],
   ].map(([prefix, label]) => ({
     groupId: prefix,
     label,
