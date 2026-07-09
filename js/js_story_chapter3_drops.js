@@ -13,7 +13,7 @@ function skill(id, label, cost, detail, data) {
 export const STORY_CHAPTER3_DROPS_BY_UNIT_ID = {
   story_leo: [
     slot("story_leo_slot1_evade_1", "slot1", "回避 1回", 5, "回避を1回獲得する。", { kind: "evade", value: 1 }),
-    slot("story_leo_slot2_drum_gun", "slot2", "ドラムガン", 0, "5ダメージ×6回 / 射撃 / リロード / 弾数30 / 1ターン3リロード", { kind: "attack", damage: 5, count: 6, attackType: "shoot", reload: true, ammoMax: 30, ammoCostPerUse: 6, reloadPerTurn: 3 }),
+    slot("story_leo_slot2_drum_gun", "slot2", "ドラムガン", 12, "5ダメージ×6回 / 射撃 / リロード / 弾数30 / 1ターン3リロード", { kind: "attack", damage: 5, count: 6, attackType: "shoot", reload: true, ammoMax: 30, ammoCostPerUse: 6, reloadPerTurn: 3 }),
     slot("story_leo_slot6_heal_60", "slot6", "回復 60", 15, "HPを60回復する。", { kind: "heal", value: 60 }),
     equipment("story_leo_shield_option", "リーオーシールドオプション", 15, "20%の確率で1回のダメージを10軽減する。被弾時常に自動発動。", { kind: "auto_guard", chance: 20, reduceDamage: 10 })
   ],
@@ -28,9 +28,9 @@ export const STORY_CHAPTER3_DROPS_BY_UNIT_ID = {
 
   story_tallgeese: [
     slot("story_tallgeese_slot3_evade_3", "slot3", "回避 3回", 30, "回避を3回獲得する。", { kind: "evade", value: 3 }),
-    slot("story_tallgeese_slot5_dover_beam", "slot5", "ドーバーガン(ビーム)", 60, "100ダメージ / 射撃 / ビーム / 軽減不可 / リロード / 弾数3 / 2ターン1装填", { kind: "attack", damage: 100, count: 1, attackType: "shoot", beam: true, ignoreReduction: true, reload: true, ammoMax: 3, ammoCostPerUse: 1, reloadTurnInterval: 2, reloadPerInterval: 1 }),
-    slot("story_tallgeese_slot6_dover_shell", "slot6", "ドーバーガン(実弾)", 60, "50ダメージ×3回 / 射撃 / リロード / 弾数3 / 2ターン1装填", { kind: "attack", damage: 50, count: 3, attackType: "shoot", reload: true, ammoMax: 3, ammoCostPerUse: 1, reloadTurnInterval: 2, reloadPerInterval: 1 }),
-    equipment("story_tallgeese_super_vernier", "スーパーバーニア", 80, "ゲーム中2回まで使用可能。回避ストック最大値を現在の所持回避数の倍にし、一時的に赤上限保持する。", { kind: "equipment_special", effectId: "super_vernier_temp_evade_cap_double", uses: 2 }),
+    slot("story_tallgeese_slot5_dover_beam", "slot5", "ドーバーガン(ビーム)", 40, "100ダメージ / 射撃 / ビーム / 軽減不可 / リロード / 弾数3 / 2ターン1装填", { kind: "attack", damage: 100, count: 1, attackType: "shoot", beam: true, ignoreReduction: true, reload: true, ammoMax: 3, ammoCostPerUse: 1, reloadTurnInterval: 2, reloadPerInterval: 1 }),
+    slot("story_tallgeese_slot6_dover_shell", "slot6", "ドーバーガン(実弾)", 40, "50ダメージ×3回 / 射撃 / リロード / 弾数3 / 2ターン1装填", { kind: "attack", damage: 50, count: 3, attackType: "shoot", reload: true, ammoMax: 3, ammoCostPerUse: 1, reloadTurnInterval: 2, reloadPerInterval: 1 }),
+    equipment("story_tallgeese_super_vernier", "スーパーバーニア", 50, "ゲーム中2回まで使用可能。回避ストック最大値を現在の所持回避数の倍にし、一時的に赤上限保持する。", { kind: "equipment_special", effectId: "super_vernier_temp_evade_cap_double", uses: 2 }),
     skill("story_tallgeese_killing_acceleration", "殺人的な加速", 50, "ゲーム中3回まで、現在HPを半分消費して回避所持数を最大にする。", { effectId: "killing_acceleration", uses: 3, hpCostRate: 0.5, setEvadeToMax: true })
   ],
 
@@ -46,7 +46,7 @@ export const STORY_CHAPTER3_DROPS_BY_UNIT_ID = {
     slot("story_schwalbe_slot1_long_rifle", "slot1", "シュバルべロングライフル", 35, "60ダメージ / 射撃 / 軽減不可 / リロード / 弾数5 / 3ターン1装填", { kind: "attack", damage: 60, count: 1, attackType: "shoot", ignoreReduction: true, reload: true, ammoMax: 5, ammoCostPerUse: 1, reloadTurnInterval: 3, reloadPerInterval: 1 }),
     slot("story_schwalbe_slot2_axe", "slot2", "バトルアックス", 20, "40ダメージ / 格闘 / 必中", { kind: "attack", damage: 40, count: 1, attackType: "melee", cannotEvade: true }),
     slot("story_schwalbe_slot4_wire_claw", "slot4", "ワイヤークロー", 40, "20ダメージ / 射撃 / 次の攻撃に必中付与", { kind: "attack", damage: 20, count: 1, attackType: "shoot", onHit: "next_attack_cannot_evade" }),
-    slot("story_schwalbe_slot6_lance", "slot6", "ランスユニット", 70, "100ダメージ / 格闘 / 軽減不可", { kind: "attack", damage: 100, count: 1, attackType: "melee", ignoreReduction: true }),
+    slot("story_schwalbe_slot6_lance", "slot6", "ランスユニット", 50, "100ダメージ / 格闘 / 軽減不可", { kind: "attack", damage: 100, count: 1, attackType: "melee", ignoreReduction: true }),
     skill("story_schwalbe_chivalry", "騎士道精神", 20, "5ターンに1回発動可能。2ターン間お互いの会心を無効化する。", { effectId: "chivalry_no_critical", cooldown: 5, turns: 2 })
   ],
 
@@ -64,23 +64,23 @@ export const STORY_CHAPTER3_DROPS_BY_UNIT_ID = {
     slot("story_ein_slot3_machine_gun", "slot3", "40mm機関銃", 50, "10ダメージ×8回 / 射撃", { kind: "attack", damage: 10, count: 8, attackType: "shoot" }),
     slot("story_ein_slot4_evade_4", "slot4", "回避 4回", 60, "回避を4回獲得する。", { kind: "evade", value: 4 }),
     slot("story_ein_slot5_drill_kick", "slot5", "ドリルキック", 70, "90ダメージ / 格闘 / ヒット時、追加で5ダメージ×6回", { kind: "custom", effectId: "story_graze_ein_drill_kick", damage: 90, count: 1, attackType: "melee", extraDamage: 5, extraCount: 6 }),
-    slot("story_ein_slot6_alaya_combo", "slot6", "阿頼耶識軌道・連撃", 100, "前回の攻撃行動を抽選し、かつもう一度スロット行動を抽選する。", { kind: "custom", effectId: "story_graze_ein_combo" }),
-    equipment("story_ein_pile_bunker", "パイルバンカー", 100, "攻撃ヒット時、50ダメージ格闘を1ターンに1回のみ追加発動する。", { kind: "extra_hit_attack", damage: 50, count: 1, attackType: "melee", oncePerTurn: true }),
+    slot("story_ein_slot6_alaya_combo", "slot6", "阿頼耶識軌道・連撃", 80, "前回の攻撃行動を抽選し、かつもう一度スロット行動を抽選する。", { kind: "custom", effectId: "story_graze_ein_combo" }),
+    equipment("story_ein_pile_bunker", "パイルバンカー", 90, "攻撃ヒット時、50ダメージ格闘を1ターンに1回のみ追加発動する。", { kind: "extra_hit_attack", damage: 50, count: 1, attackType: "melee", oncePerTurn: true }),
     equipment("story_ein_nanolaminate_armor", "ナノラミネートアーマー", 80, "エネルギーが5以上の時、1回にEN5消費してビーム属性ダメージを半減する。", { kind: "beam_damage_half_with_energy", energyCost: 5 }),
     equipment("story_ein_brain_transplant", "脳髄移植", 70, "HP最大値が半分になるが、回避ストック最大値が5増える。", { kind: "hp_half_evade_max_bonus", hpMaxRate: 0.5, evadeMaxBonus: 5 }),
     skill("story_ein_alaya_orbit", "阿頼耶識軌道", 40, "HPを半減して回避所持数を2追加する。HP5以下の時は使用できない。", { effectId: "alaya_orbit", hpCostRate: 0.5, minHpExclusive: 5, evadeGain: 2 })
   ],
 
   story_guncannon: [
-    slot("story_guncannon_slot2_cannon", "slot2", "240mm低反動キャノン砲", 90, "40ダメージ×4回 / 射撃 / リロード / 弾数8 / 1ターン1装填", { kind: "attack", damage: 40, count: 4, attackType: "shoot", reload: true, ammoMax: 8, ammoCostPerUse: 4, reloadPerTurn: 1 }),
+    slot("story_guncannon_slot2_cannon", "slot2", "240mm低反動キャノン砲", 70, "40ダメージ×4回 / 射撃 / リロード / 弾数8 / 1ターン1装填", { kind: "attack", damage: 40, count: 4, attackType: "shoot", reload: true, ammoMax: 8, ammoCostPerUse: 4, reloadPerTurn: 1 }),
     slot("story_guncannon_slot6_melee", "slot6", "格闘", 70, "40ダメージ×3回 / 格闘 / 軽減不可", { kind: "attack", damage: 40, count: 3, attackType: "melee", ignoreReduction: true })
   ],
 
   story_guntank: [
     slot("story_guntank_slot3_missile", "slot3", "ポップミサイルランチャー", 50, "10ダメージ×8回 / 射撃", { kind: "attack", damage: 10, count: 8, attackType: "shoot" }),
-    slot("story_guntank_slot4_cannon", "slot4", "120mm低反動キャノン砲", 80, "60ダメージ×2回 / 射撃", { kind: "attack", damage: 60, count: 2, attackType: "shoot" }),
-    slot("story_guntank_slot5_sniping_resist", "slot5", "狙撃耐性", 70, "次の射撃攻撃に必中を付与する。", { kind: "custom", effectId: "next_shoot_cannot_evade" }),
-    slot("story_guntank_slot6_cannon", "slot6", "120mm低反動キャノン砲", 80, "60ダメージ×2回 / 射撃", { kind: "attack", damage: 60, count: 2, attackType: "shoot" })
+    slot("story_guntank_slot4_cannon", "slot4", "120mm低反動キャノン砲", 60, "60ダメージ×2回 / 射撃", { kind: "attack", damage: 60, count: 2, attackType: "shoot" }),
+    slot("story_guntank_slot5_sniping_resist", "slot5", "狙撃耐性", 60, "次の射撃攻撃に必中を付与する。", { kind: "custom", effectId: "next_shoot_cannot_evade" }),
+    slot("story_guntank_slot6_cannon", "slot6", "120mm低反動キャノン砲", 60, "60ダメージ×2回 / 射撃", { kind: "attack", damage: 60, count: 2, attackType: "shoot" })
   ],
 
   story_gyan: [
@@ -139,7 +139,7 @@ export const STORY_CHAPTER3_DROPS_BY_UNIT_ID = {
     slot("story_death_army_slot5_melee", "slot5", "格闘", 15, "20ダメージ×3回 / 格闘", {
       kind: "attack", damage: 20, count: 3, attackType: "melee"
     }),
-    slot("story_death_army_slot6_fake_finger", "slot6", "フェイクダークネスフィンガー", 0, "150ダメージ / 格闘 / 軽減不可 / EN消費30 / 増加値20", {
+    slot("story_death_army_slot6_fake_finger", "slot6", "フェイクダークネスフィンガー", 60, "150ダメージ / 格闘 / 軽減不可 / EN消費30 / 増加値20", {
       kind: "attack", damage: 150, count: 1, attackType: "melee", ignoreReduction: true, energy: true, energyCost: 30, energyIncrease: 20
     }),
     equipment("story_death_army_master_cross", "マスタークロス", 7, "ゲーム中1度だけ行動権を2増加させる。", {
