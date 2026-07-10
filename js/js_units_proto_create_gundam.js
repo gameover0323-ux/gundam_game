@@ -8,7 +8,8 @@ import {
   PROTO_CREATE_BASE,
   findStorySlotOption,
   findStoryEquipmentOption,
-  findStorySkillOption
+  findStorySkillOption,
+  getStoryEquipmentBonuses
 } from "../story/story_create_lab_data.js";
 
 const SLOT_KEYS = ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6"];
@@ -90,18 +91,29 @@ function buildSpecials(lab) {
       actionType: "instant",
       desc: "行動権を消費して、エネルギーを充填する。"
     },
-    {
+    
+  {
   name: `装備品1 ${equipment1?.label || "なし"}`,
   effectType: "story_equipment_1",
-  timing: String(equipment1?.label || "").includes("シールド") ? "reaction" : "self",
-  actionType: equipment1?.id === "none" ? "auto" : "instant",
+  timing: String(equipment1?.label || "").includes("シールド")
+    ? "reaction"
+    : "self",
+  actionType:
+    equipment1?.id === "none" || isPassiveEquipment(equipment1)
+      ? "auto"
+      : "instant",
   desc: equipment1?.detail || "装備品1は未装備。"
 },
 {
   name: `装備品2 ${equipment2?.label || "なし"}`,
   effectType: "story_equipment_2",
-  timing: String(equipment2?.label || "").includes("シールド") ? "reaction" : "self",
-  actionType: equipment2?.id === "none" ? "auto" : "instant",
+  timing: String(equipment2?.label || "").includes("シールド")
+    ? "reaction"
+    : "self",
+  actionType:
+    equipment2?.id === "none" || isPassiveEquipment(equipment2)
+      ? "auto"
+      : "instant",
   desc: equipment2?.detail || "装備品2は未装備。"
 },
     {
@@ -121,15 +133,29 @@ function buildSpecials(lab) {
   ];
 }
 
+function isPassiveEquipment(option) {
+  return option?.data?.kind === "passive_stat";
+}
+
+
 export function buildProtoCreateGundamUnit(save = loadStorySave()) {
   const unitSave = save.createUnits?.proto_create_gundam;
   const lab = unitSave?.lab || {};
+
   const levelInfo = getProtoCreateLevelInfo(save);
-  const maxCost = getProtoCreateMaxCost(save);
+  const equipmentBonuses = getStoryEquipmentBonuses(lab);
+
+  const maxCost =
+    getProtoCreateMaxCost(save) +
+    equipmentBonuses.maxCost;
 
   const slots = {};
+
   SLOT_KEYS.forEach(slotKey => {
-    slots[slotKey] = buildSlot(slotKey, lab.selectedSlots?.[slotKey]);
+    slots[slotKey] = buildSlot(
+      slotKey,
+      lab.selectedSlots?.[slotKey]
+    );
   });
 
   return {
@@ -144,9 +170,26 @@ export function buildProtoCreateGundamUnit(save = loadStorySave()) {
     forms: {
       normal: {
         name: PROTO_CREATE_BASE.unitName,
-        hp: Number(lab.hp || PROTO_CREATE_BASE.baseHp),
-        evadeMax: Number(lab.evade || PROTO_CREATE_BASE.baseEvade),
-        storyEnergyMax: Number(lab.energy || PROTO_CREATE_BASE.baseEnergy),
+
+        hp: Number(
+          lab.hp ||
+          PROTO_CREATE_BASE.baseHp
+        ),
+
+        evadeMax:
+          Number(
+            lab.evade ||
+            PROTO_CREATE_BASE.baseEvade
+          ) +
+          equipmentBonuses.evadeMax,
+
+        storyEnergyMax:
+          Number(
+            lab.energy ||
+            PROTO_CREATE_BASE.baseEnergy
+          ) +
+          equipmentBonuses.energyMax,
+
         rollableSlotOrder: SLOT_KEYS,
         ownedSlotOrder: SLOT_KEYS,
         slots,
@@ -155,5 +198,4 @@ export function buildProtoCreateGundamUnit(save = loadStorySave()) {
     }
   };
 }
-
 export const proto_create_gundam = buildProtoCreateGundamUnit();
