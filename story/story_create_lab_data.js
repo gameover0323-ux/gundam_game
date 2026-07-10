@@ -238,6 +238,42 @@ export const STORY_EQUIPMENT_OPTIONS = [
   }
 ];
 
+export const STORY_SHOP_EQUIPMENT_OPTIONS = [
+  {
+    id: "energy_converter_lv1",
+    label: "エネルギーコンバーターLv1",
+    priceLevel: 4,
+    cost: 5,
+    detail: "エネルギーを20引き上げる。",
+    data: {
+      kind: "passive_stat",
+      energyMaxBonus: 20
+    }
+  },
+  {
+    id: "cost_converter_lv1",
+    label: "コストコンバーターLv1",
+    priceLevel: 4,
+    cost: 0,
+    detail: "使用可能コストが10増加する。",
+    data: {
+      kind: "passive_stat",
+      maxCostBonus: 10
+    }
+  },
+  {
+    id: "simple_vernier",
+    label: "簡易バーニア",
+    priceLevel: 4,
+    cost: 5,
+    detail: "回避ストック最大値+1。",
+    data: {
+      kind: "passive_stat",
+      evadeMaxBonus: 1
+    }
+  }
+];
+
 export const STORY_SKILL_OPTIONS = [
   {
     id: "none",
@@ -315,8 +351,35 @@ export function findStorySlotOption(slotKey, optionId) {
 export function findStoryEquipmentOption(optionId) {
   return [
     ...STORY_EQUIPMENT_OPTIONS,
+    ...STORY_SHOP_EQUIPMENT_OPTIONS,
     ...getStoryDropEquipmentOptions()
   ].find(option => option.id === optionId) || STORY_EQUIPMENT_OPTIONS[0];
+}
+
+export function getStoryEquipmentBonuses(state) {
+  const equipmentIds = [
+    state?.equipment?.equipment1 || "none",
+    state?.equipment?.equipment2 || "none"
+  ];
+
+  return equipmentIds.reduce((bonuses, optionId) => {
+    const option = findStoryEquipmentOption(optionId);
+    const data = option?.data || {};
+
+    if (data.kind !== "passive_stat") {
+      return bonuses;
+    }
+
+    bonuses.maxCost += Number(data.maxCostBonus || 0);
+    bonuses.energyMax += Number(data.energyMaxBonus || 0);
+    bonuses.evadeMax += Number(data.evadeMaxBonus || 0);
+
+    return bonuses;
+  }, {
+    maxCost: 0,
+    energyMax: 0,
+    evadeMax: 0
+  });
 }
 
 export function findStorySkillOption(optionId) {
