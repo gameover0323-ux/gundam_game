@@ -3,7 +3,8 @@ import {
   PROTO_CREATE_BASE,
   STORY_SLOT_OPTIONS,
   STORY_EQUIPMENT_OPTIONS,
-   STORY_SKILL_OPTIONS,
+  STORY_SHOP_EQUIPMENT_OPTIONS,
+  STORY_SKILL_OPTIONS,
   STORY_COMPANION_OPTIONS,
   getStoryDropSlotOptions,
   getStoryDropEquipmentOptions,
@@ -12,6 +13,7 @@ import {
   findStoryEquipmentOption,
   findStoryCompanionOption,
   findStorySkillOption,
+  getStoryEquipmentBonuses,
   calculateProtoCreateLabCost,
   createInitialProtoCreateLabState
 } from "./story_create_lab_data.js";
@@ -121,7 +123,12 @@ const chapter3Controller = createStoryChapter3Controller({ ...ctx, renderStoryMa
   }
 
   function getMaxCost() {
-    return getProtoCreateMaxCost(storySave);
+  const equipmentBonuses = getStoryEquipmentBonuses(customizeState);
+
+  return (
+    getProtoCreateMaxCost(storySave) +
+    equipmentBonuses.maxCost
+  );
   }
 
   function getRemainCost() {
