@@ -323,11 +323,12 @@ const chapterBossUnlocked = storySave.flags?.chapterBossUnlocked === true || sto
 });
 }
 
-  const CHAPTER3_SHOP_EQUIPMENTS = [
-  { id: "energy_converter_lv1", label: "エネルギーコンバーターLv1", priceLevel: 4, detail: "エネルギーを20引き上げる。[コスト5]" },
-  { id: "cost_converter_lv1", label: "コストコンバーターLv1", priceLevel: 4, detail: "使用可能コストが10増加する。[コスト0]" },
-  { id: "simple_vernier", label: "簡易バーニア", priceLevel: 4, detail: "回避ストック最大値+1。[コスト5]" }
-];
+  const CHAPTER3_SHOP_EQUIPMENTS = STORY_SHOP_EQUIPMENT_OPTIONS.map(option => ({
+  id: option.id,
+  label: option.label,
+  priceLevel: option.priceLevel,
+  detail: `${option.detail}[コスト${option.cost}]`
+}));
 
 const CHAPTER3_SHOP_UNITS = [
   { id: "story_leo", label: "リーオー", priceLevel: 5, cost: 40 },
@@ -882,43 +883,72 @@ document.getElementById("storyChapter3Btn")?.addEventListener("click", () => cha
   }
 
   function renderCustomizeValues() {
-    const levelInfo = getProtoCreateLevelInfo(storySave);
-    const maxCost = getMaxCost();
-    const remainCost = getRemainCost();
+  const levelInfo = getProtoCreateLevelInfo(storySave);
+  const equipmentBonuses = getStoryEquipmentBonuses(customizeState);
 
-    const levelText = document.getElementById("storyLevelText");
-    if (levelText) {
-      levelText.innerHTML = [
-        `Lv${levelInfo.level}`,
-        `${levelInfo.currentExp} / ${levelInfo.nextExp} Exp`,
-        `次Lvまで${levelInfo.remainingExp}`
-      ].join("<br>");
-    }
+  const maxCost = getMaxCost();
+  const remainCost = getRemainCost();
 
-    const costText = document.getElementById("storyCostText");
-    if (costText) {
-      costText.textContent = `コスト ${maxCost}[残${remainCost}]`;
-      costText.style.color = remainCost < 0 ? "#ff6666" : "";
-    }
+  const effectiveEvade =
+    Number(customizeState.evade || 0) +
+    equipmentBonuses.evadeMax;
 
-    const hpText = document.getElementById("storyHpText");
-    const hpCost = document.getElementById("storyHpCost");
-    if (hpText) hpText.textContent = `HP ${customizeState.hp}`;
-    if (hpCost) hpCost.textContent = `[コスト${customizeState.hpCost}]`;
+  const effectiveEnergy =
+    Number(customizeState.energy || 0) +
+    equipmentBonuses.energyMax;
 
-    const evadeText = document.getElementById("storyEvadeText");
-    const evadeCost = document.getElementById("storyEvadeCost");
-    if (evadeText) evadeText.textContent = `回避ストック ${customizeState.evade}`;
-    if (evadeCost) evadeCost.textContent = `[コスト${customizeState.evadeCost}]`;
+  const levelText = document.getElementById("storyLevelText");
 
-    const energyText = document.getElementById("storyEnergyText");
-    const energyCost = document.getElementById("storyEnergyCost");
-    if (energyText) energyText.textContent = `エネルギー ${customizeState.energy}`;
-    if (energyCost) energyCost.textContent = `[コスト${customizeState.energyCost}]`;
-
-    updateReadyButton();
+  if (levelText) {
+    levelText.innerHTML = [
+      `Lv${levelInfo.level}`,
+      `${levelInfo.currentExp} / ${levelInfo.nextExp} Exp`,
+      `次Lvまで${levelInfo.remainingExp}`
+    ].join("<br>");
   }
 
+  const costText = document.getElementById("storyCostText");
+
+  if (costText) {
+    costText.textContent = `コスト ${maxCost}[残${remainCost}]`;
+    costText.style.color = remainCost < 0 ? "#ff6666" : "";
+  }
+
+  const hpText = document.getElementById("storyHpText");
+  const hpCost = document.getElementById("storyHpCost");
+
+  if (hpText) {
+    hpText.textContent = `HP ${customizeState.hp}`;
+  }
+
+  if (hpCost) {
+    hpCost.textContent = `[コスト${customizeState.hpCost}]`;
+  }
+
+  const evadeText = document.getElementById("storyEvadeText");
+  const evadeCost = document.getElementById("storyEvadeCost");
+
+  if (evadeText) {
+    evadeText.textContent = `回避ストック ${effectiveEvade}`;
+  }
+
+  if (evadeCost) {
+    evadeCost.textContent = `[コスト${customizeState.evadeCost}]`;
+  }
+
+  const energyText = document.getElementById("storyEnergyText");
+  const energyCost = document.getElementById("storyEnergyCost");
+
+  if (energyText) {
+    energyText.textContent = `エネルギー ${effectiveEnergy}`;
+  }
+
+  if (energyCost) {
+    energyCost.textContent = `[コスト${customizeState.energyCost}]`;
+  }
+
+  updateReadyButton();
+}
   function renderCustomizeTutorial() {
     if (labMode === "normal") {
       refreshStorySave();
@@ -1335,45 +1365,67 @@ document.getElementById("storyChapter3Btn")?.addEventListener("click", () => cha
     }
   
   function getOptionsFor(kind, key) {
-    if (labMode === "chapter1") {
-      if (kind === "slot") return (STORY_SLOT_OPTIONS[key] || []).slice(0, 2);
-      if (kind === "equipment") return STORY_EQUIPMENT_OPTIONS.slice(0, 2);
-      if (kind === "skill") return STORY_SKILL_OPTIONS.slice(0, 2);
+  if (labMode === "chapter1") {
+    if (kind === "slot") {
+      return (STORY_SLOT_OPTIONS[key] || []).slice(0, 2);
     }
 
-    const ownedSlots = storySave.inventory?.slots || [];
-const ownedEquipments = storySave.inventory?.equipments || [];
-const ownedSkills = storySave.inventory?.skills || [];
-
-if (kind === "slot") {
-  return [
-    ...(STORY_SLOT_OPTIONS[key] || []),
-    ...getStoryDropSlotOptions(key).filter(option => ownedSlots.includes(option.id))
-  ];
-}
-
-if (kind === "equipment") {
-  return [
-    ...STORY_EQUIPMENT_OPTIONS,
-    ...getStoryDropEquipmentOptions().filter(option => ownedEquipments.includes(option.id))
-  ];
-}
-
-if (kind === "skill") {
-  return [
-    ...STORY_SKILL_OPTIONS,
-    ...getStoryDropSkillOptions().filter(option => ownedSkills.includes(option.id))
-  ];
-}
-
-    if (kind === "companion") {
-      return STORY_COMPANION_OPTIONS.filter(option => {
-        if (option.id === "none") return true;
-        return storySave.companionUnits?.[option.id]?.unlocked === true;
-      });
+    if (kind === "equipment") {
+      return STORY_EQUIPMENT_OPTIONS.slice(0, 2);
     }
 
-    return [];
+    if (kind === "skill") {
+      return STORY_SKILL_OPTIONS.slice(0, 2);
+    }
+  }
+
+  const ownedSlots = storySave.inventory?.slots || [];
+  const ownedEquipments = storySave.inventory?.equipments || [];
+  const ownedSkills = storySave.inventory?.skills || [];
+
+  if (kind === "slot") {
+    return [
+      ...(STORY_SLOT_OPTIONS[key] || []),
+      ...getStoryDropSlotOptions(key).filter(option =>
+        ownedSlots.includes(option.id)
+      )
+    ];
+  }
+
+  if (kind === "equipment") {
+    return [
+      ...STORY_EQUIPMENT_OPTIONS,
+
+      ...STORY_SHOP_EQUIPMENT_OPTIONS.filter(option =>
+        ownedEquipments.includes(option.id)
+      ),
+
+      ...getStoryDropEquipmentOptions().filter(option =>
+        ownedEquipments.includes(option.id)
+      )
+    ];
+  }
+
+  if (kind === "skill") {
+    return [
+      ...STORY_SKILL_OPTIONS,
+      ...getStoryDropSkillOptions().filter(option =>
+        ownedSkills.includes(option.id)
+      )
+    ];
+  }
+
+  if (kind === "companion") {
+    return STORY_COMPANION_OPTIONS.filter(option => {
+      if (option.id === "none") return true;
+
+      return (
+        storySave.companionUnits?.[option.id]?.unlocked === true
+      );
+    });
+  }
+
+  return [];
   }
 
   function setOption(kind, key, optionId) {
