@@ -127,10 +127,15 @@ function unlockChapter3Stage3Rewards() {
   const save = loadStorySave();
 
   if (!save.flags) save.flags = {};
+
   save.flags.chapter3BossStage = 3;
   save.flags.chapter3Cleared = true;
   save.flags.chapter3EndingViewed = true;
+
+  // 新旧両方のチャプターボス解放フラグを終了させる
   save.flags.chapter3BossUnlocked = false;
+  save.flags.chapterBossUnlocked = false;
+
   save.flags.chapter3LearningPsychoGundamUnlocked = true;
 
   saveStorySave(save);
@@ -199,14 +204,26 @@ export function createStoryChapterBossController(ctx) {
   }
 
   function startCurrentBoss() {
-    const save = loadStorySave();
+  const save = loadStorySave();
 
-    if (save.flags?.chapter3BossUnlocked === true && save.flags?.chapter3Cleared !== true) {
-      startChapter3Boss();
-      return;
-    }
+  if (
+    save.flags?.chapter3BossUnlocked === true &&
+    save.flags?.chapter3Cleared !== true
+  ) {
+    startChapter3Boss();
+    return;
+  }
 
+  if (
+    save.flags?.chapterBossUnlocked === true &&
+    save.flags?.chapterBossGundamCleared !== true
+  ) {
     startGundamBoss();
+    return;
+  }
+
+  // どのボスも解放されていない場合は戦闘を開始しない
+  ctx.renderStoryMainMenu?.();
   }
 
   function startGundamBoss() {
