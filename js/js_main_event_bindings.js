@@ -19,10 +19,11 @@ export function bindMainEvents(ctx) {
     renderPlayerStatsPanel
   } = ctx;
 
-  const storyModeController = createStoryModeController({
+const storyModeController = createStoryModeController({
   getPlayerProfile: ctx.getPlayerProfile,
   playerAccountUi,
   showPopup: ctx.showPopup,
+  showTitle,
   startStoryFreeBattle: ctx.startStoryFreeBattle
 });
 
