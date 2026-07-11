@@ -281,7 +281,15 @@ function renderStoryMainMenu() {
       const chapter2Cleared = storySave.flags?.chapter2Cleared === true;
 const chapter3Available = storySave.flags?.chapterBossGundamCleared === true || chapter2Cleared;
 const learningBattleUnlocked = storySave.flags?.learningBattleUnlocked === true || chapter2Cleared;
-const chapterBossUnlocked = storySave.flags?.chapterBossUnlocked === true || storySave.flags?.chapter3BossUnlocked === true;
+const chapterBossUnlocked =
+  (
+    storySave.flags?.chapterBossUnlocked === true &&
+    storySave.flags?.chapterBossGundamCleared !== true
+  ) ||
+  (
+    storySave.flags?.chapter3BossUnlocked === true &&
+    storySave.flags?.chapter3Cleared !== true
+  );
 
     root.innerHTML = `
       <h2>ストーリーモード</h2>
