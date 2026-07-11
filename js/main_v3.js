@@ -414,6 +414,10 @@ function cleanupOnlineBattleUi() {
 }
 
 function showTitle() {
+  // ストーリー専用戦闘をタイトル遷移時に確実に終了させる
+  activeStoryFreeBattleOptions = null;
+  cleanupStoryFreeBattleButtons();
+
   return resetController.showTitle();
 }
 
