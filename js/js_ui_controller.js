@@ -1,10 +1,14 @@
 export function createUiController(ctx) {
-  function showScreen(screenId) {
-    Object.values(ctx.screens).forEach(screen => {
-      screen.classList.remove("active");
-    });
-    ctx.screens[screenId].classList.add("active");
-  }
+ function showScreen(screenId) {
+  Object.entries(ctx.screens).forEach(([id, screen]) => {
+    if (!screen) return;
+
+    // ストーリー戦闘などで設定されたインラインdisplayを解除する
+    screen.style.removeProperty("display");
+
+    screen.classList.toggle("active", id === screenId);
+  });
+ }
 
   function renderAttackLogText(message) {
     const attackLog = document.getElementById("attackLog");
